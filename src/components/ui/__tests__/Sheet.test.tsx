@@ -50,4 +50,43 @@ describe('Sheet', () => {
     // pushState on open + back() consuming it on close nets to no change.
     expect(window.history.length).toBe(before)
   })
+
+  it('does not revert a URL change the sheet content itself made while open', async () => {
+    // Regression test: a sheet whose content calls history.replaceState
+    // (e.g. a filter panel updating ?type=income via useSearchParams) used
+    // to have that change silently undone, because the sheet's own
+    // "consume my pushed entry" cleanup called history.back() unconditionally
+    // — and since replaceState modifies whatever entry is *current* (the
+    // sheet's own pushed one), back() landed right before it, wiping the
+    // change out along with the dummy entry.
+    function FilterLikeSheet({ onClose }: { onClose: () => void }) {
+      return (
+        <Sheet open onClose={onClose} title="Filter">
+          <button
+            type="button"
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search)
+              params.set('type', 'income')
+              window.history.replaceState({}, '', `?${params}`)
+              onClose()
+            }}
+          >
+            Apply
+          </button>
+        </Sheet>
+      )
+    }
+
+    function Harness() {
+      const [open, setOpen] = useState(true)
+      return open ? <FilterLikeSheet onClose={() => setOpen(false)} /> : null
+    }
+
+    render(<Harness />)
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(window.location.search).toBe('?type=income')
+
+    // Clean up the URL change this test made.
+    window.history.replaceState({}, '', window.location.pathname)
+  })
 })

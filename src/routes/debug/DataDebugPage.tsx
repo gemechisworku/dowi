@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useDatabase } from '@/app/db/useDatabase'
 import { exportAll, importAll, validateBackup, BackupValidationError } from '@/db/backup'
@@ -22,7 +23,7 @@ export function DataDebugPage() {
   // Reactive: updates automatically after any create/import/erase below,
   // no manual refresh() needed — this is the useLiveQuery pattern PRD D5
   // calls for everywhere data is read.
-  const categories = useLiveQuery(() => repos.categories.list(), [repos]) ?? []
+  const categories = useLiveQuery(() => repos.categories.list(), [repos], EMPTY_ARRAY)
   const [usage, setUsage] = useState<StorageUsage | null>(null)
   const [confirmErase, setConfirmErase] = useState(false)
   const [busy, setBusy] = useState(false)

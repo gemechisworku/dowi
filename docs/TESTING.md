@@ -166,31 +166,64 @@ screen.)_
 
 ---
 
-## §M3 — Money capture
+## §M3 — Money capture ✅ done
 
-**Automated**
+**Run it yourself:**
 
-- Form validation: zero/negative/empty amount blocked; missing category blocked.
-- Create → appears in list; edit → list updates; delete → removed, undo → restored
-  with the same id.
-- Filters produce the correct subset (fixture-based); URL round-trips filter state.
-- Category delete with transactions attached → reassign flow, no orphans.
+```bash
+npm run test           # 144 Vitest tests
+npm run test:e2e        # 50 Playwright tests, incl. e2e/money.spec.ts
+npm run dev              # then open http://localhost:5173/money
+```
+
+**Automated (in place)**
+
+- `e2e/money.spec.ts` (real IndexedDB): the add sheet opens on the very first tap;
+  seeded categories appear Food-first (not scrambled); adding an expense shows it
+  with a minus sign in the right category; editing pre-fills the form and persists
+  changes; deleting offers undo, which restores the exact transaction; filtering by
+  type narrows the list and shows a removable chip that, removed, restores the full
+  list; deleting a category in use requires picking a replacement before the
+  confirm button enables, and reassigns every affected transaction; deleting an
+  unused category shows a plain confirm instead.
+- Unit: `groupByMonthAndDay` (day/month grouping, per-currency net subtotal sign,
+  newest-first ordering, empty input); `MoneyText` (forces the correct +/− prefix
+  from the `sign` prop regardless of the stored value's own sign — the exact bug
+  described below); `createSoftDeleteRepo`'s creation-order guarantee; the seed
+  script's category-ordering regression test.
+- The kitchen-sink accessibility sweep now includes `/money/categories`,
+  `/money/sources`, `/money/accounts`, `/money/rates` — zero violations.
 
 **Manual**
 
-1. From Home, tap the expense quick action. Time yourself: amount → category → save
-   should take **under 10 seconds and ≤ 4 taps**.
+1. From Money, tap the **+** FAB. Time yourself: amount → category → save should
+   take **under 10 seconds and ≤ 4 taps**.
 2. Add an income in your base currency. Add one in a different currency (e.g. USD).
    Both show their own currency correctly in the list.
 3. Add a JPY entry (0 decimals) and a KWD entry (3 decimals) → no phantom decimals.
-4. Backdate an entry to last month → it lands in the right day group.
-5. Scroll the list to 200+ entries → smooth, day subtotals correct, sticky month header.
-6. Apply: type = expense + category = Food + this month. Only matching rows show.
-   Press back → filters clear/restore as expected.
-7. Swipe to delete a row → undo snackbar → tap Undo → the row returns unchanged.
-8. Delete a category that has 5 transactions → you are asked what to do; choose
-   reassign; verify those 5 now show the new category and none were deleted.
-9. Edit a transaction's currency → the amount is not silently rescaled.
+4. Backdate an entry to last month → it lands in the right day group, under the
+   right sticky month header.
+5. Scroll the list past 60 entries → the next page loads automatically as you
+   near the bottom (or tap "Load more"); day subtotals stay correct throughout.
+6. Open Filters, set type = Expense + a category, tap Apply. Only matching rows
+   show, and a removable chip appears for each active filter. Refresh the page →
+   the filters (and the URL) survive. Tap a chip's ✕ → that filter alone clears.
+   _(By design the browser back button does **not** step through each filter
+   tweak — only Clear all / removing a chip does. See PLAN.md §M3.)_
+7. Swipe a row left → the delete action reveals; releasing past the threshold
+   deletes it with an undo snackbar → tap Undo → the row returns unchanged.
+8. Money → Categories → delete a category that has transactions → you're asked to
+   choose a replacement category (the confirm button stays disabled until you do)
+   → verify those transactions now show the new category and none were deleted.
+   Delete a category with **no** transactions → a plain "Delete this?" confirm,
+   no reassign picker.
+9. Edit a transaction's currency → the amount is not silently rescaled (it's the
+   same stored minor-units number, now just labelled with the new code — this is
+   intentional; re-enter the amount if you actually meant to convert it).
+10. Add a source and an account (Money → Sources / Accounts), then confirm they
+    appear as options in the add-transaction sheet.
+11. Money → Exchange rates → add a rate for a foreign currency → it appears in the
+    list as "1 XXX = N ETB, set <date>".
 
 ---
 

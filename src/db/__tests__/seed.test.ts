@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createTestDb } from './testDb'
 import { seedIfNeeded } from '../seed'
+import { createRepositories } from '../repositories'
 import type { DowiDatabase } from '../db'
 
 describe('seedIfNeeded', () => {
@@ -36,5 +37,19 @@ describe('seedIfNeeded', () => {
     await db.categories.delete(all[0]!.id)
     await seedIfNeeded(db)
     expect(await db.categories.toArray()).toHaveLength(all.length - 1)
+  })
+
+  it('lists seeded categories in the intended order, not a scrambled UUID order', async () => {
+    // Regression test: seeding used to give every row the same createdAt,
+    // which made list()'s createdAt sort a no-op and left the *actual*
+    // order up to Dexie's primary-key (UUID) iteration — effectively
+    // random, and very visibly wrong for "Food, Transport, ..., Other".
+    await seedIfNeeded(db)
+    const repos = createRepositories(db)
+    const expenseNames = (await repos.categories.list())
+      .filter((c) => c.type === 'expense')
+      .map((c) => c.name)
+    expect(expenseNames[0]).toBe('Food')
+    expect(expenseNames[expenseNames.length - 1]).toBe('Other')
   })
 })

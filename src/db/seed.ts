@@ -42,26 +42,33 @@ export async function seedIfNeeded(db: DowiDatabase): Promise<void> {
   if (already) return
 
   const now = new Date().toISOString()
+  const baseTime = Date.now()
+
+  // Every list() sorts by createdAt (softDeleteRepo.ts) so the deliberate
+  // "common categories first, Other last" ordering above survives into the
+  // UI. A single shared timestamp for the whole batch would make that sort
+  // a no-op (all ties) and fall back to arbitrary UUID order — staggering
+  // by 1ms per row keeps the intended order without it being user-visible
+  // (nobody sees "createdAt", only the resulting list order).
+  let offset = 0
+  function nextTimestamp(): string {
+    offset += 1
+    return new Date(baseTime + offset).toISOString()
+  }
 
   await db.transaction('rw', db.categories, db.settings, db.meta, async () => {
     const stillEmpty = !(await db.meta.get(SEEDED_META_KEY))
     if (!stillEmpty) return
 
     const categoryRecords: Category[] = [
-      ...DEFAULT_EXPENSE_CATEGORIES.map((c) => ({
-        ...c,
-        id: newId(),
-        type: 'expense' as const,
-        createdAt: now,
-        updatedAt: now,
-      })),
-      ...DEFAULT_INCOME_CATEGORIES.map((c) => ({
-        ...c,
-        id: newId(),
-        type: 'income' as const,
-        createdAt: now,
-        updatedAt: now,
-      })),
+      ...DEFAULT_EXPENSE_CATEGORIES.map((c) => {
+        const createdAt = nextTimestamp()
+        return { ...c, id: newId(), type: 'expense' as const, createdAt, updatedAt: createdAt }
+      }),
+      ...DEFAULT_INCOME_CATEGORIES.map((c) => {
+        const createdAt = nextTimestamp()
+        return { ...c, id: newId(), type: 'income' as const, createdAt, updatedAt: createdAt }
+      }),
     ]
 
     await db.categories.bulkAdd(categoryRecords)

@@ -180,23 +180,79 @@ suite can't itself prove. Build is 129.6 KB gzipped JS (budget 180 KB).
 
 ---
 
-## M3 — Money: capture & CRUD
+## M3 — Money: capture & CRUD ✅ done
 
 **Deliverable:** you can record real income and expenses and manage your taxonomy.
 
-- [ ] Add-transaction sheet: income/expense toggle, keypad, currency picker,
-      category chips, date, account, source, note, tags
-- [ ] Transaction list: grouped by day with subtotals, sticky month header,
-      virtualised, infinite scroll
-- [ ] Filters (type, date range, category, source, account, currency, text) reflected
-      in the URL; filter chips with clear-all
-- [ ] Transaction detail → Edit → Delete with confirm + 5 s undo snackbar
-- [ ] Categories / sources / accounts management screens: full CRUD, icon + colour
-      picker, reassign-on-delete flow
-- [ ] Currency list + base currency; exchange-rate table CRUD
+- [x] Add-transaction sheet: income/expense toggle, amount keypad, category chips
+      (filtered by type, seeded categories in the intended order), date, account,
+      source (income only, per the PRD data model), note, tags
+- [x] Transaction list: grouped by day with per-currency subtotals, sticky month
+      header. **Infinite scroll** via an `IntersectionObserver` sentinel (auto-loads
+      60 at a time, with a tap-to-load-more fallback) rather than a windowing
+      library — plenty for realistic personal-finance volumes; true virtualisation
+      is deferred until M10's perf pass shows it's actually needed
+- [x] Filters (type, category, source, account, currency, date range, note text)
+      synced to the URL via `useSearchParams` (`replace`, not `push` — see
+      `useTransactionFilters.ts` for why); removable chips + Clear all
+- [x] Delete with confirm + 5 s undo snackbar. **Deviation from the literal
+      checklist:** tapping a transaction opens Edit directly rather than a
+      separate read-only Detail screen first — every field is already visible and
+      editable in one compact form, so an intermediate detail-only view added a
+      tap without adding information
+- [x] Categories (icon + colour picker, income/expense tabs) / Sources / Accounts
+      (the latter two share one `NamedEntityManager` component — identical shape)
+      management screens, full CRUD. Deleting a category in use requires picking a
+      **replacement category** before it's removed — nothing is ever silently
+      deleted. **Deviation:** PRD's "reassign _or keep as Uncategorised_" — the
+      "keep as Uncategorised" branch needs `categoryId` to become optional on
+      `Transaction`, a schema/reporting decision better made with M4's aggregation
+      logic in hand, so v1.0 requires an explicit replacement category instead
+- [x] Exchange-rate table CRUD (currency code, rate to base, effective date),
+      surfaced from Money's own nav row (a Settings → Money entry point is added on
+      top of this, not instead of it, when M9 builds Settings)
 
 **Done when:** you can log a week of real spending in mixed currencies and edit/delete
 any of it. **Tag:** `m3` · **Test guide:** TESTING.md §M3
+
+**Verified:** 144 Vitest unit tests (up from 129) and **50** Playwright e2e tests (up
+from 26) — `e2e/money.spec.ts` covers add/edit/delete/undo, filtering, and the
+category reassign-on-delete flow against real IndexedDB, and the accessibility sweep
+now also covers `/money/categories`, `/money/sources`, `/money/accounts` and
+`/money/rates` (zero violations). Build is 135.2 KB gzipped JS (budget 180 KB).
+
+**Bugs the test suite caught and fixed before merge** (this milestone found more of
+these than M1 and M2 combined — money math and money UI are exactly where "looks
+right in a screenshot" and "is actually right" diverge):
+
+- **A stored expense showed a "+"**: `MoneyText`'s `sign` prop only controlled
+  colour, not the +/− prefix — `formatMoney`'s sign logic looked at the raw
+  (always non-negative) `amountMinorUnits`. Fixed by having `MoneyText` derive the
+  displayed sign from the `sign` prop itself, so an expense is always shown negative
+  regardless of how its magnitude was stored.
+- **Seeded categories appeared in a scrambled order**: Dexie's `toArray()` with no
+  explicit ordering iterates by primary key — for a random UUID id, that's
+  unrelated to creation order. Fixed by sorting every `list()`/`listTrashed()` by
+  `createdAt` in the shared repo factory. That in turn exposed a second bug: the
+  seed script gave every seeded row the _same_ `createdAt` (one timestamp reused
+  for the whole batch), making the new sort a no-op for them — fixed by staggering
+  seed timestamps by 1 ms per row so the deliberate "Food, Transport, …, Other"
+  order survives.
+- **The add-transaction sheet silently failed to open on the very first tap**: a
+  race between React Strict Mode's synchronous mount→cleanup→mount and `Sheet`'s
+  asynchronous `history.back()` (used to consume its own dismiss-tracking history
+  entry) meant a stale `popstate` from the _first_ (phantom) mount's cleanup landed
+  _after_ the second (real) mount had already pushed its own entry — closing the
+  sheet the instant it reopened. Fixed by deferring that `history.back()` one
+  microtask and skipping it if a new mount has already reclaimed ownership.
+- **A filter sheet's "Apply" silently reverted the filter**: `Sheet`'s history
+  cleanup called `history.back()` unconditionally to consume its own pushed entry
+  — but `TransactionFilterSheet`'s Apply button calls `setSearchParams`, which
+  modifies whatever history entry is _current_ (the sheet's own pushed one, at that
+  point). `history.back()` then undid that change along with the dummy entry.
+  Fixed by recording the URL at push time and only consuming the entry if the URL
+  is still unchanged when closing — a sheet whose content legitimately changed the
+  URL keeps that change, at the cost of a rare, harmless extra history frame.
 
 ---
 

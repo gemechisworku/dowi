@@ -18,6 +18,20 @@ export interface SoftDeleteRepo<T extends BaseEntity, CreateInput> {
 }
 
 /**
+ * Dexie's `toArray()` with no explicit ordering returns rows in primary-key
+ * order — for our string-UUID ids, that's effectively random, not creation
+ * order. Every list() a person actually looks at (categories, sources, a
+ * notes list before M5 adds its own sort, ...) should be stable and match
+ * "the order I made these in" instead, so every repo built from this
+ * factory sorts by createdAt ascending by default.
+ */
+function sortByCreatedAt<T extends BaseEntity>(rows: T[]): T[] {
+  return [...rows].sort((a, b) =>
+    a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
+  )
+}
+
+/**
  * Builds the CRUD + soft-delete repository shared by every list-based
  * entity (categories, sources, accounts, notes, tasks, ...). Kept generic
  * so each entity's own repository file only has to add what's specific to
@@ -28,11 +42,11 @@ export function createSoftDeleteRepo<T extends BaseEntity, CreateInput extends o
 ): SoftDeleteRepo<T, CreateInput> {
   return {
     async list() {
-      return table.filter((row) => !row.deletedAt).toArray()
+      return sortByCreatedAt(await table.filter((row) => !row.deletedAt).toArray())
     },
 
     async listTrashed() {
-      return table.filter((row) => Boolean(row.deletedAt)).toArray()
+      return sortByCreatedAt(await table.filter((row) => Boolean(row.deletedAt)).toArray())
     },
 
     async get(id) {
