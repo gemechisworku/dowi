@@ -101,36 +101,68 @@ see PLAN.md §M1 for what they were; it's the concrete case for keeping this gat
 
 ---
 
-## §M2 — Data layer
+## §M2 — Data layer ✅ done
 
-**Automated (this is the most important test suite in the project)**
+**Run it yourself:**
 
-- Repos: create → read → update → soft-delete → restore, per entity.
-- Money maths:
-  - `parseAmount("123.45","ETB") === 12345`; `("1234","JPY") === 1234`; `("1.234","KWD") === 1234`
-  - formatting round-trips for ETB (2), JPY (0), KWD (3)
-  - summing 10,000 amounts loses no precision
-  - negative, zero and absurdly large inputs rejected
-- Period maths (parameterised, with week-start = Mon and Sun, FY start = Jan and Jul):
-  - week boundaries across a year boundary (e.g. 2026-12-28 → 2027-01-03)
-  - month boundaries in February of a leap year
-  - FY label and range for a July FY start
-  - DST-free correctness: all boundaries computed in local time, no UTC drift
-- Conversion: mixed-currency sum with rates; missing rate → excluded **and** reported.
-- Export → `deleteDatabase` → import → deep-equal the original dump.
-- Import of: a truncated file, a wrong-version file, a file with an unknown entity →
-  fails with a typed error and leaves the DB untouched.
-- Migration test: open a v1 DB fixture with the v2 schema → data intact.
+```bash
+npm run test           # 129 Vitest tests, incl. every repo, money/period maths, backup
+npm run test:e2e        # adds 6 real-IndexedDB persistence tests to M1's 20
+npm run dev              # then open http://localhost:5173/debug/data
+```
+
+**Automated (this is the most important test suite in the project — all in place)**
+
+- Repos (`src/db/__tests__/softDeleteRepo.test.ts`, exercised via categories but
+  covering the shared factory every list-based entity uses): create → read → list
+  (excludes soft-deleted) → update (merges + bumps `updatedAt`) → soft-delete →
+  `listTrashed()` → restore (clears `deletedAt`, every other field intact) →
+  `hardDelete()`; `update()` on an unknown id throws, `remove()` on one is a no-op.
+- `transactions.test.ts`: `listFiltered` by type/category/source/account/currency/
+  date-range/note-text, combined with AND semantics, excluding soft-deleted rows;
+  `reassignCategory` moves every affected transaction and returns the count.
+- `rates.test.ts`: `getRateForCurrency` returns the most recent rate, respects an
+  "as of" date, keeps currencies independent, and ignores a soft-deleted rate.
+- `settingsRepo.test.ts` / `notificationsRepo.test.ts`: defaults match the resolved
+  product decisions (ETB, January FY, Monday week); partial `update()` merges
+  without clobbering untouched fields; the notification inbox's list/unread/
+  mark-read/clear operations.
+- `seed.test.ts`: seeding is idempotent (running it twice doesn't duplicate
+  categories) and doesn't recreate a category the user deleted.
+- `money.test.ts`: `parseAmountToMinorUnits` for 2/0/3-decimal currencies, `.50`,
+  `0`, and rejects empty/negative/too-many-decimals/scientific-notation input;
+  `convertMinorUnits` across differing decimal places; `sumConverted` — mixed
+  currencies convert correctly, and an unconvertible currency is **excluded and
+  counted**, never silently dropped (PRD AC-M7).
+- `period.test.ts`: week boundaries for both a Monday and Sunday week-start,
+  including one that crosses a year boundary; month boundaries in a leap and a
+  non-leap February; FY ranges/labels for both a January and a July start,
+  including that 15 June and 15 July land in different FYs under a July start;
+  ISO week-key assignment across the tricky December/January boundary cases.
+- `backup.test.ts`: full export → erase → import (`replace`) round-trips every
+  table exactly; `replace` removes a record added after the snapshot was taken;
+  `merge` overwrites by id while leaving untouched records alone; `validateBackup`
+  rejects null/non-object/missing-version/newer-version/missing-table input; a
+  failed import leaves the database completely untouched.
+- E2E (`e2e/data-persistence.spec.ts`, real browser IndexedDB — the fake-indexeddb
+  suite above can't prove this on its own): a record created via `/debug/data`
+  survives a full page reload; Erase all empties every table; storage usage reads
+  without error.
 
 **Manual**
 
-1. Add a record via a debug screen, force-close the app, reopen → it is still there.
-2. Settings → Export → a `.json` file lands in Downloads and is non-empty.
-3. Settings → Erase all → confirm → app is empty.
-4. Settings → Import that file → everything is back.
-5. Check `navigator.storage.estimate()` output in Settings looks sane.
+1. Open `/debug/data`, tap "Add a test category", force-close the app (or just
+   reload), reopen → it is still there.
+2. Tap "Export JSON" → a `.json` file lands in Downloads and is non-empty.
+3. Tap "Erase all" → confirm → the categories list goes to 0.
+4. Tap "Import JSON" and pick the file from step 2 → everything is back.
+5. Tap "Check" under Storage → the used/quota/persisted values look sane.
 
-**Pass:** 100 % of the automated suite + all 5 manual steps.
+_(This debug screen is temporary — PLAN.md's M9 replaces it with the real
+Settings → Data UI. The steps above are the same actions, just via a plainer
+screen.)_
+
+**Pass:** 129 unit + 26 e2e tests green, and all 5 manual steps.
 
 ---
 

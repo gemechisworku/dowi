@@ -5,10 +5,11 @@ your own device. No account, no server, no cloud. Android-first, installable, of
 
 ## Status
 
-**M0 — Project setup: done.** **M1 — Design system & app shell: done.** The full
-reusable component library (buttons, forms, sheets/dialogs, money/task building
-blocks, charts) is live at `/kitchen-sink`, in light and dark. Feature milestones
-(M2–M10) are tracked in [docs/PLAN.md](docs/PLAN.md).
+**M0 — Project setup: done.** **M1 — Design system & app shell: done.** **M2 — Data
+layer: done.** The full reusable component library is live at `/kitchen-sink`; the
+local IndexedDB (Dexie) database — repositories, money/period maths, export/import,
+storage usage — is live at `/debug/data`, a temporary panel until M9's real Settings
+UI. Feature milestones (M3–M10) are tracked in [docs/PLAN.md](docs/PLAN.md).
 
 Chosen design direction: **Option A "Soft Cards"**. Reminders ship as a pure PWA for
 now (see PRD §12/OD-1). Defaults: base currency ETB, financial year starts January,
@@ -25,11 +26,11 @@ week starts Monday.
 
 ## Stack
 
-Vite 8 · React 19 · TypeScript (strict) · Tailwind v4 · React Router 7 ·
-`vite-plugin-pwa` (Workbox) · Vitest + Testing Library + `fake-indexeddb` ·
-Playwright (Pixel 7, light + dark)
+Vite 8 · React 19 · TypeScript (strict) · Tailwind v4 · React Router 7 · Dexie 4 +
+`dexie-react-hooks` (IndexedDB) · `vite-plugin-pwa` (Workbox) · Vitest + Testing
+Library + `fake-indexeddb` · Playwright (Pixel 7, light + dark) + `@axe-core/playwright`
 
-Dexie (IndexedDB) and Tiptap land in M2 and M5 respectively — not needed until then.
+Tiptap lands in M5 — not needed until then.
 
 ## Getting started
 
