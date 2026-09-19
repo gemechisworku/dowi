@@ -91,10 +91,19 @@ it is closed. Available mechanisms on Android/Chrome:
 | Web Push | High | Requires a push server — violates the "no cloud" constraint |
 | Capacitor/TWA wrapper with `LocalNotifications` | High | Same React codebase, produces a real APK, exact scheduled alarms |
 
-**v1.0 plan:** implement the reliable-when-open path plus periodic background sync,
-and show an honest in-app explanation of the limits. **Option B** (documented in §12)
-is to wrap the same codebase in Capacitor so reminders become exact — this changes no
-application code, only the build/distribution step.
+**v1.0 decision (OD-1, resolved):** build as a pure PWA — the reliable-when-open path,
+periodic background sync, catch-up on open, and the in-app inbox as the backstop. All
+scheduling goes through a single `ReminderScheduler` interface with a `WebScheduler`
+implementation, so a `CapacitorScheduler` can be dropped in later without touching any
+feature code. M7 testing records the actual delivery behaviour on the real device
+(TESTING.md §M7 step 4); if it proves unreliable, the Capacitor wrap is added in M10.
+
+### D4b — Visual direction
+**Option A, "Soft Cards"** (`design/design-options.html`) is the chosen direction:
+22 px radii, white cards on a light-gray canvas, a blue gradient hero for the headline
+number, tinted squircle icon chips, a floating bottom nav with a filled-pill active
+tab, and a contextual FAB. This sets token values and a few component variants — the
+information architecture, component APIs and milestone plan are unaffected.
 
 ### D5 — Tech stack
 
@@ -491,9 +500,9 @@ encrypted export.
 
 | ID | Decision | Status |
 |---|---|---|
-| OD-1 | PWA-only reminders vs. Capacitor wrap for exact alarms (§12) | **Awaiting user** |
-| OD-2 | Which of the three UI design directions to build (`design/`) | **Awaiting user** |
-| OD-3 | Base currency + financial-year start month defaults | Assumed ETB + January; changeable in Settings |
+| OD-1 | PWA-only reminders vs. Capacitor wrap for exact alarms (§12) | **Resolved 2026-09-19** — build as a PWA now; the scheduler sits behind a `ReminderScheduler` interface so a Capacitor adapter can be added in M10 *only if* M7 testing on the real phone shows delivery is unreliable |
+| OD-2 | Which of the three UI design directions to build (`design/`) | **Resolved 2026-09-19** — **Option A, "Soft Cards"** |
+| OD-3 | Base currency + financial-year start month defaults | **Resolved 2026-09-19** — base currency **ETB**, financial year **January–December**, week starts **Monday**. All three changeable in Settings |
 
 ## 12. OD-1 detail — reminder reliability
 

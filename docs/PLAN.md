@@ -79,8 +79,10 @@ offers "Add to Home screen", launches standalone, and works with Wi-Fi off.
 navigable, and the four tabs route correctly with the nav preserving scroll position.
 **Tag:** `m1` · **Test guide:** TESTING.md §M1
 
-> The chosen design direction (A / B / C from `design/design-options.html`) is applied
-> here — it changes token values and a handful of component variants, not the API.
+> **Chosen direction: Option A "Soft Cards"** (`design/design-options.html`). Applied
+> here as token values plus these component variants: `Card` radius 22 px with a soft
+> shadow, `HeroCard` (blue gradient), `CategoryIcon` as a tinted squircle chip,
+> `BottomNav` floating with a filled-pill active tab, and a squircle FAB.
 
 ---
 
@@ -98,7 +100,8 @@ navigable, and the four tabs route correctly with the nav preserving scroll posi
 - [ ] Money helpers: minor-unit parse/format, per-currency exponent, safe add/sum,
       conversion via rate table
 - [ ] Period helpers: week/month/FY boundaries honouring week-start and FY-start
-- [ ] Seed on first run: default categories, default settings, base currency
+- [ ] Seed on first run: default categories, default settings, base currency **ETB**,
+      FY start **January**, week start **Monday**
 - [ ] `exportAll()` → versioned JSON; `importAll(json, mode: merge|replace)` with
       validation and a dry-run diff
 - [ ] `navigator.storage.persist()` request + storage-usage reporting
@@ -204,8 +207,9 @@ counts match reality. **Tag:** `m6` · **Test guide:** TESTING.md §M6
 - [ ] In-app notification inbox with unread badge, mark-read, clear, deep links
 - [ ] In-context permission request with an explainer; honest state display in Settings
 - [ ] "Send a test notification" button
-- [ ] *If OD-1 = Option B:* Capacitor Android project + `@capacitor/local-notifications`
-      adapter behind the same scheduler interface; `npm run android` build script
+- [ ] All scheduling behind a `ReminderScheduler` interface; `WebScheduler` is the only
+      implementation in v1.0. A `CapacitorScheduler` can be added in M10 without
+      touching feature code — **only if** §M7 step 4 shows delivery is unreliable
 
 **Done when:** a reminder set 2 minutes ahead arrives on the phone, deep-links
 correctly, and appears in the inbox. **Tag:** `m7` · **Test guide:** TESTING.md §M7
@@ -260,6 +264,8 @@ correctly, and appears in the inbox. **Tag:** `m7` · **Test guide:** TESTING.md
 - [ ] Privacy check: zero outbound network requests after load (automated test)
 - [ ] Seed/demo data toggle for screenshots; `docs/DATA-FORMAT.md`; README refresh
 - [ ] Hosting decision (GitHub Pages / Netlify / Cloudflare Pages — static, free)
+- [ ] Re-read the §M7 step-4 results; add the Capacitor wrap **only** if reminders
+      proved unreliable in real use
 - [ ] Tag `v1.0.0`, install on the phone, use it for a week
 
 **Tag:** `v1.0.0` · **Test guide:** TESTING.md §M10
