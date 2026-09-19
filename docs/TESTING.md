@@ -50,20 +50,41 @@ matching after I changed the schema".
 
 ---
 
-## §M1 — Design system & app shell
+## §M1 — Design system & app shell ✅ done
 
-**Automated**
+**Run it yourself:**
 
-- Component unit tests: each primitive renders every variant/state.
-- Playwright screenshot suite over `/kitchen-sink` in light and dark.
-- `axe` accessibility scan on `/kitchen-sink` — zero violations.
+```bash
+npm run test          # 40 Vitest unit/interaction tests
+npm run test:e2e       # 20 Playwright tests (Pixel 7, light + dark) incl. axe scans
+npm run build          # confirms the bundle budget (93.8 KB gz JS / 180 KB budget)
+npm run dev             # then open http://localhost:5173/kitchen-sink
+```
+
+**Automated (in place)**
+
+- Unit: `Button`, `Checkbox`, `SegmentedControl` (interaction + a11y roles);
+  `Sheet` (renders/hides, closes on Escape, closes on scrim click, and — the one
+  that actually caught a bug — leaves `history.length` unchanged after a
+  non-back-button close); `Dialog` (focus moves in on open, restores to the trigger
+  on close); `SnackbarProvider` (shows a message, runs the undo action exactly once,
+  throws a clear error outside its provider); `DonutChart` (slice percentages, and
+  the zero-total case renders `0%` rather than `NaN%`); `AmountKeypad` (digit
+  entry, single decimal point, decimal-place limit, 0-decimal currencies, backspace);
+  `formatMoney`/`formatMinorUnits`/`minorUnitExponent` (2/0/3-decimal currencies,
+  signs, approximate marking).
+- E2E (`e2e/kitchen-sink.spec.ts`): every section heading renders, no horizontal
+  overflow at mobile width; the theme toggle switches `<html data-theme>` with zero
+  console errors; a `Sheet` opens, is focus-trapped, and dismisses on Escape; an
+  **axe accessibility scan of `/kitchen-sink` and every top-level route, in both
+  light and dark, asserts zero violations.**
 
 **Manual (on the phone)**
 
 1. Open `/kitchen-sink`. Every component is visible and none overflows the viewport.
 2. Toggle Light → Dark → System. Check specifically: card borders are visible in dark,
    disabled text is still readable, chart colours still distinguishable, no pure-black
-   text on pure-white.
+   text on pure-white, and the native date/time picker icons are visible in dark mode.
 3. Reload in dark mode → **no white flash** before the theme applies.
 4. Every button/row is comfortably tappable one-handed (≥ 44 px).
 5. Open a `Sheet` → drag to dismiss, tap the scrim to dismiss, back button dismisses.
@@ -74,7 +95,9 @@ matching after I changed the schema".
 10. On an editor route the bottom nav is hidden; on top-level routes it is visible.
 11. Rotate to landscape → layout adapts, nothing is cut off.
 
-**Pass:** all 11 + zero axe violations.
+**Pass:** all 11 manual steps + the automated suite above (40 unit + 20 e2e, zero axe
+violations). This milestone shipped with 4 real bugs found by the test suite itself —
+see PLAN.md §M1 for what they were; it's the concrete case for keeping this gate.
 
 ---
 

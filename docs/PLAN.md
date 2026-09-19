@@ -64,31 +64,35 @@ manifest and service worker confirmed served correctly from the preview build.
 
 ---
 
-## M1 — Design system & app shell
+## M1 — Design system & app shell ✅ done
 
 **Deliverable:** the complete reusable component kit + navigation shell, browsable at
 `/kitchen-sink`, in light and dark.
 
-- [ ] **Tokens** — colour (blue ramp, semantic surface/text/border, income green,
+- [x] **Tokens** — colour (blue ramp, semantic surface/text/border, income green,
       expense red, warning amber), spacing (4 px base), radii, shadow, type scale,
-      motion. Light + dark via `[data-theme]` and `prefers-color-scheme`.
-- [ ] **Theme provider** — System / Light / Dark, persisted, no flash on load.
-- [ ] **Primitives:** `Button` (primary/secondary/ghost/danger, 3 sizes, loading),
+      motion, z-index layers, `color-scheme`. Light + dark via `[data-theme]` and
+      `prefers-color-scheme`.
+- [x] **Theme provider** — System / Light / Dark, persisted, no flash on load.
+- [x] **Primitives:** `Button` (primary/secondary/ghost/danger, 3 sizes, loading),
       `IconButton`, `Input`, `NumericInput`, `TextArea`, `Select`, `DatePicker`,
       `TimePicker`, `Switch`, `Checkbox`, `Radio`, `Chip`/`ChipGroup`,
-      `SegmentedControl`, `Badge`, `Avatar`, `Divider`, `Skeleton`, `Spinner`.
-- [ ] **Layout & feedback:** `Card`, `ListItem` (leading/title/subtitle/trailing),
-      `SectionHeader`, `Sheet` (bottom sheet, snap points, focus trap), `Dialog`,
-      `Snackbar` (with undo action), `Toast`, `EmptyState`, `ErrorState`,
-      `ConfirmDialog`, `SwipeableRow`, `PullToRefresh`.
-- [ ] **Domain-shaped:** `MoneyText` (currency-aware, minor units, sign colour),
+      `SegmentedControl`, `Badge`, `Avatar`, `Divider`, `Skeleton`, `Spinner`,
+      `Field` (label/hint/error wiring).
+- [x] **Layout & feedback:** `Card`, `ListItem`, `SectionHeader`, `Sheet` (bottom
+      sheet: scrim/Escape/back-gesture/drag-down dismiss, focus trap), `Dialog`
+      (focus trap + restore), `ConfirmDialog`, `Snackbar` with an undo action
+      (`Toast` folded into this — one portal-based transient-message component
+      covers both), `EmptyState`, `ErrorState`, `SwipeableRow`, `PullToRefresh`.
+- [x] **Domain-shaped:** `MoneyText` (currency-aware, minor units, sign colour),
       `AmountKeypad`, `PeriodSelector`, `PeriodStepper`, `StatTile`, `ProgressBar`,
       `TaskCheckbox`, `CategoryIcon`, `CollectionChip`.
-- [ ] **Charts (own SVG):** `BarChart`, `GroupedBarChart`, `DonutChart`, `Sparkline`
-      — responsive, accessible (table fallback), theme-aware.
-- [ ] **Shell:** `AppLayout` with `TopAppBar` (title / back, bell + badge, settings)
+- [x] **Charts (own SVG):** `BarChart`, `GroupedBarChart`, `DonutChart`, `Sparkline`
+      — theme-aware, each with a `sr-only` accessible data-table fallback.
+- [x] **Shell:** `AppLayout` with `TopAppBar` (title / back, bell + badge, settings)
       and `BottomNav` (4 tabs, active state, hides on editor routes), safe-area insets.
-- [ ] `/kitchen-sink` route rendering every component in every state.
+- [x] `/kitchen-sink` route rendering every component in every state, grouped into
+      Buttons/Forms/Feedback/Domain/Charts sections.
 
 **Done when:** `/kitchen-sink` shows all components correct in both themes, keyboard
 navigable, and the four tabs route correctly with the nav preserving scroll position.
@@ -96,8 +100,33 @@ navigable, and the four tabs route correctly with the nav preserving scroll posi
 
 > **Chosen direction: Option A "Soft Cards"** (`design/design-options.html`). Applied
 > here as token values plus these component variants: `Card` radius 22 px with a soft
-> shadow, `HeroCard` (blue gradient), `CategoryIcon` as a tinted squircle chip,
-> `BottomNav` floating with a filled-pill active tab, and a squircle FAB.
+> shadow, `CategoryIcon` as a tinted squircle chip, `BottomNav` floating with a
+> filled-pill active tab, and a squircle FAB (used ad hoc per screen, not yet its own
+> component — trivial to extract once a second use case shows up in M3+).
+
+**Verified:** 40 Vitest unit/interaction tests (money formatting, focus trap +
+restore, Sheet dismiss paths, Snackbar, SegmentedControl, Checkbox, AmountKeypad,
+DonutChart edge cases) and 20 Playwright e2e tests (Pixel 7, light + dark), including
+an axe accessibility scan of every top-level route with **zero violations**. Build is
+93.8 KB gzipped JS (budget 180 KB).
+
+**Bugs the test suite caught and fixed before merge** (kept here as the concrete
+argument for why M1's "test as you go" gate matters):
+
+- Native date/time picker icons were invisible in dark mode — missing a `color-scheme`
+  declaration (browsers pick light-mode picker chrome by default regardless of your
+  own dark background).
+- Checkbox/Radio's check-mark/dot never rendered — an absolutely-positioned `<input>`
+  paints _above_ a normal-flow sibling regardless of DOM order, hiding the indicator
+  drawn "after" it. Fixed by positioning the indicator too.
+- `Sheet`'s Android-back-button handling double-invoked `onClose` (once directly,
+  once via the `popstate` its own `history.back()` call re-triggered) — found by a
+  unit test asserting `history.length` is unchanged after a non-back-button close.
+- Four real WCAG AA contrast failures caught by the axe scan: the danger button/swipe
+  action (white text on dark-mode's lighter danger red), light-mode income green on
+  white (3.3:1), and both soft-badge pairings for expense and warning (3.95:1 and
+  2.86:1). Fixed with token changes — see the comments in `tokens.css` for the exact
+  ratios and margins chosen.
 
 ---
 

@@ -3,7 +3,6 @@
  * Chosen direction: Option A "Soft Cards" (design/design-options.html).
  * All colour is referenced through semantic tokens — components never use
  * raw hex values, which is what makes light/dark a single switch.
- * Filled out further as components are built in M1.
  */
 
 :root {
@@ -18,23 +17,58 @@
   --blue-700: #1d4ed8;
   --blue-900: #1e3a8a;
 
-  /* ---- Semantic (light) ---- */
+  /* ---- Semantic surfaces & text (light) ---- */
   --color-primary: var(--blue-600);
   --color-primary-fg: #ffffff;
+  --color-primary-soft: var(--blue-50);
   --color-bg: #f1f3f7;
   --color-surface: #ffffff;
   --color-surface-2: #f1f5f9;
+  --color-surface-3: #e9edf3;
   --color-text: #0f172a;
-  --color-text-muted: #64748b;
+  /* slate-600, not -500: -500 (#64748b) only clears 4.5:1 on white by a
+     hair and fails outright against --color-surface-2 (~4.3:1) — this
+     passes comfortably (~7.6:1) against every surface it's used on. */
+  --color-text-muted: #475569;
+  --color-text-on-primary: #ffffff;
   --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+  --color-scrim: rgba(15, 23, 42, 0.45);
+  --color-focus-ring: var(--blue-500);
 
-  --color-income: #16a34a;
+  --color-disabled-bg: #eef1f6;
+  --color-disabled-fg: #a1aab8;
+
+  /* ---- Semantic (money / status) ---- */
+  /* green-700, not -600: -600 (#16a34a) is only 3.3:1 on white as text,
+     well under the 4.5:1 minimum — this passes at ~5:1. */
+  --color-income: #15803d;
   --color-income-soft: #dcfce7;
-  --color-expense: #dc2626;
+  /* red-700, not -600: -600 (#dc2626) is only 3.95:1 on --color-expense-soft
+     (the Badge pairing) — this passes at ~5.3:1 there and improves on the
+     already-passing white-background case too. */
+  --color-expense: #b91c1c;
   --color-expense-soft: #fee2e2;
-  --color-warning: #d97706;
+  /* amber-800, not -600: -600 (#d97706) is only 2.86:1 on --color-warning-soft
+     — amber-700 clears 4.5:1 by too thin a margin (4.51), so this goes one
+     step further for headroom (~6.4:1). */
+  --color-warning: #92400e;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+  /*
+   * A fixed (non-theme-swapped) red for solid fills paired with white text
+   * (danger Button, SwipeableRow's delete reveal). --color-danger itself
+   * turns into a lighter red in dark mode for legibility *as text on a
+   * dark surface*, which fails contrast if reused as a solid background
+   * behind white text — this token is what those two contexts want instead.
+   */
+  --color-danger-solid: #dc2626;
 
+  /* ---- Elevation ---- */
   --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 20px rgba(15, 23, 42, 0.06);
+  --shadow-elevated: 0 10px 15px rgba(15, 23, 42, 0.1), 0 4px 6px rgba(15, 23, 42, 0.08);
+  --shadow-floating: 0 18px 44px rgba(15, 23, 42, 0.18);
 
   /* ---- Spacing (4px base) ---- */
   --space-1: 4px;
@@ -51,10 +85,47 @@
   --radius-lg: 22px;
   --radius-pill: 999px;
 
+  /* ---- Type scale ---- */
+  --font-sans: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Plus Jakarta Sans', var(--font-sans);
+
+  --text-xs: 12px;
+  --text-sm: 13.5px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+  --text-display: 32px;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+
   /* ---- Motion ---- */
   --motion-fast: 120ms;
   --motion-base: 200ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---- Layering ---- */
+  --z-nav: 40;
+  --z-sheet: 50;
+  --z-dialog: 60;
+  --z-toast: 70;
+
+  /* ---- Touch ---- */
+  --tap-target-min: 44px;
+
+  /*
+   * Tells the browser which native UI (date/time picker icons, scrollbars,
+   * form control chrome) to render, independent of our own CSS colours.
+   * Without this, Chrome draws native date/time picker icons for light
+   * mode even on a dark background, making them unreadable.
+   */
+  color-scheme: light dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -64,48 +135,89 @@
   }
 }
 
-/* Dark mode: system preference, unless overridden by an explicit choice */
+/*
+ * Dark overrides are colour-only (everything else in :root applies as-is)
+ * and are intentionally identical between the two selectors below: the
+ * @media block handles "system" preference, the [data-theme='dark'] block
+ * handles an explicit user choice that overrides the system preference.
+ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --color-primary: var(--blue-400);
+    --color-primary-fg: #0b0f17;
+    --color-primary-soft: #16233a;
     --color-bg: #0b0f17;
     --color-surface: #131a26;
     --color-surface-2: #1d2634;
+    --color-surface-3: #263243;
     --color-text: #e8edf6;
-    --color-text-muted: #8b98ac;
+    --color-text-muted: #8fa0b6;
+    --color-text-on-primary: #0b0f17;
     --color-border: #222c3c;
+    --color-border-strong: #35415470;
+    --color-scrim: rgba(0, 0, 0, 0.6);
+    --color-focus-ring: var(--blue-400);
+
+    --color-disabled-bg: #1a212e;
+    --color-disabled-fg: #545f70;
 
     --color-income: #4ade80;
     --color-income-soft: #12301f;
     --color-expense: #f87171;
     --color-expense-soft: #331616;
     --color-warning: #fbbf24;
+    --color-warning-soft: #3a2c0c;
+    --color-danger: #f87171;
+    --color-danger-soft: #331616;
 
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-elevated: 0 10px 24px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.4);
+    --shadow-floating: 0 18px 44px rgba(0, 0, 0, 0.55);
   }
 }
 
-/* Dark mode: explicit user choice, regardless of system preference */
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --color-primary: var(--blue-400);
+  --color-primary-fg: #0b0f17;
+  --color-primary-soft: #16233a;
   --color-bg: #0b0f17;
   --color-surface: #131a26;
   --color-surface-2: #1d2634;
+  --color-surface-3: #263243;
   --color-text: #e8edf6;
-  --color-text-muted: #8b98ac;
+  --color-text-muted: #8fa0b6;
+  --color-text-on-primary: #0b0f17;
   --color-border: #222c3c;
+  --color-border-strong: #35415470;
+  --color-scrim: rgba(0, 0, 0, 0.6);
+  --color-focus-ring: var(--blue-400);
+
+  --color-disabled-bg: #1a212e;
+  --color-disabled-fg: #545f70;
 
   --color-income: #4ade80;
   --color-income-soft: #12301f;
   --color-expense: #f87171;
   --color-expense-soft: #331616;
   --color-warning: #fbbf24;
+  --color-warning-soft: #3a2c0c;
+  --color-danger: #f87171;
+  --color-danger-soft: #331616;
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0 10px 24px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.4);
+  --shadow-floating: 0 18px 44px rgba(0, 0, 0, 0.55);
 }
 
 html,
 body {
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+/* One consistent focus style across every interactive element. */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }

@@ -5,9 +5,10 @@ your own device. No account, no server, no cloud. Android-first, installable, of
 
 ## Status
 
-**M0 — Project setup: done.** App shell, routing, theming, PWA manifest/service
-worker, and the full test toolchain are in place. Feature milestones (M1–M10) are
-tracked in [docs/PLAN.md](docs/PLAN.md).
+**M0 — Project setup: done.** **M1 — Design system & app shell: done.** The full
+reusable component library (buttons, forms, sheets/dialogs, money/task building
+blocks, charts) is live at `/kitchen-sink`, in light and dark. Feature milestones
+(M2–M10) are tracked in [docs/PLAN.md](docs/PLAN.md).
 
 Chosen design direction: **Option A "Soft Cards"**. Reminders ship as a pure PWA for
 now (see PRD §12/OD-1). Defaults: base currency ETB, financial year starts January,
