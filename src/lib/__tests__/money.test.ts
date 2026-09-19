@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   convertMinorUnits,
   formatMinorUnits,
+  formatMinorUnitsPlain,
   formatMoney,
   minorUnitExponent,
   parseAmountToMinorUnits,
@@ -34,6 +35,19 @@ describe('formatMinorUnits', () => {
   })
   it('formats zero correctly', () => {
     expect(formatMinorUnits(0, 'ETB')).toBe('0.00')
+  })
+})
+
+describe('formatMinorUnitsPlain', () => {
+  it('never includes a thousands separator, unlike formatMinorUnits', () => {
+    expect(formatMinorUnitsPlain(1842000, 'ETB')).toBe('18420.00')
+    expect(formatMinorUnitsPlain(1235000, 'JPY')).toBe('1235000')
+  })
+  it('formats a 3-decimal currency', () => {
+    expect(formatMinorUnitsPlain(1234, 'KWD')).toBe('1.234')
+  })
+  it('formats zero correctly', () => {
+    expect(formatMinorUnitsPlain(0, 'ETB')).toBe('0.00')
   })
 })
 

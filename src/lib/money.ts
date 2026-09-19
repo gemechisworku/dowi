@@ -17,7 +17,7 @@ export function minorUnitExponent(currency: string): number {
   return 2
 }
 
-/** Formats an integer minor-units amount as "1,234.50" (grouping, fixed decimals). */
+/** Formats an integer minor-units amount as "1,234.50" (grouping, fixed decimals) — for on-screen display. */
 export function formatMinorUnits(amountMinorUnits: number, currency: string): string {
   const exponent = minorUnitExponent(currency)
   const divisor = 10 ** exponent
@@ -26,6 +26,19 @@ export function formatMinorUnits(amountMinorUnits: number, currency: string): st
     minimumFractionDigits: exponent,
     maximumFractionDigits: exponent,
   })
+}
+
+/**
+ * Formats an integer minor-units amount as a plain decimal string with no
+ * thousands separator — e.g. "1500" (JPY) or "1234.50" (ETB), never
+ * "1,234.50". For CSV/data-interchange output, where a locale-formatted
+ * grouping separator is at best noise and at worst (in a comma-decimal
+ * locale reading the file) actively misparsed as a different number.
+ */
+export function formatMinorUnitsPlain(amountMinorUnits: number, currency: string): string {
+  const exponent = minorUnitExponent(currency)
+  const divisor = 10 ** exponent
+  return (amountMinorUnits / divisor).toFixed(exponent)
 }
 
 export interface FormatMoneyOptions {

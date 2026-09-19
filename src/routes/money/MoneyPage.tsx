@@ -123,6 +123,13 @@ export function MoneyPage() {
 
       <div className="flex gap-2 overflow-x-auto px-4 py-2 text-sm">
         <Link
+          to="/money/reports"
+          className="whitespace-nowrap font-semibold"
+          style={{ color: 'var(--color-primary)' }}
+        >
+          Reports
+        </Link>
+        <Link
           to="/money/categories"
           className="whitespace-nowrap font-semibold"
           style={{ color: 'var(--color-primary)' }}

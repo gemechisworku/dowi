@@ -256,24 +256,70 @@ right in a screenshot" and "is actually right" diverge):
 
 ---
 
-## M4 — Money: reports
+## M4 — Money: reports 🚧 in progress
 
 **Deliverable:** the "what did I earn vs spend" answer, for any period.
 
-- [ ] Report screen: `PeriodSelector` (Day/Week/Month/FY) + `PeriodStepper`
-- [ ] Headline Income / Expense / Net + delta vs previous comparable period
-- [ ] `GroupedBarChart` income vs expense across sub-periods (FY→months,
-      Month→weeks, Week→days, Day→categories)
-- [ ] Category breakdown: donut + ranked list (amount, %, count), income/expense toggle
-- [ ] Source and account breakdowns
-- [ ] Mixed-currency handling: "≈" marking, rate footnote, missing-rate warning chip
-      linking to Settings
-- [ ] "View transactions in this period" → the filtered M3 list
-- [ ] CSV export + plain-text summary share
-- [ ] Aggregation runs off indexed queries; memoised; tested against fixtures
+**Branch:** `m4-money-reports` (local, not yet pushed/PR'd — paused mid-milestone,
+picking back up next session).
+
+- [x] `buildReport()` (`src/routes/money/reports/aggregate.ts`) — the pure,
+      fixture-tested aggregation core: headline income/expense/net, previous-period
+      delta (`null`, not `NaN`/`Infinity`, when the previous period was exactly
+      zero), category/source/account breakdowns, sub-period buckets for the chart
+      (`FY→months, Month→weeks, Week→days, Day→categories`), and mixed-currency
+      handling via M2's `sumConverted` (excluded currencies are reported, never
+      silently dropped)
+- [x] `ReportsPage` UI: `PeriodSelector` + `PeriodStepper`, headline `StatTile`s,
+      `GroupedBarChart`/`BarChart` for the sub-period view, `DonutChart` + ranked
+      list for the category breakdown (income/expense toggle) with overflow past 5
+      categories folded into an "Other" slice so the donut and the list underneath
+      always sum to the same total, source/account breakdown lists, a missing-rate
+      warning chip linking to `/money/rates`, "View transactions" (→ M3's list,
+      filtered to the period) and "Export CSV"
+- [x] CSV export (`csv.ts`) — RFC 4180 quoting/escaping, and amounts written with
+      `formatMinorUnitsPlain` (no thousands separator) rather than the display
+      formatter — see the bug note below
+- [x] Route wired at `/money/reports`, linked from Money's nav row
+- [ ] Plain-text summary "share" (Web Share API / clipboard fallback) — not yet built
+- [ ] Full manual verification pass (TESTING.md §M4) and `e2e/reports.spec.ts` — not
+      yet done; this is where the session paused
+- [ ] Perf check against a 5,000-row fixture _in the UI path_ (the aggregation
+      function itself is already covered by a unit test at this scale)
+
+**Known issue, not yet root-caused:** manually exercising `/money`'s add-transaction
+sheet via `npm run dev` (Vite dev server, React Strict Mode) intermittently fails to
+open on click — confirmed **absent** from the production build (`npm run build && npm
+run preview`), where `e2e/money.spec.ts`'s "add sheet opens on the first tap" test
+still passes 100 % of runs. Almost certainly a further wrinkle in the same
+Strict-Mode-double-invoke-vs-`Sheet`-history-timing family as the two bugs already
+fixed in M3 (see M3's section above) — next session should reproduce it under
+`test:e2e`'s dev-server mode (if reproducible there) rather than ad hoc `npm run dev`
+smoke-testing, since that's what actually matters for correctness.
 
 **Done when:** a fixture of known transactions produces exactly the expected totals in
 every period, and the numbers match a hand calculation. **Tag:** `m4` · **Test guide:** TESTING.md §M4
+
+**Verified so far:** 184 Vitest unit tests (up from 144) — `aggregate.test.ts` (25
+cases: headline totals, breakdown-sums-to-total, previous-period delta including the
+zero-previous-period edge case, week-start and FY-start configuration, mixed
+currency, empty period, every sub-period bucket shape, and a 5,000-transaction
+perf case under 100 ms), `csv.test.ts` (8 cases), `periodLabel.test.ts` (4 cases).
+Not yet run: `test:e2e` for the new Reports screens, or a build-size check.
+
+**Bugs found so far this milestone:**
+
+- **Account breakdown summed income and expense together as if the same sign**,
+  producing a meaningless total (e.g. 100,000 income + 30,000 expense through the
+  same account showing as "130,000" instead of a net "70,000"). Fixed by giving
+  `breakdownBy()` an explicit per-transaction sign function for the one breakdown
+  that legitimately mixes both transaction types.
+- **CSV amounts used the display formatter**, which adds a thousands-group
+  separator (`"1,500"` for ¥1,500) — correctly RFC-4180-quoted since it contains a
+  comma, but fragile for a data-interchange format: some spreadsheet locales treat
+  `,` as the decimal separator, and it's needless quoting either way. Added
+  `formatMinorUnitsPlain()` (no grouping) for CSV/data-export use, keeping the
+  grouped `formatMinorUnits()` for on-screen display only.
 
 ---
 
