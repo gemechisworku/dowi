@@ -6,8 +6,10 @@ node_modules/
 # build output
 dist/
 dist-ssr/
+dev-dist/
 build/
 *.local
+*.tsbuildinfo
 
 # env
 .env

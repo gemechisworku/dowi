@@ -1,0 +1,6 @@
+dist
+dev-dist
+coverage
+playwright-report
+node_modules
+design/*.html

@@ -15,8 +15,8 @@ npm run build && npm run preview -- --host   # serve to your phone over LAN
 ```
 
 **Testing on the actual phone.** Run `npm run preview -- --host`, note the LAN URL
-(e.g. `http://192.168.1.10:4173`), open it in Chrome on Android, menu → *Add to Home
-screen*. Service workers need a secure context: `localhost` is fine, a LAN IP is not
+(e.g. `http://192.168.1.10:4173`), open it in Chrome on Android, menu → _Add to Home
+screen_. Service workers need a secure context: `localhost` is fine, a LAN IP is not
 for notification testing — for those use `npx vite preview --host` behind
 `ngrok`/`cloudflared`, or Chrome's `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
 with your LAN origin added.
@@ -24,8 +24,8 @@ with your LAN origin added.
 **Test data.** `npm run seed:demo` loads a fixed fixture (90 days, 2 currencies, known
 totals) used by the report tests below. `npm run seed:clear` wipes it.
 
-**Regression rule.** Before tagging any milestone, re-run the manual scripts for *all
-previous* milestones that touch the same data. Most bugs here will be "reports stopped
+**Regression rule.** Before tagging any milestone, re-run the manual scripts for _all
+previous_ milestones that touch the same data. Most bugs here will be "reports stopped
 matching after I changed the schema".
 
 ---
@@ -35,6 +35,7 @@ matching after I changed the schema".
 **Automated:** `npm run typecheck && npm run lint && npm run build` all pass.
 
 **Manual**
+
 1. `npm run dev` → app shell loads at `localhost:5173`, no console errors.
 2. Tap each of the 4 bottom-nav placeholders → URL changes, back button works.
 3. `npm run build && npm run preview -- --host` → open on the phone.
@@ -52,11 +53,13 @@ matching after I changed the schema".
 ## §M1 — Design system & app shell
 
 **Automated**
+
 - Component unit tests: each primitive renders every variant/state.
 - Playwright screenshot suite over `/kitchen-sink` in light and dark.
 - `axe` accessibility scan on `/kitchen-sink` — zero violations.
 
 **Manual (on the phone)**
+
 1. Open `/kitchen-sink`. Every component is visible and none overflows the viewport.
 2. Toggle Light → Dark → System. Check specifically: card borders are visible in dark,
    disabled text is still readable, chart colours still distinguishable, no pure-black
@@ -78,6 +81,7 @@ matching after I changed the schema".
 ## §M2 — Data layer
 
 **Automated (this is the most important test suite in the project)**
+
 - Repos: create → read → update → soft-delete → restore, per entity.
 - Money maths:
   - `parseAmount("123.45","ETB") === 12345`; `("1234","JPY") === 1234`; `("1.234","KWD") === 1234`
@@ -96,6 +100,7 @@ matching after I changed the schema".
 - Migration test: open a v1 DB fixture with the v2 schema → data intact.
 
 **Manual**
+
 1. Add a record via a debug screen, force-close the app, reopen → it is still there.
 2. Settings → Export → a `.json` file lands in Downloads and is non-empty.
 3. Settings → Erase all → confirm → app is empty.
@@ -109,6 +114,7 @@ matching after I changed the schema".
 ## §M3 — Money capture
 
 **Automated**
+
 - Form validation: zero/negative/empty amount blocked; missing category blocked.
 - Create → appears in list; edit → list updates; delete → removed, undo → restored
   with the same id.
@@ -116,6 +122,7 @@ matching after I changed the schema".
 - Category delete with transactions attached → reassign flow, no orphans.
 
 **Manual**
+
 1. From Home, tap the expense quick action. Time yourself: amount → category → save
    should take **under 10 seconds and ≤ 4 taps**.
 2. Add an income in your base currency. Add one in a different currency (e.g. USD).
@@ -135,6 +142,7 @@ matching after I changed the schema".
 ## §M4 — Money reports
 
 **Automated** (against `seed:demo`, whose totals are known constants)
+
 - Day / Week / Month / FY totals equal the fixture constants exactly.
 - Sum of category slices === headline total (to the minor unit), for income and expense.
 - Net === income − expense, always.
@@ -150,6 +158,7 @@ matching after I changed the schema".
   and quotes in notes escaped.
 
 **Manual**
+
 1. Open Reports → Month. Hand-add 3 income and 3 expense entries you can total
    mentally. Check Income, Expense and Net against your own arithmetic.
 2. Step ‹ / › across months, including across the year boundary.
@@ -171,6 +180,7 @@ ever fails, stop and fix before anything else — the reports are the product.
 ## §M5 — Notes
 
 **Automated**
+
 - Applying each mark/node produces the expected Tiptap JSON, and re-loading that JSON
   re-renders it.
 - `contentText` derivation strips formatting and powers search hits inside bodies.
@@ -181,6 +191,7 @@ ever fails, stop and fix before anything else — the reports are the product.
 - Trash: soft delete → restore → note identical; purge after 30 days.
 
 **Manual**
+
 1. New note. Use **every** format: H1, H2, H3, body, bold, italic, underline,
    strikethrough, highlight (two colours), bullet list, numbered list, checklist,
    quote, inline code, code block, divider, link.
@@ -200,6 +211,7 @@ ever fails, stop and fix before anything else — the reports are the product.
 ## §M6 — Tasks
 
 **Automated**
+
 - Task/subtask CRUD; parent progress `n/m` recomputes on every subtask toggle.
 - A task created in the plan screen gets the correct ISO `weekKey`, including for
   dates in the first and last week of a year.
@@ -211,6 +223,7 @@ ever fails, stop and fix before anything else — the reports are the product.
 - Completing all subtasks prompts but does not auto-complete the parent.
 
 **Manual (run this across a real week if you can)**
+
 1. Monday: open Plan your week. Add 5 tasks, 2 with deadlines, 1 with 3 subtasks.
 2. Confirm all 5 show under this week's chip.
 3. Tuesday–Friday: complete 3 of them, including all subtasks of the subtask one.
@@ -231,6 +244,7 @@ ever fails, stop and fix before anything else — the reports are the product.
 > is only useful for the first two automated checks.
 
 **Automated**
+
 - Next-fire-time computation for each reminder type across day/week/DST boundaries.
 - Quiet hours: a reminder inside the window writes an inbox entry and does **not**
   call `showNotification`.
@@ -239,6 +253,7 @@ ever fails, stop and fix before anything else — the reports are the product.
 - Deep-link routing: each notification payload resolves to the right route.
 
 **Manual**
+
 1. Settings → Reminders → enable Weekly plan. The explainer appears **before** the
    browser permission prompt. Grant it.
 2. Tap "Send a test notification" → it arrives on the phone within seconds.
@@ -246,8 +261,8 @@ ever fails, stop and fix before anything else — the reports are the product.
    → Notification arrives. Tap it → the app opens **on that task**.
 4. Repeat but fully close the app for 10 minutes → note whether it arrives late or not
    at all, then open the app → the catch-up notification fires **once** and the inbox
-   has the entry. *(This is the known PWA limitation from PRD §D4 — record the actual
-   behaviour on your device here.)*
+   has the entry. _(This is the known PWA limitation from PRD §D4 — record the actual
+   behaviour on your device here.)_
 5. Set quiet hours to cover now → trigger a reminder → no OS notification, but the bell
    badge increments and the inbox has it.
 6. Deny permission in Android settings → the app shows the denied state honestly with
@@ -264,6 +279,7 @@ ever fails, stop and fix before anything else — the reports are the product.
 ## §M8 — Home
 
 **Automated**
+
 - Home with an empty DB renders the empty state; with the demo fixture renders all cards.
 - Money summary numbers === the M4 report numbers for the same period.
 - Today's tasks card === the first 5 of the Today view.
@@ -271,6 +287,7 @@ ever fails, stop and fix before anything else — the reports are the product.
 - No cumulative layout shift once data resolves (skeletons reserve the space).
 
 **Manual**
+
 1. Cold-launch from the home screen → Home paints in under ~2.5 s, no flash of
    unstyled or mis-themed content.
 2. Every number on Home matches the corresponding feature screen — check Money
@@ -287,12 +304,14 @@ ever fails, stop and fix before anything else — the reports are the product.
 ## §M9 — Settings & data
 
 **Automated**
+
 - Every setting: change → persisted → re-read after a simulated restart.
 - Changing week-start / FY-start recomputes reports immediately (assert a changed total).
 - Import merge vs replace behave differently and correctly; the diff preview counts match.
 - Erase-all requires the typed confirmation; cancelling changes nothing.
 
 **Manual**
+
 1. Change theme, text size, base currency, FY start, week start — one at a time,
    restarting the app after each. All persist; all take effect immediately.
 2. Change FY start to July → open the FY report → the range and label change and the
@@ -308,6 +327,7 @@ ever fails, stop and fix before anything else — the reports are the product.
 ## §M10 — Release
 
 **Automated**
+
 - Lighthouse (mobile, throttled) ≥ 90 for Performance, Accessibility, Best Practices, PWA.
 - Bundle: initial JS ≤ 180 KB gz; the Tiptap chunk is not in the initial load.
 - `axe` scan on every top-level route, light and dark: zero violations.
@@ -317,6 +337,7 @@ ever fails, stop and fix before anything else — the reports are the product.
   note → plan a week → complete a task → review the week → export → erase → import.
 
 **Manual — the one-week soak**
+
 1. Install the release build on your phone and delete any dev version.
 2. Use it as your only tracker for a week: log every transaction, write notes, plan on
    Monday, review on Saturday.

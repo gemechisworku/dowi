@@ -23,29 +23,44 @@ Companion to [PRD.md](./PRD.md). Verification steps for every deliverable are in
 main                      always green
   m3-money-capture        one branch per milestone
 ```
+
 Commits: `feat(money): add transaction form`, `fix(report): week boundary off-by-one`,
 `test(money): FY boundary cases`, `chore: bump deps`, `docs: update PRD §5.4`.
 
 ---
 
-## M0 — Project setup
+## M0 — Project setup ✅ done
 
 **Deliverable:** an empty but correct, installable app shell.
 
-- [ ] `npm create vite@latest . -- --template react-ts`; Node 22+ / Vite 6
-- [ ] TypeScript `strict: true`, `noUncheckedIndexedAccess: true`; path alias `@/*`
-- [ ] Tailwind v4 + `src/styles/tokens.css` (empty token file, filled in M1)
-- [ ] React Router 7 with a root layout route and four placeholder tab routes
-- [ ] `vite-plugin-pwa` — manifest (name, short_name "Dowi", theme `#2563eb`,
-      standalone, portrait), 192/512 maskable icons, Workbox precache, update prompt
-- [ ] ESLint + Prettier + `lint-staged` + `husky` pre-commit (lint + typecheck)
-- [ ] Vitest + RTL + `fake-indexeddb` wired; Playwright wired with a Pixel 7 project
-- [ ] Scripts: `dev`, `build`, `preview`, `test`, `test:e2e`, `lint`, `typecheck`
-- [ ] `README.md` with run/build/install-on-phone instructions
+- [x] Vite 8 + React 19 + TypeScript template; Node 22+
+- [x] TypeScript `strict: true`, `noUncheckedIndexedAccess: true`; path alias `@/*`
+- [x] Tailwind v4 + `src/styles/tokens.css` (starter token set — colour, spacing,
+      radii, motion, light/dark; expanded with component-specific tokens in M1)
+- [x] React Router 7 with a root layout route (`AppLayout`) and four routed
+      placeholder screens (Home, Money, Notes, Tasks)
+- [x] `vite-plugin-pwa` — manifest (name, short_name "Dowi", theme `#2563eb`,
+      standalone, portrait, maskable icons, shortcuts), Workbox precache, update prompt
+- [x] ESLint + Prettier + `lint-staged` + `husky` pre-commit (lint + format)
+- [x] Vitest + RTL + `fake-indexeddb` wired; Playwright wired with Pixel 7 light/dark
+      projects
+- [x] Scripts: `dev`, `build`, `preview`, `test`, `test:e2e`, `lint`, `typecheck`, `format`
+- [x] `README.md` with run/build/install-on-phone instructions
+
+**Pulled forward from M1** (needed to make M0 navigable/testable rather than static
+placeholder text): a minimal `TopAppBar` (bell + settings) and floating `BottomNav`
+per the Option A design direction, a `ThemeProvider` (system/light/dark, persisted,
+no-flash), and a `/kitchen-sink` stub that exercises the theme toggle. **Not yet
+built:** the actual component primitive library (buttons, inputs, sheets, dialogs,
+charts, etc.) — that is the substance of M1.
 
 **Done when:** `npm run build && npm run preview`, opened on the phone over LAN,
 offers "Add to Home screen", launches standalone, and works with Wi-Fi off.
 **Tag:** `m0` · **Test guide:** TESTING.md §M0
+
+**Verified:** `typecheck`, `lint`, `test` (Vitest) and `test:e2e` (Playwright, Pixel 7,
+light + dark) all pass; production build is 84 KB gzipped JS (budget: 180 KB);
+manifest and service worker confirmed served correctly from the preview build.
 
 ---
 
@@ -94,7 +109,7 @@ navigable, and the four tabs route correctly with the nav preserving scroll posi
       `currencies`, `rates`, `notes`, `noteCollections`, `tasks`, `taskCollections`,
       `notifications`, `settings`, `meta`
 - [ ] Indexes chosen for the real queries (e.g. `transactions: date, type, categoryId,
-      [type+date], currency`)
+[type+date], currency`)
 - [ ] Typed repository per entity: `list`, `get`, `create`, `update`, `remove`,
       `restore` — every repo implements soft delete
 - [ ] Money helpers: minor-unit parse/format, per-currency exponent, safe add/sum,
@@ -279,18 +294,19 @@ M0 ─ M1 ─┬─ M2 ─┬─ M3 ─ M4 ─┐
          │      ├─ M5 ──────┼─ M8 ─ M9 ─ M10
          │      └─ M6 ─ M7 ─┘
 ```
+
 M3+M4 (Money), M5 (Notes) and M6+M7 (Tasks) are independent of one another after M2,
 so they can be built in any order — or in parallel if you ever want to.
 
 ## Suggested sequencing
 
-| Order | Milestones | Why |
-|---|---|---|
-| 1 | M0, M1, M2 | Foundation; nothing meaningful ships without these |
-| 2 | M3, M4 | Money is the feature with the most day-to-day value — start using it immediately |
-| 3 | M6, M7 | Tasks + reminders; the weekly habit loop starts paying off |
-| 4 | M5 | Notes; the largest single dependency (Tiptap) and the least time-critical |
-| 5 | M8, M9, M10 | Tie together, configure, polish, release |
+| Order | Milestones  | Why                                                                              |
+| ----- | ----------- | -------------------------------------------------------------------------------- |
+| 1     | M0, M1, M2  | Foundation; nothing meaningful ships without these                               |
+| 2     | M3, M4      | Money is the feature with the most day-to-day value — start using it immediately |
+| 3     | M6, M7      | Tasks + reminders; the weekly habit loop starts paying off                       |
+| 4     | M5          | Notes; the largest single dependency (Tiptap) and the least time-critical        |
+| 5     | M8, M9, M10 | Tie together, configure, polish, release                                         |
 
-You can start *using* Dowi for real after M4 — earlier milestones are usable but
+You can start _using_ Dowi for real after M4 — earlier milestones are usable but
 incomplete, and M2's export means nothing you enter will be lost along the way.
