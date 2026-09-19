@@ -5,11 +5,12 @@ your own device. No account, no server, no cloud. Android-first, installable, of
 
 ## Status
 
-**M0 — Project setup: done.** **M1 — Design system & app shell: done.** **M2 — Data
-layer: done.** The full reusable component library is live at `/kitchen-sink`; the
-local IndexedDB (Dexie) database — repositories, money/period maths, export/import,
-storage usage — is live at `/debug/data`, a temporary panel until M9's real Settings
-UI. Feature milestones (M3–M10) are tracked in [docs/PLAN.md](docs/PLAN.md).
+**M0–M3 done: project setup, design system, data layer, and money capture.** Money
+(`/money`) is a real, usable feature — add/edit/delete income & expenses in any
+currency, filter and search, manage categories/sources/accounts/exchange rates. The
+full component library is at `/kitchen-sink`; the raw data layer debug panel (export/
+import/erase, superseded by M9's real Settings UI) is at `/debug/data`. Feature
+milestones (M4–M10) are tracked in [docs/PLAN.md](docs/PLAN.md).
 
 Chosen design direction: **Option A "Soft Cards"**. Reminders ship as a pure PWA for
 now (see PRD §12/OD-1). Defaults: base currency ETB, financial year starts January,

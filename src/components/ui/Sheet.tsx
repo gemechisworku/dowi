@@ -23,6 +23,13 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
   // still needs consuming, so scrim/Escape/programmatic closes don't leave
   // a stale entry that would eat the user's *next* physical back press.
   const ownsHistoryEntry = useRef(false)
+  // The URL at the moment we pushed our entry. Sheet content can itself
+  // change the URL while open (e.g. a filter sheet's Apply calling
+  // setSearchParams) — that change lands on *our* pushed entry, since it's
+  // the current one. If we blindly called history.back() to consume that
+  // entry afterward, we'd revert the content's own legitimate change along
+  // with it. Comparing against this lets us skip the consume in that case.
+  const pushedHrefRef = useRef<string | null>(null)
   // Consuming that entry via history.back() re-fires 'popstate', which
   // would otherwise call onClose a second time — this guards onClose to
   // fire exactly once per open/close cycle no matter which path triggered it.
@@ -37,12 +44,21 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
     onClose()
   }
 
-  // Close requested from *inside* the sheet (scrim, Escape, form submit, ...).
-  function requestClose() {
-    if (ownsHistoryEntry.current) {
-      ownsHistoryEntry.current = false
+  // Consumes the pushed entry via history.back() — but only if the URL is
+  // still what it was when we pushed it (see pushedHrefRef above). If
+  // something changed it while our entry was current, going back would
+  // revert that change, so we leave the entry in place instead: a rare,
+  // harmless extra history frame beats silently undoing app state.
+  function consumeHistoryEntryIfUnchanged() {
+    ownsHistoryEntry.current = false
+    if (window.location.href === pushedHrefRef.current) {
       window.history.back()
     }
+  }
+
+  // Close requested from *inside* the sheet (scrim, Escape, form submit, ...).
+  function requestClose() {
+    if (ownsHistoryEntry.current) consumeHistoryEntryIfUnchanged()
     closeOnce()
   }
 
@@ -62,6 +78,7 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
     closedRef.current = false
     window.history.pushState({ dowiSheet: true }, '')
     ownsHistoryEntry.current = true
+    pushedHrefRef.current = window.location.href
     function handlePopState() {
       ownsHistoryEntry.current = false
       closeOnce()
@@ -72,10 +89,18 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
       // Covers a close path that bypassed requestClose (e.g. a "Cancel"
       // button that calls the outer onClose prop directly) — the pushed
       // entry must still be consumed so it doesn't eat a later back press.
-      if (ownsHistoryEntry.current) {
-        ownsHistoryEntry.current = false
-        window.history.back()
-      }
+      if (!ownsHistoryEntry.current) return
+      // Deferred rather than called immediately: React (Strict Mode, in
+      // particular) can synchronously run mount → cleanup → mount again for
+      // the *same* open sheet. history.back() only resolves asynchronously
+      // (a later 'popstate'), so calling it here unconditionally would land
+      // after that second mount already pushed its own entry — closing the
+      // sheet the instant it re-opens. Deferring one microtask lets that
+      // second mount claim ownership first; we only actually pop the entry
+      // if nothing did.
+      queueMicrotask(() => {
+        if (ownsHistoryEntry.current) consumeHistoryEntryIfUnchanged()
+      })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])

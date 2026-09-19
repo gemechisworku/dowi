@@ -54,7 +54,16 @@ test.describe('Kitchen sink', () => {
 })
 
 test.describe('Top-level screens', () => {
-  for (const path of ['/', '/money', '/notes', '/tasks']) {
+  for (const path of [
+    '/',
+    '/money',
+    '/money/categories',
+    '/money/sources',
+    '/money/accounts',
+    '/money/rates',
+    '/notes',
+    '/tasks',
+  ]) {
     test(`${path} has zero automatically-detectable accessibility violations`, async ({ page }) => {
       await page.goto(path)
       const results = await new AxeBuilder({ page }).analyze()
