@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dowi Design Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue-50:#eff6ff; --blue-100:#dbeafe; --blue-200:#bfdbfe; --blue-300:#93c5fd;
+  --blue-400:#60a5fa; --blue-500:#3b82f6; --blue-600:#2563eb; --blue-700:#1d4ed8; --blue-900:#1e3a8a;
+  --green:#16a34a; --green-soft:#dcfce7; --red:#dc2626; --red-soft:#fee2e2; --amber:#d97706;
+  --page-bg:#f1f3f7; --page-fg:#0f172a; --page-muted:#64748b; --page-card:#ffffff; --page-line:#e2e8f0;
+  --ph-bg:#f6f7fa; --ph-surface:#ffffff; --ph-surface-2:#f1f5f9; --ph-fg:#0f172a;
+  --ph-muted:#64748b; --ph-line:#e5e9f0; --ph-accent:var(--blue-600); --ph-accent-soft:var(--blue-50);
+  --ph-shadow:0 1px 2px rgba(15,23,42,.06), 0 6px 20px rgba(15,23,42,.06);
+}
+:root:not([data-theme="light"]) { }
+[data-theme="dark"]{
+  --page-bg:#0b0f17; --page-fg:#e8edf6; --page-muted:#8b98ac; --page-card:#131a26; --page-line:#222c3c;
+  --ph-bg:#0d1219; --ph-surface:#161d29; --ph-surface-2:#1d2634; --ph-fg:#e8edf6;
+  --ph-muted:#8fa0b6; --ph-line:#27313f; --ph-accent:var(--blue-400); --ph-accent-soft:#16233a;
+  --green:#4ade80; --green-soft:#12301f; --red:#f87171; --red-soft:#331616; --amber:#fbbf24;
+  --ph-shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page-bg:#0b0f17; --page-fg:#e8edf6; --page-muted:#8b98ac; --page-card:#131a26; --page-line:#222c3c;
+    --ph-bg:#0d1219; --ph-surface:#161d29; --ph-surface-2:#1d2634; --ph-fg:#e8edf6;
+    --ph-muted:#8fa0b6; --ph-line:#27313f; --ph-accent:var(--blue-400); --ph-accent-soft:#16233a;
+    --green:#4ade80; --green-soft:#12301f; --red:#f87171; --red-soft:#331616; --amber:#fbbf24;
+    --ph-shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page-bg); color:var(--page-fg);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px;margin:0 auto;padding:40px 16px 96px}
+header.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+h1{font-family:"Plus Jakarta Sans",Inter,sans-serif;font-size:clamp(26px,4vw,38px);line-height:1.1;margin:0 0 8px;letter-spacing:-.02em}
+.sub{color:var(--page-muted);font-size:15px;max-width:60ch;line-height:1.6;margin:0}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  font:inherit;font-size:13px;font-weight:600;color:var(--page-fg);background:var(--page-card);
+  border:1px solid var(--page-line);border-radius:999px;padding:9px 16px;cursor:pointer;
+  transition:background .15s,border-color .15s;
+}
+.btn:hover{border-color:var(--blue-400)}
+.btn[aria-pressed="true"],.btn.active{background:var(--blue-600);border-color:var(--blue-600);color:#fff}
+hr.rule{border:0;border-top:1px solid var(--page-line);margin:28px 0}
+
+.option{margin-top:40px;scroll-margin-top:20px}
+.opthead{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:baseline;margin-bottom:6px}
+.badge{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#fff;background:var(--blue-600);padding:5px 11px;border-radius:7px}
+.opthead h2{font-family:"Plus Jakarta Sans",sans-serif;font-size:24px;margin:0;letter-spacing:-.01em}
+.tagline{color:var(--page-muted);font-size:14px}
+.optbody{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:28px;align-items:start;margin-top:18px}
+@media (max-width:900px){.optbody{grid-template-columns:1fr}}
+.phones{display:flex;gap:22px;flex-wrap:wrap}
+.spec{background:var(--page-card);border:1px solid var(--page-line);border-radius:16px;padding:18px 20px}
+.spec h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--page-muted);margin:0 0 10px}
+.spec ul{margin:0 0 16px;padding-left:18px;font-size:13.5px;line-height:1.65;color:var(--page-fg)}
+.spec ul:last-child{margin-bottom:0}
+.spec li::marker{color:var(--blue-500)}
+.spec b{font-weight:600}
+
+/* ---------- phone frame ---------- */
+.phone{
+  width:312px;flex:0 0 auto;border-radius:38px;background:var(--ph-bg);color:var(--ph-fg);
+  border:9px solid #1b2230; box-shadow:0 18px 44px rgba(15,23,42,.18);
+  overflow:hidden;position:relative;height:648px;display:flex;flex-direction:column;
+  font-size:13px;
+}
+[data-theme="dark"] .phone{border-color:#2a3444}
+.phone .caption{position:absolute;inset:auto 0 0 0}
+.screen{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:9px 18px 3px;font-size:11px;font-weight:600;color:var(--ph-muted);flex:0 0 auto}
+.scroll{flex:1;overflow:hidden;position:relative}
+.scrollinner{position:absolute;inset:0;overflow:auto;padding-bottom:12px}
+.scrollinner::-webkit-scrollbar{width:0}
+.phcap{text-align:center;font-size:12px;color:var(--page-muted);margin-top:10px;font-weight:500}
+.phonewrap{display:flex;flex-direction:column;align-items:center}
+
+.money{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.pos{color:var(--green)} .neg{color:var(--red)}
+.mut{color:var(--ph-muted)}
+.row{display:flex;align-items:center;gap:10px}
+.between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:15px;flex:0 0 auto;background:var(--ph-surface-2)}
+.dot{width:8px;height:8px;border-radius:50%}
+.chk{width:20px;height:20px;border-radius:6px;border:2px solid var(--ph-muted);flex:0 0 auto}
+.chk.on{background:var(--ph-accent);border-color:var(--ph-accent);position:relative}
+.chk.on::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.bar{height:6px;border-radius:99px;background:var(--ph-surface-2);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:99px;background:var(--ph-accent)}
+
+/* ============ OPTION A — Soft Cards ============ */
+.optA .appbar{padding:6px 18px 12px;display:flex;align-items:center;justify-content:space-between}
+.optA .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--blue-500),var(--blue-700));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+.optA .iconbtn{width:34px;height:34px;border-radius:50%;background:var(--ph-surface);display:grid;place-items:center;position:relative;box-shadow:var(--ph-shadow)}
+.optA .card{background:var(--ph-surface);border-radius:22px;padding:16px;margin:0 16px 12px;box-shadow:var(--ph-shadow)}
+.optA .hero{background:linear-gradient(150deg,var(--blue-600),var(--blue-700) 60%,#1e3a8a);color:#fff;border-radius:24px;padding:18px;margin:0 16px 14px;box-shadow:0 10px 24px rgba(37,99,235,.28)}
+.optA .seg{display:flex;background:rgba(255,255,255,.16);border-radius:99px;padding:3px;font-size:11px;font-weight:600}
+.optA .seg span{padding:4px 11px;border-radius:99px;opacity:.75}
+.optA .seg span.on{background:#fff;color:var(--blue-700);opacity:1}
+.optA .qa{display:flex;gap:9px;padding:0 16px 14px}
+.optA .qa div{flex:1;background:var(--ph-surface);border-radius:16px;padding:10px 6px;text-align:center;font-size:10.5px;font-weight:600;box-shadow:var(--ph-shadow)}
+.optA .qa em{display:block;font-style:normal;font-size:17px;margin-bottom:3px}
+.optA .navwrap{position:absolute;left:0;right:0;bottom:0;padding:10px 16px 14px;background:linear-gradient(to top,var(--ph-bg) 62%,transparent)}
+.optA .nav{background:var(--ph-surface);border-radius:26px;box-shadow:0 8px 26px rgba(15,23,42,.14);display:flex;justify-content:space-around;padding:9px 6px;position:relative}
+[data-theme="dark"] .optA .nav{box-shadow:0 8px 26px rgba(0,0,0,.5)}
+.optA .nav i{font-style:normal;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:var(--ph-muted);font-weight:600;padding:3px 12px;border-radius:16px}
+.optA .nav i em{font-style:normal;font-size:17px}
+.optA .nav i.on{color:#fff;background:var(--ph-accent)}
+.optA .fab{position:absolute;right:18px;bottom:84px;width:54px;height:54px;border-radius:19px;background:var(--ph-accent);color:#fff;display:grid;place-items:center;font-size:26px;box-shadow:0 8px 22px rgba(37,99,235,.45)}
+
+/* ============ OPTION B — Compact Pro ============ */
+.optB .appbar{padding:4px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ph-line)}
+.optB .appbar h2{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+.optB .tabs{display:flex;gap:0;border-bottom:1px solid var(--ph-line);padding:0 16px;font-size:12px;font-weight:600}
+.optB .tabs span{padding:9px 12px;color:var(--ph-muted);border-bottom:2px solid transparent}
+.optB .tabs span.on{color:var(--ph-accent);border-bottom-color:var(--ph-accent)}
+.optB .sec{padding:12px 16px 4px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ph-muted)}
+.optB .panel{background:var(--ph-surface);border:1px solid var(--ph-line);border-radius:12px;margin:0 16px 10px;overflow:hidden}
+.optB .panel .li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--ph-line)}
+.optB .panel .li:last-child{border-bottom:0}
+.optB .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--ph-line);border:1px solid var(--ph-line);border-radius:12px;overflow:hidden;margin:0 16px 10px}
+.optB .kpis div{background:var(--ph-surface);padding:10px 8px}
+.optB .kpis span{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ph-muted);font-weight:700;margin-bottom:3px}
+.optB .kpis b{font-size:15px;font-weight:700}
+.optB .nav{display:flex;border-top:1px solid var(--ph-line);background:var(--ph-surface)}
+.optB .nav i{flex:1;font-style:normal;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9.5px;color:var(--ph-muted);font-weight:600;padding:8px 0 10px;border-top:2px solid transparent}
+.optB .nav i em{font-style:normal;font-size:16px}
+.optB .nav i.on{color:var(--ph-accent);border-top-color:var(--ph-accent)}
+.optB .fab{position:absolute;right:14px;bottom:70px;height:40px;padding:0 15px;border-radius:10px;background:var(--ph-accent);color:#fff;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;box-shadow:0 6px 16px rgba(37,99,235,.35)}
+
+/* ============ OPTION C — Bold Minimal ============ */
+.optC .appbar{padding:10px 22px 4px;display:flex;align-items:center;justify-content:space-between}
+.optC .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ph-muted);font-weight:700}
+.optC h1.big{font-family:"Plus Jakarta Sans",sans-serif;font-size:27px;line-height:1.12;margin:4px 22px 16px;letter-spacing:-.025em;font-weight:800}
+.optC .block{padding:0 22px;margin-bottom:22px}
+.optC .blabel{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ph-muted);font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between}
+.optC .huge{font-family:"Plus Jakarta Sans",sans-serif;font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.optC .hair{height:1px;background:var(--ph-line);margin:12px 0}
+.optC .li{display:flex;align-items:center;gap:12px;padding:9px 0}
+.optC .nav{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;display:flex;gap:2px;background:var(--ph-fg);border-radius:99px;padding:5px;box-shadow:0 10px 28px rgba(15,23,42,.3)}
+.optC .nav i{font-style:normal;padding:8px 13px;border-radius:99px;font-size:16px;color:var(--ph-bg);opacity:.55;display:flex;align-items:center;gap:6px}
+.optC .nav i.on{background:var(--ph-accent);color:#fff;opacity:1;font-size:12px;font-weight:700;padding:8px 15px}
+.optC .nav i.on em{font-style:normal;font-size:15px}
+.optC .fab{position:absolute;right:20px;bottom:78px;width:48px;height:48px;border-radius:50%;background:var(--ph-accent);color:#fff;display:grid;place-items:center;font-size:24px;box-shadow:0 8px 20px rgba(37,99,235,.4)}
+
+
+@media (max-width:420px){
+  .wrap{padding:28px 16px 72px}
+  .phone{width:280px;height:600px;border-width:7px;border-radius:32px;font-size:12px}
+  .phones{gap:16px;justify-content:center}
+  table.cmp{font-size:12px}
+  table.cmp th,table.cmp td{padding:7px 6px}
+}
+.footnote{margin-top:48px;background:var(--page-card);border:1px solid var(--page-line);border-radius:16px;padding:20px 22px}
+.footnote h3{margin:0 0 10px;font-size:16px;font-family:"Plus Jakarta Sans",sans-serif}
+.footnote p{margin:0 0 10px;font-size:14px;line-height:1.65;color:var(--page-fg)}
+.footnote p:last-child{margin-bottom:0}
+table.cmp{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px}
+table.cmp th,table.cmp td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--page-line);vertical-align:top}
+table.cmp th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--page-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>Dowi — three design directions</h1>
+    <p class="sub">Same product, same information architecture, three different visual and structural treatments. Each column shows the <b>landing / Home screen</b> and the <b>Money report screen</b>. Toggle light/dark to check both themes before you choose.</p>
+  </div>
+  <div class="controls">
+    <button class="btn" id="themeBtn" aria-pressed="false">🌙 Dark mode</button>
+    <a class="btn" href="#optA">A</a><a class="btn" href="#optB">B</a><a class="btn" href="#optC">C</a>
+  </div>
+</header>
+
+<hr class="rule">
+
+<!-- ================= OPTION A ================= -->
+<section class="option optA" id="optA">
+  <div class="opthead">
+    <span class="badge">Option A</span>
+    <h2>Soft Cards</h2>
+    <span class="tagline">Friendly, rounded, floating nav — the familiar modern-Android feel.</span>
+  </div>
+  <div class="optbody">
+    <div class="phones">
+
+      <!-- A / Home -->
+      <div class="phonewrap">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ▲ 87%</span></div>
+        <div class="appbar">
+          <div><div style="font-size:11px" class="mut">Saturday, 19 Sep</div><div style="font-size:18px;font-weight:700;letter-spacing:-.01em">Good evening 👋</div></div>
+          <div class="row" style="gap:8px">
+            <div class="iconbtn">🔔<span style="position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--ph-surface)"></span></div>
+            <div class="avatar">G</div>
+          </div>
+        </div>
+        <div class="scroll"><div class="scrollinner">
+
+          <div class="hero">
+            <div class="between" style="margin-bottom:12px">
+              <span style="font-size:11px;opacity:.85;font-weight:600">THIS MONTH</span>
+              <div class="seg"><span>W</span><span class="on">M</span><span>Y</span></div>
+            </div>
+            <div style="font-size:11px;opacity:.8">Net balance</div>
+            <div class="money" style="font-size:31px;font-weight:800;letter-spacing:-.02em;margin:2px 0 14px">+ETB 18,420</div>
+            <div class="row" style="gap:16px">
+              <div style="flex:1"><div style="font-size:10.5px;opacity:.8">Income</div><div class="money" style="font-weight:700;font-size:14px">ETB 42,000</div><div class="bar" style="background:rgba(255,255,255,.25);margin-top:6px"><i style="width:100%;background:#fff"></i></div></div>
+              <div style="flex:1"><div style="font-size:10.5px;opacity:.8">Expense</div><div class="money" style="font-weight:700;font-size:14px">ETB 23,580</div><div class="bar" style="background:rgba(255,255,255,.25);margin-top:6px"><i style="width:56%;background:#bfdbfe"></i></div></div>
+            </div>
+          </div>
+
+          <div class="qa">
+            <div><em>💸</em>Expense</div><div><em>💰</em>Income</div><div><em>📝</em>Note</div><div><em>✅</em>Task</div>
+          </div>
+
+          <div class="card">
+            <div class="between" style="margin-bottom:12px"><b style="font-size:13.5px">Today's tasks</b><span class="mut" style="font-size:11px">3 of 5 ›</span></div>
+            <div class="row" style="margin-bottom:11px"><div class="chk on"></div><div style="flex:1"><div style="text-decoration:line-through" class="mut">Send invoice to client</div></div></div>
+            <div class="row" style="margin-bottom:11px"><div class="chk"></div><div style="flex:1"><div>Weekly review write-up</div><div style="font-size:10.5px" class="neg">Due today · 18:00</div></div></div>
+            <div class="row"><div class="chk"></div><div style="flex:1"><div>Draft budget for October</div><div style="font-size:10.5px" class="mut">Finance · no deadline</div></div></div>
+          </div>
+
+          <div class="card" style="background:var(--ph-accent-soft);border:1px solid var(--blue-200)">
+            <div class="row"><div style="font-size:20px">🗓️</div><div style="flex:1"><b style="font-size:13px">Review your week</b><div class="mut" style="font-size:11px">12 planned · 8 done</div></div><div style="background:var(--ph-accent);color:#fff;border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:700">Start</div></div>
+          </div>
+
+          <div class="card">
+            <div class="between" style="margin-bottom:11px"><b style="font-size:13.5px">Recent notes</b><span class="mut" style="font-size:11px">All ›</span></div>
+            <div class="row" style="margin-bottom:10px"><div class="ic" style="background:var(--blue-100);color:var(--blue-700)">📌</div><div style="flex:1;min-width:0"><div style="font-weight:600">Q4 planning</div><div class="mut" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Three things to fix before year end…</div></div></div>
+            <div class="row"><div class="ic">📖</div><div style="flex:1;min-width:0"><div style="font-weight:600">Reading list</div><div class="mut" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Designing Data-Intensive Applications…</div></div></div>
+          </div>
+          <div style="height:78px"></div>
+        </div></div>
+
+        <div class="fab">＋</div>
+        <div class="navwrap"><div class="nav">
+          <i class="on"><em>🏠</em>Home</i><i><em>📊</em>Money</i><i><em>📝</em>Notes</i><i><em>✅</em>Tasks</i>
+        </div></div>
+      </div></div>
+      <div class="phcap">A · Home</div>
+      </div>
+
+      <!-- A / Report -->
+      <div class="phonewrap">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ▲ 87%</span></div>
+        <div class="appbar">
+          <div class="row"><div class="iconbtn">‹</div><b style="font-size:16px">Reports</b></div>
+          <div class="iconbtn">⋯</div>
+        </div>
+        <div class="scroll"><div class="scrollinner">
+          <div style="padding:0 16px 12px"><div class="seg" style="background:var(--ph-surface-2);color:var(--ph-fg)"><span>Day</span><span>Week</span><span class="on" style="background:var(--ph-accent);color:#fff">Month</span><span>Year</span></div></div>
+          <div class="between" style="padding:0 20px 12px"><span class="mut">‹</span><b>September 2026</b><span class="mut">›</span></div>
+
+          <div class="card">
+            <div class="row" style="gap:0">
+              <div style="flex:1"><div class="mut" style="font-size:10.5px">INCOME</div><div class="money pos" style="font-size:15px;font-weight:700">42,000</div></div>
+              <div style="flex:1"><div class="mut" style="font-size:10.5px">EXPENSE</div><div class="money neg" style="font-size:15px;font-weight:700">23,580</div></div>
+              <div style="flex:1"><div class="mut" style="font-size:10.5px">NET</div><div class="money" style="font-size:15px;font-weight:700">+18,420</div></div>
+            </div>
+            <div style="margin-top:8px;font-size:11px" class="mut">▲ 12% vs August · ≈ converted from 2 currencies</div>
+          </div>
+
+          <div class="card">
+            <div class="between" style="margin-bottom:12px"><b style="font-size:13.5px">Income vs expense</b><span class="mut" style="font-size:11px">by week</span></div>
+            <svg viewBox="0 0 260 96" width="100%" height="96">
+              <g>
+                <rect x="14"  y="30" width="14" height="52" rx="4" fill="var(--green)"/><rect x="31" y="54" width="14" height="28" rx="4" fill="var(--red)"/>
+                <rect x="72"  y="22" width="14" height="60" rx="4" fill="var(--green)"/><rect x="89" y="46" width="14" height="36" rx="4" fill="var(--red)"/>
+                <rect x="130" y="44" width="14" height="38" rx="4" fill="var(--green)"/><rect x="147" y="36" width="14" height="46" rx="4" fill="var(--red)"/>
+                <rect x="188" y="16" width="14" height="66" rx="4" fill="var(--green)"/><rect x="205" y="58" width="14" height="24" rx="4" fill="var(--red)"/>
+              </g>
+              <g fill="var(--ph-muted)" font-size="9" font-family="Inter">
+                <text x="22" y="93">W1</text><text x="80" y="93">W2</text><text x="138" y="93">W3</text><text x="196" y="93">W4</text>
+              </g>
+            </svg>
+          </div>
+
+          <div class="card">
+            <div class="between" style="margin-bottom:12px"><b style="font-size:13.5px">Where it went</b><span style="font-size:11px" class="mut">Expense ⌄</span></div>
+            <div class="row" style="margin-bottom:10px"><div class="ic" style="background:var(--red-soft)">🍽️</div><div style="flex:1"><div class="between"><span style="font-weight:600">Food</span><span class="money" style="font-weight:600">8,240</span></div><div class="bar" style="margin-top:5px"><i style="width:72%;background:var(--red)"></i></div></div></div>
+            <div class="row" style="margin-bottom:10px"><div class="ic" style="background:var(--blue-100)">🚕</div><div style="flex:1"><div class="between"><span style="font-weight:600">Transport</span><span class="money" style="font-weight:600">5,100</span></div><div class="bar" style="margin-top:5px"><i style="width:45%"></i></div></div></div>
+            <div class="row"><div class="ic" style="background:var(--green-soft)">🏠</div><div style="flex:1"><div class="between"><span style="font-weight:600">Housing</span><span class="money" style="font-weight:600">4,800</span></div><div class="bar" style="margin-top:5px"><i style="width:42%;background:var(--green)"></i></div></div></div>
+          </div>
+          <div style="height:78px"></div>
+        </div></div>
+        <div class="navwrap"><div class="nav">
+          <i><em>🏠</em>Home</i><i class="on"><em>📊</em>Money</i><i><em>📝</em>Notes</i><i><em>✅</em>Tasks</i>
+        </div></div>
+      </div></div>
+      <div class="phcap">A · Money report</div>
+      </div>
+
+    </div>
+
+    <aside class="spec">
+      <h3>Structure</h3>
+      <ul>
+        <li><b>Top bar:</b> greeting + date on the left, bell with badge and settings avatar on the right. Detail screens swap to back-arrow + title.</li>
+        <li><b>Bottom nav:</b> floating rounded bar, 4 tabs, active tab is a filled blue pill.</li>
+        <li><b>Primary action:</b> square-ish FAB above the nav, contextual per tab.</li>
+      </ul>
+      <h3>Visual language</h3>
+      <ul>
+        <li>22&nbsp;px radii, soft shadows, white cards on a light-gray canvas.</li>
+        <li>A single blue gradient hero carries the headline number.</li>
+        <li>Icons in tinted squircle chips; colour used generously.</li>
+      </ul>
+      <h3>Best if you want</h3>
+      <ul>
+        <li>The warmest, most approachable feel; closest to what people expect from a modern Android app.</li>
+        <li>Quick-action tiles right on Home.</li>
+      </ul>
+      <h3>Trade-off</h3>
+      <ul><li>Cards and padding cost vertical space — fewer rows visible per screen.</li></ul>
+    </aside>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= OPTION B ================= -->
+<section class="option optB" id="optB">
+  <div class="opthead">
+    <span class="badge">Option B</span>
+    <h2>Compact Pro</h2>
+    <span class="tagline">Dense, data-forward, fintech-grade. Maximum information per screen.</span>
+  </div>
+  <div class="optbody">
+    <div class="phones">
+
+      <!-- B / Home -->
+      <div class="phonewrap">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ▲ 87%</span></div>
+        <div class="appbar">
+          <div><h2>Dowi</h2><div class="mut" style="font-size:10.5px">Sat 19 Sep · Week 38 · FY 2026</div></div>
+          <div class="row" style="gap:14px;font-size:17px"><span style="position:relative">🔔<span style="position:absolute;top:-2px;right:-4px;background:var(--red);color:#fff;font-size:8px;font-weight:800;border-radius:99px;padding:1px 4px">3</span></span><span>⚙️</span></div>
+        </div>
+        <div class="tabs"><span class="on">Overview</span><span>Week</span><span>Month</span><span>Year</span></div>
+        <div class="scroll"><div class="scrollinner">
+
+          <div class="sec">This month · ETB</div>
+          <div class="kpis">
+            <div><span>Income</span><b class="money pos">42,000</b></div>
+            <div><span>Expense</span><b class="money neg">23,580</b></div>
+            <div><span>Net</span><b class="money">+18,420</b></div>
+          </div>
+          <div class="panel" style="padding:12px">
+            <svg viewBox="0 0 260 62" width="100%" height="62">
+              <g>
+                <rect x="10" y="12" width="9" height="40" fill="var(--green)"/><rect x="21" y="32" width="9" height="20" fill="var(--red)"/>
+                <rect x="52" y="6" width="9" height="46" fill="var(--green)"/><rect x="63" y="26" width="9" height="26" fill="var(--red)"/>
+                <rect x="94" y="26" width="9" height="26" fill="var(--green)"/><rect x="105" y="18" width="9" height="34" fill="var(--red)"/>
+                <rect x="136" y="2" width="9" height="50" fill="var(--green)"/><rect x="147" y="36" width="9" height="16" fill="var(--red)"/>
+                <rect x="178" y="20" width="9" height="32" fill="var(--green)"/><rect x="189" y="30" width="9" height="22" fill="var(--red)"/>
+                <rect x="220" y="14" width="9" height="38" fill="var(--green)"/><rect x="231" y="40" width="9" height="12" fill="var(--red)"/>
+              </g>
+              <g fill="var(--ph-muted)" font-size="8" font-family="Inter"><text x="12" y="60">Apr</text><text x="54" y="60">May</text><text x="96" y="60">Jun</text><text x="138" y="60">Jul</text><text x="180" y="60">Aug</text><text x="222" y="60">Sep</text></g>
+            </svg>
+          </div>
+
+          <div class="sec">Today · 2 overdue</div>
+          <div class="panel">
+            <div class="li"><div class="chk"></div><div style="flex:1"><div style="font-weight:600">Weekly review write-up</div><div style="font-size:10px" class="neg">Overdue · yesterday 18:00</div></div><span class="dot" style="background:var(--red)"></span></div>
+            <div class="li"><div class="chk"></div><div style="flex:1"><div style="font-weight:600">Send invoice · Client A</div><div style="font-size:10px" class="mut">Work · today 17:00</div></div><span class="dot" style="background:var(--amber)"></span></div>
+            <div class="li"><div class="chk on"></div><div style="flex:1"><div class="mut" style="text-decoration:line-through">Pay electricity bill</div></div></div>
+            <div class="li"><div class="chk"></div><div style="flex:1"><div style="font-weight:600">Draft October budget</div><div style="font-size:10px" class="mut">Finance · 2/4 subtasks</div></div></div>
+          </div>
+
+          <div class="sec">Recent transactions</div>
+          <div class="panel">
+            <div class="li"><div class="ic" style="border-radius:8px;width:28px;height:28px;font-size:13px">💼</div><div style="flex:1"><div style="font-weight:600">Consulting · Client A</div><div style="font-size:10px" class="mut">Salary · Bank · 18 Sep</div></div><b class="money pos">+18,000</b></div>
+            <div class="li"><div class="ic" style="border-radius:8px;width:28px;height:28px;font-size:13px">🍽️</div><div style="flex:1"><div style="font-weight:600">Lunch</div><div style="font-size:10px" class="mut">Food · Cash · 18 Sep</div></div><b class="money neg">−320</b></div>
+            <div class="li"><div class="ic" style="border-radius:8px;width:28px;height:28px;font-size:13px">💻</div><div style="flex:1"><div style="font-weight:600">Hosting</div><div style="font-size:10px" class="mut">Utilities · USD 12.00</div></div><b class="money neg">≈−1,680</b></div>
+          </div>
+
+          <div class="sec">Notes</div>
+          <div class="panel">
+            <div class="li"><span class="dot" style="background:var(--blue-500)"></span><div style="flex:1"><div style="font-weight:600">Q4 planning</div><div style="font-size:10px" class="mut">Work · edited 2 h ago</div></div></div>
+            <div class="li"><span class="dot" style="background:var(--green)"></span><div style="flex:1"><div style="font-weight:600">Reading list</div><div style="font-size:10px" class="mut">Personal · yesterday</div></div></div>
+          </div>
+          <div style="height:60px"></div>
+        </div></div>
+        <div class="fab">＋ Add</div>
+        <div class="nav"><i class="on"><em>🏠</em>Home</i><i><em>📊</em>Money</i><i><em>📝</em>Notes</i><i><em>✅</em>Tasks</i></div>
+      </div></div>
+      <div class="phcap">B · Home</div>
+      </div>
+
+      <!-- B / Report -->
+      <div class="phonewrap">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ▲ 87%</span></div>
+        <div class="appbar"><div class="row"><span style="font-size:17px">‹</span><h2>Money</h2></div><div class="row" style="gap:14px;font-size:16px"><span>🔍</span><span>⇪</span></div></div>
+        <div class="tabs"><span>Day</span><span>Week</span><span class="on">Month</span><span>FY 2026</span></div>
+        <div class="scroll"><div class="scrollinner">
+          <div class="between" style="padding:10px 16px 6px"><span class="mut">‹ Aug</span><b style="font-size:13px">September 2026</b><span class="mut">Oct ›</span></div>
+          <div class="kpis">
+            <div><span>Income</span><b class="money pos">42,000</b></div>
+            <div><span>Expense</span><b class="money neg">23,580</b></div>
+            <div><span>Net</span><b class="money">+18,420</b></div>
+          </div>
+          <div class="sec">Income vs expense · by week</div>
+          <div class="panel" style="padding:12px">
+            <svg viewBox="0 0 260 84" width="100%" height="84">
+              <line x1="0" y1="62" x2="260" y2="62" stroke="var(--ph-line)"/>
+              <line x1="0" y1="40" x2="260" y2="40" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+              <line x1="0" y1="18" x2="260" y2="18" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+              <rect x="18" y="20" width="16" height="42" fill="var(--green)"/><rect x="36" y="44" width="16" height="18" fill="var(--red)"/>
+              <rect x="80" y="12" width="16" height="50" fill="var(--green)"/><rect x="98" y="36" width="16" height="26" fill="var(--red)"/>
+              <rect x="142" y="34" width="16" height="28" fill="var(--green)"/><rect x="160" y="26" width="16" height="36" fill="var(--red)"/>
+              <rect x="204" y="6" width="16" height="56" fill="var(--green)"/><rect x="222" y="48" width="16" height="14" fill="var(--red)"/>
+              <g fill="var(--ph-muted)" font-size="8.5" font-family="Inter"><text x="26" y="76">W36</text><text x="88" y="76">W37</text><text x="150" y="76">W38</text><text x="212" y="76">W39</text></g>
+            </svg>
+          </div>
+          <div class="sec">By category · expense</div>
+          <div class="panel">
+            <div class="li"><span class="dot" style="background:var(--red)"></span><div style="flex:1"><div style="font-weight:600">Food</div><div class="bar" style="margin-top:4px;height:4px"><i style="width:72%;background:var(--red)"></i></div></div><div style="text-align:right"><b class="money">8,240</b><div style="font-size:9.5px" class="mut">35% · 42</div></div></div>
+            <div class="li"><span class="dot" style="background:var(--blue-500)"></span><div style="flex:1"><div style="font-weight:600">Transport</div><div class="bar" style="margin-top:4px;height:4px"><i style="width:45%"></i></div></div><div style="text-align:right"><b class="money">5,100</b><div style="font-size:9.5px" class="mut">22% · 18</div></div></div>
+            <div class="li"><span class="dot" style="background:var(--green)"></span><div style="flex:1"><div style="font-weight:600">Housing</div><div class="bar" style="margin-top:4px;height:4px"><i style="width:42%;background:var(--green)"></i></div></div><div style="text-align:right"><b class="money">4,800</b><div style="font-size:9.5px" class="mut">20% · 1</div></div></div>
+            <div class="li"><span class="dot" style="background:var(--amber)"></span><div style="flex:1"><div style="font-weight:600">Utilities</div><div class="bar" style="margin-top:4px;height:4px"><i style="width:26%;background:var(--amber)"></i></div></div><div style="text-align:right"><b class="money">3,010</b><div style="font-size:9.5px" class="mut">13% · 7</div></div></div>
+          </div>
+          <div class="sec">By source · income</div>
+          <div class="panel">
+            <div class="li"><div style="flex:1;font-weight:600">Client A</div><b class="money pos">18,000</b></div>
+            <div class="li"><div style="flex:1;font-weight:600">Salary</div><b class="money pos">20,000</b></div>
+            <div class="li"><div style="flex:1;font-weight:600">Freelance <span class="mut" style="font-weight:400">· USD</span></div><b class="money pos">≈4,000</b></div>
+          </div>
+          <div style="height:56px"></div>
+        </div></div>
+        <div class="nav"><i><em>🏠</em>Home</i><i class="on"><em>📊</em>Money</i><i><em>📝</em>Notes</i><i><em>✅</em>Tasks</i></div>
+      </div></div>
+      <div class="phcap">B · Money report</div>
+      </div>
+
+    </div>
+
+    <aside class="spec">
+      <h3>Structure</h3>
+      <ul>
+        <li><b>Top bar:</b> app/screen title + date context, bell with count and a direct settings gear.</li>
+        <li><b>Second row:</b> a persistent scrollable tab strip for period/section switching — the period control lives in the chrome, not in the content.</li>
+        <li><b>Bottom nav:</b> full-width, edge-to-edge, active tab marked by a top rule + blue label.</li>
+        <li><b>Primary action:</b> labelled "＋ Add" pill, bottom-right.</li>
+      </ul>
+      <h3>Visual language</h3>
+      <ul>
+        <li>12&nbsp;px radii, 1&nbsp;px borders instead of shadows, tight 10&nbsp;px rows.</li>
+        <li>Uppercase micro-labels, tabular numerals, coloured status dots.</li>
+        <li>Colour reserved for meaning (green/red/amber), blue for interaction only.</li>
+      </ul>
+      <h3>Best if you want</h3>
+      <ul><li>To see the most at a glance — roughly 60&nbsp;% more rows per screen than A.</li>
+      <li>Reports to feel like a real finance tool.</li></ul>
+      <h3>Trade-off</h3>
+      <ul><li>Denser tap targets; less playful. Needs care to stay accessible.</li></ul>
+    </aside>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= OPTION C ================= -->
+<section class="option optC" id="optC">
+  <div class="opthead">
+    <span class="badge">Option C</span>
+    <h2>Bold Minimal</h2>
+    <span class="tagline">Big type, lots of air, almost no chrome. Editorial and calm.</span>
+  </div>
+  <div class="optbody">
+    <div class="phones">
+
+      <!-- C / Home -->
+      <div class="phonewrap">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ▲ 87%</span></div>
+        <div class="appbar">
+          <span class="eyebrow">Sat 19 Sep</span>
+          <div class="row" style="gap:16px;font-size:16px"><span style="position:relative">🔔<span style="position:absolute;top:-1px;right:-3px;width:7px;height:7px;background:var(--red);border-radius:50%"></span></span><span>⚙️</span></div>
+        </div>
+        <div class="scroll"><div class="scrollinner">
+          <h1 class="big">Good evening,<br>Gemechis.</h1>
+
+          <div class="block">
+            <div class="blabel"><span>Net · this month</span><span style="letter-spacing:0;text-transform:none;font-weight:600">Week Month Year</span></div>
+            <div class="money huge">+18,420 <span style="font-size:15px;font-weight:600" class="mut">ETB</span></div>
+            <div class="row" style="gap:20px;margin-top:14px">
+              <div><div class="eyebrow" style="letter-spacing:.1em">In</div><div class="money pos" style="font-weight:700;font-size:15px">42,000</div></div>
+              <div><div class="eyebrow" style="letter-spacing:.1em">Out</div><div class="money neg" style="font-weight:700;font-size:15px">23,580</div></div>
+              <div style="flex:1;align-self:flex-end">
+                <div style="display:flex;height:8px;border-radius:99px;overflow:hidden"><i style="width:64%;background:var(--green)"></i><i style="width:36%;background:var(--red)"></i></div>
+              </div>
+            </div>
+            <div class="hair"></div>
+          </div>
+
+          <div class="block">
+            <div class="blabel"><span>Today · 5 tasks</span><span style="letter-spacing:0;text-transform:none;font-weight:600;color:var(--ph-accent)">See all</span></div>
+            <div class="li"><div class="chk"></div><div style="flex:1;font-size:14px;font-weight:600">Weekly review write-up</div><span class="neg" style="font-size:11px;font-weight:600">18:00</span></div>
+            <div class="li"><div class="chk"></div><div style="flex:1;font-size:14px;font-weight:600">Send invoice · Client A</div><span class="mut" style="font-size:11px">17:00</span></div>
+            <div class="li"><div class="chk on"></div><div style="flex:1;font-size:14px" class="mut"><s>Pay electricity bill</s></div></div>
+            <div class="hair"></div>
+          </div>
+
+          <div class="block">
+            <div class="blabel"><span>This week</span></div>
+            <div style="font-size:15px;line-height:1.5;font-weight:600">You finished <span style="color:var(--ph-accent)">8 of 12</span> planned tasks.</div>
+            <div class="bar" style="margin:12px 0 14px;height:8px"><i style="width:67%"></i></div>
+            <div style="display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--ph-accent);color:var(--ph-accent);border-radius:99px;padding:9px 17px;font-size:12.5px;font-weight:700">Review your week →</div>
+            <div class="hair" style="margin-top:20px"></div>
+          </div>
+
+          <div class="block">
+            <div class="blabel"><span>Notes</span><span style="letter-spacing:0;text-transform:none;font-weight:600;color:var(--ph-accent)">All</span></div>
+            <div class="li" style="align-items:flex-start"><div style="flex:1"><div style="font-size:14px;font-weight:700">Q4 planning</div><div class="mut" style="font-size:12px;line-height:1.45">Three things to fix before the year ends…</div></div></div>
+            <div class="li" style="align-items:flex-start"><div style="flex:1"><div style="font-size:14px;font-weight:700">Reading list</div><div class="mut" style="font-size:12px;line-height:1.45">Designing Data-Intensive Applications…</div></div></div>
+          </div>
+          <div style="height:90px"></div>
+        </div></div>
+        <div class="fab">＋</div>
+        <div class="nav"><i class="on"><em>🏠</em> Home</i><i>📊</i><i>📝</i><i>✅</i></div>
+      </div></div>
+      <div class="phcap">C · Home</div>
+      </div>
+
+      <!-- C / Report -->
+      <div class="phonewrap">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ▲ 87%</span></div>
+        <div class="appbar"><span style="font-size:17px">‹</span><div class="row" style="gap:16px;font-size:16px"><span>🔍</span><span>⇪</span></div></div>
+        <div class="scroll"><div class="scrollinner">
+          <div class="block" style="margin-bottom:14px">
+            <span class="eyebrow">Report · Month</span>
+            <h1 class="big" style="margin:6px 0 0">September<br>2026</h1>
+          </div>
+          <div class="block">
+            <div style="display:flex;gap:6px;font-size:11.5px;font-weight:700">
+              <span class="mut">Day</span><span class="mut">Week</span><span style="color:var(--ph-accent);border-bottom:2px solid var(--ph-accent);padding-bottom:2px">Month</span><span class="mut">Year</span>
+              <span style="flex:1"></span><span class="mut">‹ ›</span>
+            </div>
+            <div class="hair"></div>
+          </div>
+          <div class="block">
+            <div class="blabel"><span>Net</span><span style="letter-spacing:0;text-transform:none;font-weight:600" class="pos">▲ 12% vs Aug</span></div>
+            <div class="money huge">+18,420</div>
+            <div class="row" style="gap:24px;margin-top:12px">
+              <div><div class="eyebrow">Income</div><div class="money pos" style="font-size:16px;font-weight:700">42,000</div></div>
+              <div><div class="eyebrow">Expense</div><div class="money neg" style="font-size:16px;font-weight:700">23,580</div></div>
+            </div>
+            <div class="mut" style="font-size:11px;margin-top:10px">≈ includes USD converted at 140.00 ETB</div>
+            <div class="hair"></div>
+          </div>
+          <div class="block">
+            <div class="blabel"><span>In vs out · by week</span></div>
+            <svg viewBox="0 0 260 90" width="100%" height="90">
+              <rect x="16" y="24" width="18" height="48" rx="9" fill="var(--green)"/><rect x="38" y="48" width="18" height="24" rx="9" fill="var(--red)"/>
+              <rect x="80" y="14" width="18" height="58" rx="9" fill="var(--green)"/><rect x="102" y="40" width="18" height="32" rx="9" fill="var(--red)"/>
+              <rect x="144" y="40" width="18" height="32" rx="9" fill="var(--green)"/><rect x="166" y="30" width="18" height="42" rx="9" fill="var(--red)"/>
+              <rect x="208" y="8" width="18" height="64" rx="9" fill="var(--green)"/><rect x="230" y="54" width="18" height="18" rx="9" fill="var(--red)"/>
+              <g fill="var(--ph-muted)" font-size="9" font-family="Inter"><text x="26" y="86">W1</text><text x="90" y="86">W2</text><text x="154" y="86">W3</text><text x="218" y="86">W4</text></g>
+            </svg>
+            <div class="hair"></div>
+          </div>
+          <div class="block">
+            <div class="blabel"><span>Where it went</span><span style="letter-spacing:0;text-transform:none;font-weight:600;color:var(--ph-accent)">Expense ⌄</span></div>
+            <div class="li"><div style="flex:1"><div class="between" style="margin-bottom:5px"><span style="font-size:14px;font-weight:700">Food</span><span class="money" style="font-weight:700">8,240</span></div><div class="bar" style="height:5px"><i style="width:72%;background:var(--red)"></i></div></div></div>
+            <div class="li"><div style="flex:1"><div class="between" style="margin-bottom:5px"><span style="font-size:14px;font-weight:700">Transport</span><span class="money" style="font-weight:700">5,100</span></div><div class="bar" style="height:5px"><i style="width:45%"></i></div></div></div>
+            <div class="li"><div style="flex:1"><div class="between" style="margin-bottom:5px"><span style="font-size:14px;font-weight:700">Housing</span><span class="money" style="font-weight:700">4,800</span></div><div class="bar" style="height:5px"><i style="width:42%;background:var(--green)"></i></div></div></div>
+          </div>
+          <div style="height:90px"></div>
+        </div></div>
+        <div class="nav"><i>🏠</i><i class="on"><em>📊</em> Money</i><i>📝</i><i>✅</i></div>
+      </div></div>
+      <div class="phcap">C · Money report</div>
+      </div>
+
+    </div>
+
+    <aside class="spec">
+      <h3>Structure</h3>
+      <ul>
+        <li><b>Top bar:</b> minimal — a small date eyebrow plus bell and gear. The screen title is a large headline in the content instead.</li>
+        <li><b>Bottom nav:</b> a floating dark pill; only the active tab shows its label, the rest are icons.</li>
+        <li><b>Sections</b> are separated by whitespace and hairlines — no card containers at all.</li>
+      </ul>
+      <h3>Visual language</h3>
+      <ul>
+        <li>Display typography (Plus Jakarta Sans) for headlines and key numbers.</li>
+        <li>Blue used sparingly as a true accent; green/red only on money and status.</li>
+        <li>Generous 22&nbsp;px side margins, calm and uncluttered.</li>
+      </ul>
+      <h3>Best if you want</h3>
+      <ul><li>Something that feels distinctive rather than templated.</li>
+      <li>Writing (Notes) and reflection (weekly review) to feel pleasant.</li></ul>
+      <h3>Trade-off</h3>
+      <ul><li>The least information per screen; long lists need more scrolling. The icon-only nav is slightly less obvious at first.</li></ul>
+    </aside>
+  </div>
+</section>
+
+<div class="footnote">
+  <h3>How to choose</h3>
+  <table class="cmp">
+    <tr><th>&nbsp;</th><th>A · Soft Cards</th><th>B · Compact Pro</th><th>C · Bold Minimal</th></tr>
+    <tr><td><b>Density</b></td><td>Low</td><td>High</td><td>Lowest</td></tr>
+    <tr><td><b>Feel</b></td><td>Friendly, familiar</td><td>Efficient, serious</td><td>Calm, editorial</td></tr>
+    <tr><td><b>Best screen</b></td><td>Home</td><td>Reports &amp; lists</td><td>Notes &amp; review</td></tr>
+    <tr><td><b>Nav</b></td><td>Floating bar, pill active</td><td>Edge-to-edge, tab strip</td><td>Floating dark pill</td></tr>
+    <tr><td><b>Build effort</b></td><td>Medium</td><td>Low</td><td>Medium</td></tr>
+  </table>
+  <p style="margin-top:14px">All three share the same tokens, the same four-tab information architecture and the same component contracts — so the choice changes the look and the density, not the plan or the schedule. Mixing is allowed: for example <b>A</b> for Home and Notes with <b>B</b>'s density for Money lists and reports.</p>
+</div>
+
+</div>
+<script>
+  var btn = document.getElementById('themeBtn');
+  btn.addEventListener('click', function(){
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+    btn.setAttribute('aria-pressed', String(!dark));
+    btn.textContent = dark ? '🌙 Dark mode' : '☀️ Light mode';
+  });
+</script>
+</body>
+</html>
