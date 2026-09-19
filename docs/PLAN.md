@@ -130,30 +130,53 @@ argument for why M1's "test as you go" gate matters):
 
 ---
 
-## M2 — Data layer
+## M2 — Data layer ✅ done
 
 **Deliverable:** a typed, tested, versioned local database with backup/restore.
 
-- [ ] Dexie v1 schema: `transactions`, `categories`, `sources`, `accounts`,
-      `currencies`, `rates`, `notes`, `noteCollections`, `tasks`, `taskCollections`,
-      `notifications`, `settings`, `meta`
-- [ ] Indexes chosen for the real queries (e.g. `transactions: date, type, categoryId,
-[type+date], currency`)
-- [ ] Typed repository per entity: `list`, `get`, `create`, `update`, `remove`,
-      `restore` — every repo implements soft delete
-- [ ] Money helpers: minor-unit parse/format, per-currency exponent, safe add/sum,
-      conversion via rate table
-- [ ] Period helpers: week/month/FY boundaries honouring week-start and FY-start
-- [ ] Seed on first run: default categories, default settings, base currency **ETB**,
-      FY start **January**, week start **Monday**
-- [ ] `exportAll()` → versioned JSON; `importAll(json, mode: merge|replace)` with
-      validation and a dry-run diff
-- [ ] `navigator.storage.persist()` request + storage-usage reporting
-- [ ] Unit tests against `fake-indexeddb` covering every repo, money maths, period
-      maths, conversion, and export→import round-trip
+- [x] Dexie v1 schema: `transactions`, `categories`, `sources`, `accounts`, `rates`,
+      `notes`, `noteCollections`, `tasks`, `taskCollections`, `notifications`,
+      `settings`, `meta` (no separate `currencies` table — a currency is just an
+      ISO code string; the minor-unit-exponent lookup lives in code, not the DB,
+      since it's fixed reference data, not something a user edits)
+- [x] Indexes chosen for the real queries: `transactions: date, type, categoryId,
+[type+date], currency, deletedAt`, plus per-entity indexes for the rest
+- [x] Typed repository per entity via a shared `createSoftDeleteRepo` factory:
+      `list`, `listTrashed`, `get`, `create`, `update`, `remove`, `restore`,
+      `hardDelete`. `transactions` adds `listFiltered` + `reassignCategory`;
+      `rates` adds `getRateForCurrency` (latest-as-of-date lookup); `settings` and
+      `notifications` are purpose-built (a singleton and a non-trashable inbox,
+      respectively, so they don't fit the soft-delete shape)
+- [x] Money helpers: `parseAmountToMinorUnits`, `minorUnitExponent`,
+      `convertMinorUnits`, `sumConverted` (converts + tallies unconvertible
+      currencies rather than dropping them — PRD AC-M7)
+- [x] Period helpers: `getWeekRange`/`getMonthRange`/`getFinancialYearRange`/
+      `getRangeForPeriod`/`shiftPeriod`/`getIsoWeekKey`, honouring week-start and
+      FY-start
+- [x] Seed on first run (idempotent, survives the user deleting a seeded row):
+      default categories, default settings — base currency **ETB**, FY start
+      **January**, week start **Monday**
+- [x] `exportAll()` → versioned JSON; `importAll(json, mode: merge|replace)` with
+      structural validation and a per-table counts result. **Deferred to M9:** a
+      _preview_ diff shown before the user confirms an import — the underlying
+      counts are already there, this is a UI-layer addition once the real
+      Settings → Data screen exists
+- [x] `requestPersistentStorage()` + `getStorageUsage()` (usage/quota/persisted)
+- [x] `DatabaseProvider` (React context: opens the DB once, seeds, requests
+      persistent storage) + a temporary `/debug/data` screen exercising create,
+      export, import, erase, and storage usage — the real UI for these lands
+      screen-by-screen in M3–M9
 
 **Done when:** `npm run test` is green and export → erase → import restores state exactly.
 **Tag:** `m2` · **Test guide:** TESTING.md §M2
+
+**Verified:** 129 Vitest unit tests (up from M1's 40) covering every repository,
+money maths, period-boundary maths (including leap years, year-boundary weeks, and
+FY starts other than January), and export/import round-trips (replace _and_ merge
+mode, plus validation rejecting a corrupt file without touching existing data) — all
+against `fake-indexeddb`. 26 Playwright e2e tests (up from 20), adding real-browser
+IndexedDB persistence-across-reload and erase-all checks that the fake-indexeddb
+suite can't itself prove. Build is 129.6 KB gzipped JS (budget 180 KB).
 
 ---
 
