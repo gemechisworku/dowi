@@ -24,8 +24,8 @@ export function App() {
             <Routes>
               <Route element={<AppLayout />}>
                 <Route index element={<HomePage />} />
-                <Route path="money" element={<MoneyPage />} />
-                <Route path="money/reports" element={<ReportsPage />} />
+                <Route path="money" element={<ReportsPage />} />
+                <Route path="money/transactions" element={<MoneyPage />} />
                 <Route path="money/categories" element={<CategoriesPage />} />
                 <Route path="money/sources" element={<SourcesPage />} />
                 <Route path="money/accounts" element={<AccountsPage />} />

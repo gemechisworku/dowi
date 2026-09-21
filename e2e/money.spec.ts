@@ -28,13 +28,13 @@ async function addExpense(
 
 test.describe('Money — transaction capture', () => {
   test('the add sheet opens on the first tap', async ({ page }) => {
-    await page.goto('/money')
+    await page.goto('/money/transactions')
     await page.getByRole('button', { name: 'Add transaction' }).click()
     await expect(page.getByRole('dialog', { name: 'Add transaction' })).toBeVisible()
   })
 
   test('seeded expense categories appear in the intended order, Food first', async ({ page }) => {
-    await page.goto('/money')
+    await page.goto('/money/transactions')
     await page.getByRole('button', { name: 'Add transaction' }).click()
     const firstChip = page.locator('[role="group"][aria-label="Category"] button').first()
     await expect(firstChip).toContainText('Food')
@@ -43,7 +43,7 @@ test.describe('Money — transaction capture', () => {
   test('adding an expense shows it with a minus sign, in the correct category', async ({
     page,
   }) => {
-    await page.goto('/money')
+    await page.goto('/money/transactions')
     await addExpense(page, ['1', '2', '5'], 'Food')
 
     await expect(page.getByText('-ETB 125.00').first()).toBeVisible()
@@ -51,7 +51,7 @@ test.describe('Money — transaction capture', () => {
   })
 
   test('editing a transaction pre-fills the form and persists changes', async ({ page }) => {
-    await page.goto('/money')
+    await page.goto('/money/transactions')
     await addExpense(page, ['5', '0'], 'Food')
 
     await page.getByText('Food', { exact: true }).first().click()
@@ -65,7 +65,7 @@ test.describe('Money — transaction capture', () => {
   })
 
   test('deleting a transaction offers undo, which restores it', async ({ page }) => {
-    await page.goto('/money')
+    await page.goto('/money/transactions')
     await addExpense(page, ['3', '0'], 'Food')
 
     await page.getByText('Food', { exact: true }).first().click()
@@ -79,7 +79,7 @@ test.describe('Money — transaction capture', () => {
   })
 
   test('filtering by type narrows the list and shows a removable chip', async ({ page }) => {
-    await page.goto('/money')
+    await page.goto('/money/transactions')
     await addExpense(page, ['1', '0'], 'Food')
 
     await page.getByRole('button', { name: 'Filters' }).click()
@@ -96,7 +96,7 @@ test.describe('Money — transaction capture', () => {
 
 test.describe('Money — category reassign on delete', () => {
   test('deleting a category in use requires choosing a replacement first', async ({ page }) => {
-    await page.goto('/money')
+    await page.goto('/money/transactions')
     await addExpense(page, ['5', '0'], 'Food')
 
     await page.getByRole('link', { name: 'Categories' }).click()
@@ -114,7 +114,7 @@ test.describe('Money — category reassign on delete', () => {
     const list = page.getByRole('main')
     await expect(list.getByText('Food', { exact: true })).not.toBeVisible()
 
-    await page.goto('/money')
+    await page.goto('/money/transactions')
     await expect(page.getByText('Transport', { exact: true }).first()).toBeVisible()
   })
 

@@ -57,6 +57,7 @@ test.describe('Top-level screens', () => {
   for (const path of [
     '/',
     '/money',
+    '/money/transactions',
     '/money/categories',
     '/money/sources',
     '/money/accounts',

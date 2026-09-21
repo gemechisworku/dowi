@@ -7,6 +7,9 @@ import { todayString, shiftPeriod, type Period } from '@/lib/period'
 import { buildReport, isFuturePeriod, type BreakdownEntry } from './aggregate'
 import { getPeriodLabel } from './periodLabel'
 import { transactionsToCsv, downloadCsv } from './csv'
+import { buildShareSummary } from './summary'
+import { useSnackbar } from '@/components/ui/useSnackbar'
+import { MoneySubNav } from '../MoneySubNav'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Divider } from '@/components/ui/Divider'
@@ -63,6 +66,7 @@ function buildDonutSlices(
 export function ReportsPage() {
   const { repos, settingsRepo } = useDatabase()
   const navigate = useNavigate()
+  const { show: showSnackbar } = useSnackbar()
   const settings = useLiveQuery(() => settingsRepo.get(), [settingsRepo])
   const transactions = useLiveQuery(() => repos.transactions.list(), [repos], EMPTY_ARRAY)
   const categories = useLiveQuery(() => repos.categories.list(), [repos], EMPTY_ARRAY)
@@ -122,7 +126,7 @@ export function ReportsPage() {
 
   function handleViewTransactions() {
     const params = new URLSearchParams({ from: report.range.start, to: report.range.end })
-    navigate(`/money?${params}`)
+    navigate(`/money/transactions?${params}`)
   }
 
   function handleExportCsv() {
@@ -130,9 +134,32 @@ export function ReportsPage() {
     downloadCsv(csv, `dowi-${period}-${report.range.start}.csv`)
   }
 
+  async function handleShare() {
+    const text = buildShareSummary(report, label, baseCurrency, categoryById)
+    if (navigator.share) {
+      try {
+        await navigator.share({ text })
+      } catch (err) {
+        // AbortError is the user dismissing the share sheet — not a failure.
+        if (err instanceof Error && err.name !== 'AbortError') {
+          showSnackbar({ message: 'Could not share the summary' })
+        }
+      }
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      showSnackbar({ message: 'Summary copied to clipboard' })
+    } catch {
+      showSnackbar({ message: 'Could not copy the summary' })
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
       <h1 className="text-xl font-bold tracking-tight">Reports</h1>
+
+      <MoneySubNav />
 
       <PeriodSelector value={period} onChange={setPeriod} />
 
@@ -306,13 +333,18 @@ export function ReportsPage() {
         </Card>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
         <Button variant="secondary" fullWidth onClick={handleViewTransactions}>
           View transactions
         </Button>
-        <Button variant="secondary" fullWidth onClick={handleExportCsv}>
-          Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" fullWidth onClick={handleShare}>
+            Share
+          </Button>
+          <Button variant="secondary" fullWidth onClick={handleExportCsv}>
+            Export CSV
+          </Button>
+        </div>
       </div>
     </div>
   )

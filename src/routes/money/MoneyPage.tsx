@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link } from 'react-router'
 import { useDatabase } from '@/app/db/useDatabase'
 import type { Transaction } from '@/db/types'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
@@ -8,6 +7,7 @@ import { groupByMonthAndDay } from './groupTransactions'
 import { useTransactionFilters } from './useTransactionFilters'
 import { TransactionFilterSheet, type FilterFormValue } from './TransactionFilterSheet'
 import { TransactionSheet } from './TransactionSheet'
+import { MoneySubNav } from './MoneySubNav'
 import { Card } from '@/components/ui/Card'
 import { ListItem } from '@/components/ui/ListItem'
 import { IconButton } from '@/components/ui/IconButton'
@@ -110,7 +110,7 @@ export function MoneyPage() {
   return (
     <div className="relative flex flex-col pb-24">
       <div className="flex items-center justify-between gap-2 px-4 pt-2">
-        <h1 className="text-xl font-bold tracking-tight">Money</h1>
+        <h1 className="text-xl font-bold tracking-tight">Transactions</h1>
         <div className="flex gap-2">
           <IconButton
             aria-label={activeCount > 0 ? `Filters, ${activeCount} active` : 'Filters'}
@@ -121,44 +121,9 @@ export function MoneyPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto px-4 py-2 text-sm">
-        <Link
-          to="/money/reports"
-          className="whitespace-nowrap font-semibold"
-          style={{ color: 'var(--color-primary)' }}
-        >
-          Reports
-        </Link>
-        <Link
-          to="/money/categories"
-          className="whitespace-nowrap font-semibold"
-          style={{ color: 'var(--color-primary)' }}
-        >
-          Categories
-        </Link>
-        <Link
-          to="/money/sources"
-          className="whitespace-nowrap font-semibold"
-          style={{ color: 'var(--color-primary)' }}
-        >
-          Sources
-        </Link>
-        <Link
-          to="/money/accounts"
-          className="whitespace-nowrap font-semibold"
-          style={{ color: 'var(--color-primary)' }}
-        >
-          Accounts
-        </Link>
-        <Link
-          to="/money/rates"
-          className="whitespace-nowrap font-semibold"
-          style={{ color: 'var(--color-primary)' }}
-        >
-          Exchange rates
-        </Link>
+      <div className="px-4 pt-2">
+        <MoneySubNav />
       </div>
-
       {filterChips.length > 0 && (
         <div className="flex flex-wrap gap-2 px-4 pb-2">
           {filterChips.map((chip) => (

@@ -42,7 +42,7 @@ export function DonutChart({ title, data, size = 120, centerLabel }: DonutChartP
               strokeWidth={14}
             />
           ) : (
-            data.map((slice) => {
+            data.map((slice, i) => {
               const fraction = slice.value / total
               const dash = fraction * circumference
               const gap = circumference - dash
@@ -50,7 +50,7 @@ export function DonutChart({ title, data, size = 120, centerLabel }: DonutChartP
               cumulative += fraction
               return (
                 <circle
-                  key={slice.label}
+                  key={i}
                   cx={50}
                   cy={50}
                   r={radius}
@@ -74,8 +74,8 @@ export function DonutChart({ title, data, size = 120, centerLabel }: DonutChartP
         )}
       </div>
       <ul className="flex-1 space-y-1.5">
-        {data.map((slice) => (
-          <li key={slice.label} className="flex items-center justify-between gap-3 text-xs">
+        {data.map((slice, i) => (
+          <li key={i} className="flex items-center justify-between gap-3 text-xs">
             <span className="flex min-w-0 items-center gap-1.5">
               <span
                 aria-hidden="true"
