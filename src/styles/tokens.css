@@ -65,6 +65,23 @@
    */
   --color-danger-solid: #dc2626;
 
+  /*
+   * Notes editor highlight-mark colours (M5, PRD §5.5 "highlight (colour
+   * choice)"). Stored *by name* in note content as literal
+   * `background-color: var(--note-highlight-yellow)` CSS (see
+   * editorExtensions.ts's HIGHLIGHT_COLORS) rather than a fixed hex, so a
+   * highlight painted in light mode keeps reading correctly once the
+   * viewer switches to dark — the usual bug this kind of feature hits
+   * (TESTING §M5 manual step 4) — without needing per-note migration.
+   * Light values are pale tints with dark text sitting on top; the dark
+   * overrides below invert to dark tints with light text on top, mirroring
+   * --color-income-soft/--color-expense-soft's existing light↔dark pattern.
+   */
+  --note-highlight-yellow: #fde68a;
+  --note-highlight-green: #bbf7d0;
+  --note-highlight-blue: #bfdbfe;
+  --note-highlight-pink: #fbcfe8;
+
   /* ---- Elevation ---- */
   --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 20px rgba(15, 23, 42, 0.06);
   --shadow-elevated: 0 10px 15px rgba(15, 23, 42, 0.1), 0 4px 6px rgba(15, 23, 42, 0.08);
@@ -170,6 +187,11 @@
     --color-danger: #f87171;
     --color-danger-soft: #331616;
 
+    --note-highlight-yellow: #533f03;
+    --note-highlight-green: #14532d;
+    --note-highlight-blue: #1e3a8a;
+    --note-highlight-pink: #831843;
+
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
     --shadow-elevated: 0 10px 24px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.4);
     --shadow-floating: 0 18px 44px rgba(0, 0, 0, 0.55);
@@ -204,6 +226,11 @@
   --color-warning-soft: #3a2c0c;
   --color-danger: #f87171;
   --color-danger-soft: #331616;
+
+  --note-highlight-yellow: #533f03;
+  --note-highlight-green: #14532d;
+  --note-highlight-blue: #1e3a8a;
+  --note-highlight-pink: #831843;
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-elevated: 0 10px 24px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.4);

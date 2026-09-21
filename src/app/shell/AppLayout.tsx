@@ -7,11 +7,22 @@ import { TopAppBar } from './TopAppBar'
 import { BottomNav } from './BottomNav'
 
 // Routes that render full-screen (editors, sheets-as-pages) hide the
-// chrome per PRD §4 ("hidden on full-screen editors").
-const CHROMELESS_PREFIXES = ['/money/new', '/notes/', '/tasks/new']
+// chrome per PRD §4 ("hidden on full-screen editors"). The note editor
+// (`/notes/new`, `/notes/:id`) is the first of these actually wired up —
+// it wants the whole viewport for typing, the same way Money's/Tasks'
+// still-unbuilt `/money/new` and `/tasks/new` placeholders anticipated.
+const CHROMELESS_PREFIXES = ['/money/new', '/notes/new', '/tasks/new']
+
+// Everything else under /notes/ (collections, trash) is an ordinary
+// list/CRUD screen and keeps the chrome + NotesSubNav, same as Tasks'
+// sibling screens under /tasks/.
+const NOTES_CHROME_PATHS = new Set(['/notes/collections', '/notes/trash'])
 
 function isChromeless(pathname: string): boolean {
   if (pathname === '/notes') return false
+  if (pathname.startsWith('/notes/')) {
+    return !NOTES_CHROME_PATHS.has(pathname)
+  }
   return CHROMELESS_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 }
 

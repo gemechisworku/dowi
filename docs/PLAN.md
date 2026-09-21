@@ -375,22 +375,107 @@ for the new paths and still green (190 unit, 88 e2e, both themes).
 
 ---
 
-## M5 — Notes
+## M5 — Notes ✅ done
 
 **Deliverable:** real writing, organised.
 
-- [ ] Tiptap editor (lazy chunk): H1–H3, bold, italic, underline, strike, highlight
-      with colours, bullet/ordered/check lists, blockquote, code, code block, rule, link
-- [ ] Sticky formatting toolbar above the keyboard + `/` slash menu
-- [ ] Autosave (debounced 500 ms) + "saved" indicator; survives app kill
-- [ ] Notes list: group **by date** or **by collection** (toggle persisted), pinned
+- [x] Tiptap editor (lazy chunk): H1–H3, bold, italic, underline, strike, highlight
+      with colours, bullet/ordered/check lists, blockquote, code, code block, rule, link.
+      **Deviation:** the editor lives at `/notes/new` and `/notes/:id` as a real route,
+      not a Sheet like Money's `TransactionSheet`/Tasks' `TaskSheet` — a rich-text
+      editor genuinely wants the full viewport, and `AppLayout`'s chromeless-route
+      table already had `/notes/` reserved for exactly this since M1/M3 ("routes that
+      render full-screen... hidden on full-screen editors"); `isChromeless()` is now
+      precise about it, so `/notes/collections` and `/notes/trash` keep the normal
+      chrome + a new `NotesSubNav` (mirroring `MoneySubNav`/`TasksSubNav`) since
+      they're ordinary list/CRUD screens, not editors. Highlight colours are stored as
+      `var(--note-highlight-*)` token references rather than literal hex — Tiptap's
+      Highlight mark writes whatever string it's given straight into an inline
+      `background-color` style, so a note painted in light mode keeps resolving
+      correctly once the theme switches, with no per-note migration needed
+      (tokens.css's `--note-highlight-*` block)
+- [x] Sticky formatting toolbar above the keyboard + `/` slash menu. **Deviation:**
+      "sticky" is a flex-column layout (toolbar as the last flex child below the
+      editor's own scrollable content), not CSS `position: sticky` — this keeps it
+      pinned just above wherever the on-screen keyboard currently ends without
+      needing visualViewport-inset JS, which behaves inconsistently across mobile
+      browsers. The slash menu is a plain positioned `<div>` driven by Tiptap's own
+      `coordsAtPos` API, not a popup library — none was already a dependency
+- [x] Autosave (debounced 500 ms) + "saved" indicator; survives app kill. Flushes
+      immediately on blur/visibilitychange/unmount, not just the debounce timer, so a
+      hard kill mid-typing never loses more than 500 ms of edits. **Deviation:** a
+      brand-new note (`/notes/new`) isn't written to the database until the first
+      real edit — the first debounced/flushed save creates the row and swaps the URL
+      to `/notes/:id` via a `replace` navigation, so backing out of an untouched
+      draft never litters the list with an empty note
+- [x] Notes list: group **by date** or **by collection** (toggle persisted), pinned
       first, card/list density toggle
-- [ ] Full-text search over title + derived plain text
-- [ ] Collections CRUD with safe delete (move to Unfiled by default)
-- [ ] Tags, pin, colour, duplicate, soft-delete Trash with restore + 30-day purge
+- [x] Full-text search over title + derived plain text
+- [x] Collections CRUD with safe delete (move to Unfiled by default). Per PRD AC-N4,
+      deleting a collection in use offers an explicit choice — "move notes to
+      Unfiled" (default/primary) or "delete notes too" (destructive) — via `Dialog`
+      directly rather than `ConfirmDialog`, which only has room for a confirm/cancel
+      pair
+- [x] Tags, pin, colour, duplicate, soft-delete Trash with restore + 30-day purge.
+      The purge runs once per app open (`sweepExpiredNoteTrash`, from
+      `DatabaseProvider` right after `seedIfNeeded`) rather than as a background job,
+      since there's no runner for that other than the M7 service worker's
+      periodicsync, which can't touch IndexedDB reliably across every target browser
 
 **Done when:** a note using every supported format survives reload byte-identical and
 renders correctly in both themes. **Tag:** `m5` · **Test guide:** TESTING.md §M5
+
+**Verified:** 44 new Vitest unit tests (294 total, up from 250) — `noteViews.test.ts`
+(19 cases: date-group boundaries including the 23:59/00:01 case and a note edited
+"yesterday", pinned-floats-to-top for both grouping modes, by-collection grouping,
+search), `noteCollectionDelete.test.ts` (3, the move-vs-delete plan), `notesTrashSweep.test.ts`
+(6, the 30-day boundary and a full repo-level sweep), `editorExtensions.test.ts` (4,
+contentText derivation from a representative multi-node Tiptap doc), `slashCommands.test.ts`
+(8, trigger detection against a real headless Tiptap `Editor` instance) and
+`notePrefs.test.ts` (4). **26** new Playwright e2e tests (164 total, up from 138) —
+`notes.spec.ts` drives the real Tiptap editor in a real browser: every required
+mark/node applied once via the toolbar and confirmed identical after a reload,
+highlight readability across a live theme switch, autosave-survives-reload, an
+untouched draft never persisting, grouping-toggle persistence, pin-floats-to-top,
+a body-only search match, both collection-delete choices, and trash restore; the
+accessibility sweep now also covers `/notes`, `/notes/collections`, `/notes/trash`
+and `/notes/new` (zero violations in both themes). Build is 151.61 KB gzipped JS for
+the initial bundle (budget 180 KB, up from M7's 143.81 KB baseline for the new eager
+notes screens) — the Tiptap chunk itself is a separate lazy 125.69 KB gzipped, loaded
+only when a note editor actually opens, confirmed by grepping the built initial
+bundle for `tiptap`/`ProseMirror` (zero matches; all 24 land in the lazy chunk).
+
+**Bugs found this milestone:**
+
+- **Typing into a brand-new note would silently vanish from the screen the instant
+  autosave first fired**, even though the database write itself was correct. The
+  lazy `<NoteEditor>` was keyed on the route's `:id` param
+  (`key={id ?? 'new'}`), so that autosave's own create-then-`replace`-navigate flow
+  (which changes `:id` from undefined to a real UUID under the _same_ mounted
+  `NoteEditorPage`) made React remount `NoteEditor` from scratch — with
+  `initialContent` frozen at its stale `EMPTY_DOC` value, since content updates
+  after the initial load only ever flowed through a ref, never back into that
+  state. The DB had the correct content (whatever was captured in the save that
+  triggered the remount), which is what made it easy to miss in isolated manual
+  testing; it only showed up once the e2e suite exercised a long, continuous typing
+  session against a real browser. Fixed by freezing the editor's key at mount
+  (`useState(() => id ?? 'new')`, never updated afterward) instead of deriving it
+  from the live route param, and by changing "duplicate" to stay on the current note
+  rather than navigate to the copy — which would have hit the identical hazard for
+  the same reason.
+- **The note content editor failed the accessibility sweep**: a plain contenteditable
+  `<div>` carries no ARIA role axe recognises, so pairing it with `aria-label` alone
+  tripped `aria-prohibited-attr`; the editor route also had no `<h1>`, tripping
+  `page-has-heading-one` (every other top-level screen has one; this one's visible
+  "heading" is the title `<input>`, not a heading element). Fixed by adding
+  `role="textbox"` + `aria-multiline="true"` to the editor's root and a visually
+  hidden `<h1>` ("New note"/"Edit note") to the page.
+- **Two e2e tests that click a button and immediately `page.goto()` to a different
+  route were flaky**: `page.goto` is a full browser reload, and the button's own
+  handler (an async repo write followed by a state update) doesn't block the click
+  from resolving — reloading could cut the in-flight write short. Fixed the tests,
+  not the app, by waiting for each action's own on-screen confirmation (the delete
+  dialog closing, a restore's snackbar text) before navigating away.
 
 ---
 

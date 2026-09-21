@@ -320,7 +320,7 @@ Tap Categories from there → jumps straight there. Repeat in dark mode.
 
 ---
 
-## §M5 — Notes
+## §M5 — Notes ✅ done
 
 **Automated**
 
