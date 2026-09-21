@@ -12,6 +12,9 @@ import { AccountsPage } from '@/routes/money/AccountsPage'
 import { RatesPage } from '@/routes/money/RatesPage'
 import { NotesPage } from '@/routes/notes/NotesPage'
 import { TasksPage } from '@/routes/tasks/TasksPage'
+import { TaskCollectionsPage } from '@/routes/tasks/TaskCollectionsPage'
+import { PlanWeekPage } from '@/routes/tasks/PlanWeekPage'
+import { ReviewWeekPage } from '@/routes/tasks/ReviewWeekPage'
 import { KitchenSinkPage } from '@/routes/kitchen-sink/KitchenSinkPage'
 import { DataDebugPage } from '@/routes/debug/DataDebugPage'
 
@@ -32,6 +35,9 @@ export function App() {
                 <Route path="money/rates" element={<RatesPage />} />
                 <Route path="notes" element={<NotesPage />} />
                 <Route path="tasks" element={<TasksPage />} />
+                <Route path="tasks/collections" element={<TaskCollectionsPage />} />
+                <Route path="tasks/plan" element={<PlanWeekPage />} />
+                <Route path="tasks/review" element={<ReviewWeekPage />} />
                 <Route path="kitchen-sink" element={<KitchenSinkPage />} />
                 <Route path="debug/data" element={<DataDebugPage />} />
               </Route>
