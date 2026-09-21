@@ -351,33 +351,99 @@ Tap Categories from there → jumps straight there. Repeat in dark mode.
 
 ---
 
-## §M6 — Tasks
+## §M6 — Tasks ✅ done
 
-**Automated**
+**Run it yourself:**
 
-- Task/subtask CRUD; parent progress `n/m` recomputes on every subtask toggle.
-- A task created in the plan screen gets the correct ISO `weekKey`, including for
-  dates in the first and last week of a year.
-- Today view: overdue first, then due-today, then undated.
-- Review screen: lists exactly `weekKey` tasks + tasks completed inside the week;
-  completion rate === done/total.
-- Carry-forward moves an unfinished task's `weekKey` to the new week and keeps its
-  subtasks and notes.
-- Completing all subtasks prompts but does not auto-complete the parent.
+```bash
+npm run test           # 228 Vitest tests
+npm run test:e2e        # 122 Playwright tests, incl. e2e/tasks.spec.ts + e2e/tasks-week.spec.ts
+npm run dev              # then open http://localhost:5173/tasks
+```
+
+**Automated (in place)**
+
+- `taskViews.test.ts` (22 cases): overdue/due-today are day-granularity, not
+  time-of-day (a task due later today is "due today", not overdue the instant its
+  time passes); Today puts overdue before due-today, each sorted by time; Upcoming
+  groups by day for 14 days then folds the rest into one trailing "Later" group,
+  excluding done and past-dated tasks; All excludes done and filters by
+  collection/search (case-insensitive, combinable); Completed sorts most-recent
+  first.
+- `dueLabel.test.ts` (9 cases) / `week.test.ts` (7 cases, incl. an ISO-week
+  year-boundary case already covered for `getIsoWeekKey` itself back in M2 — this
+  just checks the wrapper doesn't reprocess that result) — the due-date and
+  week-range display formatting.
+- `e2e/tasks.spec.ts` (real IndexedDB): capture with priority/due date/subtasks;
+  a due-dated task appears in Today, an undated one doesn't (but does in All);
+  the checkbox completes a task **without** opening its edit sheet (see the bug
+  note below); tapping the row does open it, and edits persist; swipe-delete
+  offers undo; subtask progress recomputes on toggle; search + collection filters
+  combine on the All view; deleting a collection in use moves its tasks to Unfiled.
+- `e2e/tasks-week.spec.ts`: quick-add lands a task in this week; completing it from
+  the Plan screen works; Review splits Done/Not-done with the right completion
+  rate; carrying forward empties this week's Not-done list; saving a reflection
+  persists as a real note and reloads back correctly (a regression test for the
+  bug note below).
+- The accessibility sweep now also covers `/tasks`, `/tasks/collections`,
+  `/tasks/plan`, `/tasks/review` — zero violations, both themes.
+
+**Not automated / not built:** the original draft of this section called for a
+"mark the parent done too?" prompt on completing a task's last subtask. That
+didn't make it into this pass — completing all subtasks updates the `n/m` count but
+never touches the parent's own status, full stop, no prompt. Worth adding as a
+follow-up if it turns out to matter in practice; flagging here rather than quietly
+dropping it.
 
 **Manual (run this across a real week if you can)**
 
-1. Monday: open Plan your week. Add 5 tasks, 2 with deadlines, 1 with 3 subtasks.
-2. Confirm all 5 show under this week's chip.
-3. Tuesday–Friday: complete 3 of them, including all subtasks of the subtask one.
-   Confirm the prompt to complete the parent appears and is skippable.
-4. Let one deadline pass → it appears as overdue, in red, at the top of Today.
-5. Saturday: open Review your week. Done = 3, Not done = 2, rate = 60 %.
-6. Write a reflection → save → find it in Notes under "Weekly reviews".
-7. Carry forward the 2 unfinished → they appear in next week's plan with their
-   subtasks and notes intact.
-8. Swipe-complete and swipe-delete a task → undo works for both.
-9. Confirm nothing blocks you: dismiss the plan/review banners and keep using the app.
+1. Open Tasks. Add 5 tasks: 2 with due dates (one today, one next week), 1 with 3
+   subtasks, 2 with no due date.
+2. Today shows only the one due today (plus anything overdue, above it). Upcoming
+   shows the next-week one under its day heading. All shows all 5, filterable by
+   search and by collection.
+3. Complete 3 of the 5 via their checkbox — confirm the edit sheet never opens when
+   you tap the checkbox itself, only when you tap elsewhere on the row.
+4. Toggle 2 of the 3 subtasks on the subtask task → its row shows "2/3 subtasks".
+5. Let a due date pass (or backdate one via Edit) → it shows "Overdue · <date>" in
+   red, above anything merely due today, in the Today view.
+6. Open Plan the week (from Tasks' own row of tabs, or the "This week" card's
+   "Plan" button) → quick-add a task straight into the week.
+7. Open Review the week → Done/Not-done split and completion rate match what you
+   just did. Write a reflection, save it, then reload the page — the same text is
+   still there (it's a real note, in Notes → Weekly reviews, not just local state).
+8. Carry forward the Not-done tasks → Review the week again → they're gone from
+   this week's split (moved to next week's `weekKey`).
+9. Swipe a task left → Delete reveals; confirm undo restores it exactly.
+10. Delete a collection that has tasks in it → those tasks move to Unfiled, nothing
+    is deleted.
+11. From every one of Tasks/Collections/Plan/Review, confirm the sub-nav row gets
+    you directly to any of the other three — no detour required.
+
+**Pass:** automated suite green and all 11 manual steps hold, in both themes.
+
+**Bugs the test suite caught and fixed before merge:**
+
+- **Tapping a task's checkbox also opened its edit sheet.** The checkbox is a
+  clickable `leading` element inside a row that's itself clickable (tap row → open
+  to edit) — without stopping propagation, a checkbox tap bubbled up and fired the
+  row's own click too. Fixed in the shared `TaskCheckbox` component itself, not
+  just this call site, so any future row that pairs it with a row-level `onClick`
+  is safe by construction.
+- **A saved weekly reflection never loaded back in on reopen.** Seeding the
+  reflection field from data that loads asynchronously (`useLiveQuery`) via a
+  `useState` initializer only ever captured that hook's synchronous first-render
+  value (always empty), not the real data a moment later. Fixed by moving the
+  field into its own component, mounted only once the real data has actually
+  arrived, so its `useState` initializer runs against a fresh, correct value —
+  see PLAN.md §M6 for why an effect-based fix was rejected (correctly flagged by
+  `react-hooks/set-state-in-effect`).
+- **Quick-adding a second task on Plan-the-week could wipe out its own title.**
+  The field was cleared _after_ the write it submitted resolved, so typing the
+  next title before that finished could get clobbered by the delayed clear.
+  Looked like ordinary test flake at first — padding the timeout didn't fix it,
+  which is what gave away that the field was actually being emptied, not just
+  slow. Fixed by clearing before the write, not after.
 
 ---
 

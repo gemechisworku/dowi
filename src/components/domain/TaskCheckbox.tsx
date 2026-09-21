@@ -4,7 +4,14 @@ export interface TaskCheckboxProps {
   label: string
 }
 
-/** The round checkbox used for tasks/subtasks — visually distinct from the form Checkbox (which is square, for settings/filters). */
+/**
+ * The round checkbox used for tasks/subtasks — visually distinct from the
+ * form Checkbox (which is square, for settings/filters). Stops the click
+ * from bubbling: it's routinely used as a `ListItem`'s `leading` element
+ * inside a row that's itself clickable (tap row → edit, tap checkbox →
+ * toggle), and without this a checkbox tap would also fire the row's own
+ * onClick and open the edit sheet.
+ */
 export function TaskCheckbox({ checked, onChange, label }: TaskCheckboxProps) {
   return (
     <button
@@ -12,7 +19,10 @@ export function TaskCheckbox({ checked, onChange, label }: TaskCheckboxProps) {
       role="checkbox"
       aria-checked={checked}
       aria-label={label}
-      onClick={() => onChange(!checked)}
+      onClick={(e) => {
+        e.stopPropagation()
+        onChange(!checked)
+      }}
       className="flex h-11 w-11 shrink-0 items-center justify-center"
     >
       <span

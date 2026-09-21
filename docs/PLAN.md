@@ -394,25 +394,97 @@ renders correctly in both themes. **Tag:** `m5` · **Test guide:** TESTING.md §
 
 ---
 
-## M6 — Tasks
+## M6 — Tasks ✅ done
 
 **Deliverable:** the weekly plan → do → review loop.
 
-- [ ] Task CRUD: title, rich-text notes, collection, priority, due date+time,
-      reminder offsets
-- [ ] Subtasks: add, rename, toggle, drag-reorder, delete; `n/m` progress on parent
-- [ ] Views: Today (overdue first), Upcoming (14 days + Later), All/by collection,
-      Completed (restorable); filters + search
-- [ ] Swipe actions: complete / delete with undo
-- [ ] Collections CRUD
-- [ ] **Plan-the-week screen:** week header, add straight into the week, carry-forward
-      list from last week with per-item and bulk "move to this week"
-- [ ] **Review-the-week screen:** Done / Not done split, completion rate, reflection
-      field saved into the "Weekly reviews" note collection, carry-forward action
-- [ ] Both reachable any day from the week chip; nothing blocking or streak-based
+- [x] Task CRUD (`TaskSheet`): title, notes, collection, priority, due date+time,
+      reminder offsets. **Deviation:** `notes` is a plain string, not the Tiptap JSON
+      `Task.notes` is typed for — M5 hasn't built the editor yet. Stored as-is in
+      that `unknown` field; M5 can upgrade it without a migration, since a bare
+      string round-trips through Tiptap's own shape as a single paragraph node
+- [x] Subtasks (`SubtaskEditor`): add, rename (inline), toggle, delete, and
+      drag-reorder via a pointer-drag handle (no drag-and-drop library — the row
+      under the pointer swaps in live, the same "shuffle as you drag" feel as a
+      native mobile reorder list); `n/m` progress shown on the parent row
+- [x] Views (`TasksPage`, pure logic in `taskViews.ts`): Today (overdue first, then
+      due-today by time), Upcoming (grouped by day for 14 days, then one trailing
+      "Later" group), All (search + collection filter), Completed (most recently
+      completed first — un-completing from here is how a "restore" happens, there's
+      no separate soft-delete-style restore for a status change)
+- [x] Swipe-to-delete with undo (`TaskListItem`, via the shared `SwipeableRow`);
+      complete is the checkbox, not a second swipe action — `SwipeableRow` is
+      deliberately single-action (see M1), and every task row already has an
+      always-visible checkbox, so a swipe action would just be a redundant second
+      way to do the same thing
+- [x] Collections CRUD (`TaskCollectionsPage`): icon + colour, safe delete (moves
+      affected tasks to Unfiled, mirroring M5's note-collection spec) rather than
+      Money's reassign-required flow — PRD requires reassignment specifically for
+      Money's categories; nothing says the same for tasks, and Unfiled is the
+      friendlier default absent a reason not to
+- [x] Plan-the-week (`PlanWeekPage`): week header, quick-add straight into the week,
+      carry-forward list from last week with per-item and bulk "move to this week"
+- [x] Review-the-week (`ReviewWeekPage`): Done/Not-done split, completion rate via
+      `ProgressBar`, a reflection saved as a real note in an on-demand "Weekly
+      reviews" collection (M2's notes data layer already exists even without M5's
+      editor UI — this writes a plain-text note directly rather than waiting),
+      carry-forward for what's left undone
+- [x] Both reachable any day via a persistent "This week" card + Plan/Review buttons
+      on `TasksPage` (not literally a single "chip" — a small card reads better at
+      this width once it needs both actions), plus `TasksSubNav` (mirroring Money's
+      own subnav — see its "Post-M4 fix" note above) on every Tasks screen so none
+      of Tasks/Collections/Plan/Review is a dead end
 
 **Done when:** you can plan a week, complete part of it, and produce a review whose
 counts match reality. **Tag:** `m6` · **Test guide:** TESTING.md §M6
+
+**Verified:** 66 new Vitest unit tests (228 total, up from 190) — `taskViews.test.ts`
+(22 cases: overdue/due-today at day granularity not time-of-day, Today's
+overdue-first ordering, Upcoming's day-grouping and 14-day horizon, All's
+search/collection filters, Completed's ordering), `dueLabel.test.ts` (9),
+`week.test.ts` (7, incl. an ISO-week year-boundary case). **34** new Playwright e2e
+tests (122 total, up from 88) — `tasks.spec.ts` and `tasks-week.spec.ts` cover
+capture, subtasks, all four views, swipe-delete-undo, collections' safe delete, and
+the full plan → complete → review → carry-forward → reflection loop against real
+IndexedDB; the accessibility sweep now also covers `/tasks`, `/tasks/collections`,
+`/tasks/plan`, `/tasks/review`. Build is 143.81 KB gzipped JS (budget 180 KB).
+
+**Bugs found this milestone:**
+
+- **Tapping a task's checkbox also opened the edit sheet.** `TaskListItem` gives
+  `ListItem` both an `onClick` (open to edit) and an interactive `leading` element
+  (the checkbox) — a click on the checkbox bubbles up through the row's own click
+  handler unless stopped, so checking a task off also popped the edit sheet open
+  over it. Fixed in `TaskCheckbox` itself (`e.stopPropagation()`), not just this one
+  call site, since any future clickable-row-with-a-leading-checkbox combination
+  (e.g. M8's "Today's tasks card with inline completion") would hit the same bug.
+- **A saved weekly reflection never loaded back in.** `ReviewWeekPage` seeded
+  `reflection`'s `useState` initializer from `existingReview?.contentText`, but
+  `notes` (from `useLiveQuery`) starts as `EMPTY_ARRAY` on the very first render and
+  only resolves to the real data a moment later — so the initializer always
+  captured that first, empty render, and a previously-saved reflection would show
+  up as blank every time. An effect calling `setState` to "fix" this after the fact
+  hit `react-hooks/set-state-in-effect` (correctly — that's cascading-render-prone).
+  Fixed by extracting the field into its own `ReflectionField` component that
+  `ReviewWeekPage` mounts only once `notes` has actually resolved, so its own
+  `useState` initializer captures the right value on a genuinely fresh mount — no
+  effect needed.
+- **Plan-the-week's quick-add could silently wipe out the _next_ task's title.**
+  `handleQuickAdd` cleared the input via `setDraft('')` _after_ `await
+repos.tasks.create(...)` — so if a second title got typed into the same field
+  before that write resolved (easy to do quickly-add several tasks in a row, which
+  is the screen's whole point), the delayed clear fired after the fact and wiped
+  the new text back to empty. Surfaced as an e2e test intermittently failing to
+  add a second task — looked at first like ordinary test-timing flake, but padding
+  the assertion timeout didn't fix it, which is what exposed that the input itself
+  was actually being cleared, not just slow to update. Fixed by clearing the field
+  synchronously before the write instead of after, removing the race outright
+  rather than narrowing its window.
+- One e2e-only race (not an app bug): a test navigating away immediately after a
+  click, before the async repo write it triggered had actually resolved, produced
+  a string of "element not found" failures — fixed by waiting for the on-screen
+  confirmation (dialog closed, new text visible) _before_ the next navigation, not
+  by adding blind waits.
 
 ---
 
