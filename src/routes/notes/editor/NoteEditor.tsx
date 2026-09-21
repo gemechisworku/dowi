@@ -22,9 +22,11 @@ export interface NoteEditorProps {
  * imports.
  *
  * `initialContent` is only read on mount (Tiptap owns the document after
- * that) — NoteEditorPage remounts this component with a `key={noteId}`
- * whenever it switches to a different note, rather than pushing new content
- * in via a prop update.
+ * that) — NoteEditorPage keys this component on a value frozen at *its own*
+ * mount (`stableEditorKey`), deliberately not on the note's live id, so it
+ * never remounts (and loses whatever's on screen) when autosave assigns a
+ * brand-new note its first real id partway through editing. See that key's
+ * own doc comment in NoteEditorPage.tsx for the bug this fixed.
  */
 export default function NoteEditor({
   initialContent,
