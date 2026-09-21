@@ -488,24 +488,101 @@ repos.tasks.create(...)` — so if a second title got typed into the same field
 
 ---
 
-## M7 — Notifications & reminders
+## M7 — Notifications & reminders ✅ done
 
 **Deliverable:** reminders that arrive, and an inbox that never loses one.
 
-- [ ] Scheduler: computes the next fire time for weekly-plan, weekly-review, task-due
-      and daily-agenda reminders; stored in the `notifications` table
-- [ ] Service worker: `showNotification`, click → deep link, `periodicsync` handler
-- [ ] Catch-up on app open: fire anything due since last run, exactly once
-- [ ] Quiet hours suppression (OS delivery suppressed, inbox entry still written)
-- [ ] In-app notification inbox with unread badge, mark-read, clear, deep links
-- [ ] In-context permission request with an explainer; honest state display in Settings
-- [ ] "Send a test notification" button
-- [ ] All scheduling behind a `ReminderScheduler` interface; `WebScheduler` is the only
-      implementation in v1.0. A `CapacitorScheduler` can be added in M10 without
-      touching feature code — **only if** §M7 step 4 shows delivery is unreliable
+- [x] Scheduler (`src/lib/reminders.ts` — pure `computeDueReminders()`, deliberately
+      dependency-free so the same logic runs on the main thread, inside the service
+      worker's periodicsync handler, and under Vitest): computes the next fire time
+      for weekly-plan, weekly-review, task-due (per-task `reminderOffsets`, already
+      captured by M6's `TaskSheet`) and daily-agenda reminders, plus a recurring
+      backup nudge that reschedules itself from whichever is more recent, the last
+      real export or the last nudge. A 3-day catch-up window (not applied to the
+      backup nudge) keeps re-opening the app after months away from dumping a huge
+      backlog into the inbox
+- [x] Service worker (`src/sw.ts`, switched from `generateSW` to `injectManifest` —
+      the only way to add handlers of our own): `notificationclick` closes the
+      notification and deep-links (focuses an existing tab via `postMessage`, or
+      `clients.openWindow` if none is open); `periodicsync` re-runs the same
+      scheduler against its own Dexie handle, best-effort or a no-op everywhere
+      the API isn't supported
+- [x] Catch-up on app open (`useNotificationRuntime`, run once per mount from
+      `AppLayout`): writes an inbox entry for everything newly due and attempts OS
+      delivery for each, deduplicated against what's already in the `notifications`
+      table so nothing fires twice (AC-P2)
+- [x] Quiet hours suppression — inbox entry is always written; OS delivery alone is
+      skipped when the current time falls inside the (possibly overnight) window
+      (AC-P3)
+- [x] In-app notification inbox (`NotificationsInboxPage`, `/notifications`) — the
+      bell's unread badge is now wired to `notificationsRepo.listUnread()` (it
+      existed as UI since M1 but nothing populated it); tap to mark read and
+      deep-link, swipe or "Clear all" to remove, "Mark all read"
+- [x] In-context permission request — a `ConfirmDialog` explainer shown the first
+      time a reminder is turned on while permission is still undecided, _before_
+      calling `Notification.requestPermission()`; honest state display in the new
+      `SettingsPage` (`/settings`, gear icon)
+- [x] "Send a test notification" button — reuses `ReminderScheduler.sendTest()`
+      directly rather than duplicating its permission/delivery logic
+- [x] `ReminderScheduler` interface (`src/notifications/scheduler.ts`) with
+      `WebScheduler` as the only v1.0 implementation, per PRD OD-1. A
+      `CapacitorScheduler` can be added in M10 without touching feature code —
+      **only if** the real-phone pass below shows delivery is unreliable
+
+**Deviation:** `Settings.reminders.taskDue.offsets` (a global default) is left
+unused in this screen — M6 already gives each task its own `reminderOffsets` from
+`TaskSheet`, which is the actual per-occurrence control the PRD's "Offsets,
+configurable" means; Settings surfaces only the global on/off switch for task-due
+reminders. `SettingsPage` also covers Reminders only — Appearance/Money/Data/About
+land with the rest of Settings in M9.
 
 **Done when:** a reminder set 2 minutes ahead arrives on the phone, deep-links
 correctly, and appears in the inbox. **Tag:** `m7` · **Test guide:** TESTING.md §M7
+
+**Verified:** 250 Vitest unit tests (up from 228) — `reminders.test.ts` (14 cases:
+quiet-hours same-day/overnight/disabled/degenerate windows, weekly occurrence
+timing and the catch-up-window cutoff, daily-agenda's today/yesterday fallback,
+task-due skipping completed/undated tasks, and the backup nudge's
+installedAt/last-export/last-nudge baseline logic), `scheduler.test.ts` (7 cases,
+permission module mocked: inbox-write-always-happens, OS delivery gated on
+permission and quiet hours, no double-fire on repeated catch-up calls, `sendTest`'s
+in-context permission request), plus a `notificationsRepo.markDelivered` case.
+**138** Playwright e2e tests (up from 122, both themes) — `notifications.spec.ts`
+covers the denied-permission state honestly (no re-prompt), quiet hours' UI and
+persistence, a real catch-up-generated reminder appearing in the inbox and
+deep-linking to the right screen, and Clear all; the accessibility sweep now also
+covers `/notifications` and `/settings`. Build is 147.34 KB gzipped JS (budget
+180 KB) plus a separately-loaded 40.22 KB gzipped service worker (not part of the
+initial-paint budget).
+
+**Bugs found this milestone:**
+
+- **The service worker failed to register at all in the production build** —
+  caught by the kitchen-sink suite's "no console error" check, which surfaced
+  `ServiceWorker script evaluation failed`. Root cause: `injectManifest`'s default
+  build format is ES modules (needed here since the bundle references
+  `import.meta`), but vite-plugin-pwa v1.3's auto-generated production register
+  script always passes `type: 'classic'` to `navigator.serviceWorker.register()`
+  regardless of the service worker's actual build format — a real gap in the
+  plugin, confirmed by registering the same built file manually with
+  `{ type: 'module' }` (works) versus without (the exact same failure). Fixed by
+  building the service worker itself as a classic IIFE
+  (`injectManifest.rollupFormat: 'iife'`) instead, which keeps the two in sync
+  without a hand-rolled registration call.
+- **Not a shipped bug, but the same class M6 already found twice:** the first
+  draft of `TasksPage`'s `?taskId=` deep-link handling (for a tapped task-due
+  notification) synced the URL into `editing` state from inside a `useEffect`,
+  which `react-hooks/set-state-in-effect` correctly flagged before it ever ran.
+  Rewritten as a value derived straight from `tasks` + the URL during render
+  (`effectiveEditing = editing ?? deepLinkedTask`), with the URL only cleared from
+  a real event handler (closing the sheet) — no effect needed, same shape as the
+  fix M6 already landed for `ReviewWeekPage`'s reflection field.
+- Headless Chromium was found to always report `Notification.permission` as
+  `"denied"`, even with `context.grantPermissions(['notifications'])` — confirmed
+  empirically, not assumed. Neither the 'default' explainer path nor a real
+  'granted' OS-delivery path is reachable through Playwright as a result; both are
+  covered by code review and `scheduler.test.ts`'s mocked permission states
+  instead, with the real-phone pass below as the actual proof for delivery.
 
 ---
 

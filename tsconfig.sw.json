@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "WebWorker"],
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -11,7 +10,6 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "jsx": "react-jsx",
 
     "strict": true,
     "noUnusedLocals": true,
@@ -23,10 +21,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    },
-
-    "types": ["vite/client"]
+    }
   },
-  "include": ["src"],
-  "exclude": ["src/sw.ts"]
+  "include": ["src/sw.ts"]
 }

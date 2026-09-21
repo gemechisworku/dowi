@@ -80,6 +80,19 @@ describe('notificationsRepo', () => {
     expect(await repo.listUnread()).toHaveLength(0)
   })
 
+  it('markDelivered() stamps deliveredAt', async () => {
+    const a = await repo.create({
+      type: 'task-due',
+      title: 'A',
+      body: '',
+      scheduledFor: '2026-09-01T08:00:00.000Z',
+    })
+    expect(a.deliveredAt).toBeUndefined()
+    await repo.markDelivered(a.id)
+    const [reloaded] = await repo.list()
+    expect(reloaded?.deliveredAt).toBeTruthy()
+  })
+
   it('clear() removes a single notification permanently', async () => {
     const a = await repo.create({
       type: 'task-due',

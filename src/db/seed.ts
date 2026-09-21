@@ -29,7 +29,7 @@ const DEFAULT_INCOME_CATEGORIES: Array<Pick<Category, 'name' | 'icon' | 'color'>
   { name: 'Other', icon: '📦', color: 'var(--color-text-muted)' },
 ]
 
-const SEEDED_META_KEY = 'seededAt'
+export const SEEDED_META_KEY = 'seededAt'
 
 /**
  * Seeds default categories and settings exactly once (idempotent — safe to

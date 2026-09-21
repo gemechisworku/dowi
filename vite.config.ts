@@ -10,6 +10,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
+      // injectManifest (not the default generateSW) — M7 needs
+      // `notificationclick` and `periodicsync` handlers of its own
+      // (src/sw.ts), which generateSW's black-box service worker has no
+      // hook for.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['favicon.svg'],
       manifest: {
         id: '/',
@@ -50,9 +57,14 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        navigateFallbackDenylist: [/^\/api\//],
+        // vite-plugin-pwa v1.3's production register script always passes
+        // `type: 'classic'` (a known gap — it only reads devOptions.type),
+        // regardless of the service worker's own build format. Building
+        // the SW as a classic IIFE instead of the 'es'-format default
+        // keeps the two in sync without needing a hand-rolled registration.
+        rollupFormat: 'iife',
       },
       devOptions: {
         enabled: false,

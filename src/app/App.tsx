@@ -15,6 +15,8 @@ import { TasksPage } from '@/routes/tasks/TasksPage'
 import { TaskCollectionsPage } from '@/routes/tasks/TaskCollectionsPage'
 import { PlanWeekPage } from '@/routes/tasks/PlanWeekPage'
 import { ReviewWeekPage } from '@/routes/tasks/ReviewWeekPage'
+import { NotificationsInboxPage } from '@/routes/notifications/NotificationsInboxPage'
+import { SettingsPage } from '@/routes/settings/SettingsPage'
 import { KitchenSinkPage } from '@/routes/kitchen-sink/KitchenSinkPage'
 import { DataDebugPage } from '@/routes/debug/DataDebugPage'
 
@@ -38,6 +40,8 @@ export function App() {
                 <Route path="tasks/collections" element={<TaskCollectionsPage />} />
                 <Route path="tasks/plan" element={<PlanWeekPage />} />
                 <Route path="tasks/review" element={<ReviewWeekPage />} />
+                <Route path="notifications" element={<NotificationsInboxPage />} />
+                <Route path="settings" element={<SettingsPage />} />
                 <Route path="kitchen-sink" element={<KitchenSinkPage />} />
                 <Route path="debug/data" element={<DataDebugPage />} />
               </Route>

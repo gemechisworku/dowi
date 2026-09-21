@@ -447,26 +447,62 @@ dropping it.
 
 ---
 
-## §M7 — Notifications
+## §M7 — Notifications ✅ done
 
-> Must be tested on the real phone over HTTPS with the PWA installed. Desktop Chrome
-> is only useful for the first two automated checks.
+> The scheduler, inbox and Settings controls are verified below against real
+> IndexedDB in a real (headless) browser. Actual OS notification delivery —
+> whether it arrives, on time, while backgrounded or fully closed — can only be
+> proven on a real phone; see **Manual** below. Headless Chromium always reports
+> `Notification.permission` as `"denied"` (confirmed empirically, even with
+> Playwright's `grantPermissions`), so the 'default'-permission explainer dialog
+> and a real 'granted' delivery aren't reachable in the automated suite at all —
+> both are covered by `scheduler.test.ts` with the permission module mocked
+> instead.
 
-**Automated**
+**Run it yourself:**
 
-- Next-fire-time computation for each reminder type across day/week/DST boundaries.
-- Quiet hours: a reminder inside the window writes an inbox entry and does **not**
-  call `showNotification`.
-- Catch-up: two missed reminders while closed fire exactly once each, never twice.
-- Turning a reminder off removes its scheduled entries.
-- Deep-link routing: each notification payload resolves to the right route.
+```bash
+npm run test           # 250 Vitest tests
+npm run test:e2e        # 138 Playwright tests, incl. e2e/notifications.spec.ts
+npm run dev              # then open http://localhost:5173/settings
+```
 
-**Manual**
+**Automated (in place)**
+
+- `reminders.test.ts` (14 cases): quiet hours across a same-day window, an
+  overnight window (22:00–07:00, both sides of midnight), disabled, and the
+  degenerate zero-length case; weekly-plan/review fire once their day+time has
+  passed and not before, are never raised twice for the same occurrence, and drop
+  out of the 3-day catch-up window once stale; daily agenda falls back to
+  yesterday's occurrence before today's has arrived; task-due raises one
+  reminder per offset once each has passed, skipping completed tasks and tasks
+  with no due date, and is a global no-op when disabled; the backup nudge uses
+  first-run as its baseline with no prior export, resets from a real export, and
+  recurs from its own previous occurrence when the user still hasn't exported.
+- `scheduler.test.ts` (7 cases, `../permission` and `../deliver` mocked): an
+  inbox entry is written whether or not OS delivery succeeds; OS delivery itself
+  is gated on both permission **and** quiet hours independently; repeated
+  `catchUp()` calls never raise the same occurrence twice; `sendTest()` requests
+  permission only when it's still undecided, and never touches the inbox.
+- `notificationsRepo.test.ts` gains a `markDelivered()` case.
+- `e2e/notifications.spec.ts` (real IndexedDB): the denied-permission state is
+  shown honestly and doesn't re-prompt when a reminder is toggled; a test
+  notification reports it's blocked rather than claiming success; quiet hours'
+  time pickers show/hide with the switch and the setting survives a reload; a
+  reminder whose day/time has already passed is caught up on the very next app
+  open, appears in the inbox, and its tap deep-links to the right screen — all
+  without needing OS permission, since the inbox write itself is unconditional;
+  Clear all empties the inbox.
+- The accessibility sweep now also covers `/notifications` and `/settings` —
+  zero violations, both themes.
+
+**Manual (real phone, over HTTPS, PWA installed)**
 
 1. Settings → Reminders → enable Weekly plan. The explainer appears **before** the
    browser permission prompt. Grant it.
 2. Tap "Send a test notification" → it arrives on the phone within seconds.
-3. Set a task due 2 minutes out with a 0-minute offset. Put the app in the background.
+3. Set a task due 2 minutes out with a 0-minute offset (from its own Edit sheet —
+   the per-task "Remind me" chips, not Settings). Put the app in the background.
    → Notification arrives. Tap it → the app opens **on that task**.
 4. Repeat but fully close the app for 10 minutes → note whether it arrives late or not
    at all, then open the app → the catch-up notification fires **once** and the inbox
@@ -476,12 +512,35 @@ dropping it.
    badge increments and the inbox has it.
 6. Deny permission in Android settings → the app shows the denied state honestly with
    instructions, and does not keep re-prompting.
-7. Turn every reminder off → nothing arrives over 24 h.
+7. Turn every reminder off → nothing new arrives over 24 h (existing inbox history
+   from before it was turned off is left alone — only future occurrences stop).
 8. Weekly plan reminder on Monday and review reminder on Saturday, at the configured
    times, both deep-linking to the right screens.
 
 **Record the results of step 4** — that is the evidence for whether OD-1 Option B
 (Capacitor wrap) is needed.
+
+**Pass:** automated suite green (both themes) and all 8 manual steps hold.
+
+**Bugs the test suite caught and fixed before merge:**
+
+- **The service worker failed to register at all in the production build.** The
+  kitchen-sink suite's "no console error" check caught `ServiceWorker script
+evaluation failed` the first time the full e2e suite ran against a real preview
+  build. vite-plugin-pwa's `injectManifest` strategy builds the service worker as
+  an ES module by default (needed here — the bundle references `import.meta`),
+  but the plugin's auto-generated production `<script>` registration always
+  passes `type: 'classic'` to `navigator.serviceWorker.register()` regardless —
+  confirmed as the actual cause by registering the identical built file by hand
+  with `{ type: 'module' }` (works) and without (the exact same failure). Fixed
+  by building the service worker itself as a classic IIFE
+  (`injectManifest.rollupFormat: 'iife'`) so the two stay in sync without a
+  hand-rolled registration call.
+- Not a shipped bug — caught by lint before it ever ran: the first draft of the
+  task-due deep link's `?taskId=` handling on `TasksPage` synced the URL into
+  `editing` state from inside a `useEffect`, which `react-hooks/set-state-in-effect`
+  flagged immediately. Same fix shape as M6's `ReviewWeekPage` reflection bug —
+  derived from render instead of synced via effect.
 
 ---
 

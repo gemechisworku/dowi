@@ -35,6 +35,10 @@ export function createNotificationsRepo(db: DowiDatabase) {
       await db.notifications.update(id, { read: true })
     },
 
+    async markDelivered(id: string): Promise<void> {
+      await db.notifications.update(id, { deliveredAt: new Date().toISOString() })
+    },
+
     async markAllRead(): Promise<void> {
       const unread = await this.listUnread()
       await db.notifications.bulkUpdate(unread.map((n) => ({ key: n.id, changes: { read: true } })))

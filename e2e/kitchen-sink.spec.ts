@@ -67,6 +67,8 @@ test.describe('Top-level screens', () => {
     '/tasks/collections',
     '/tasks/plan',
     '/tasks/review',
+    '/notifications',
+    '/settings',
   ]) {
     test(`${path} has zero automatically-detectable accessibility violations`, async ({ page }) => {
       await page.goto(path)
