@@ -5,6 +5,7 @@ import { DatabaseProvider } from './db/DatabaseProvider'
 import { SnackbarProvider } from '@/components/ui/SnackbarProvider'
 import { HomePage } from '@/routes/home/HomePage'
 import { MoneyPage } from '@/routes/money/MoneyPage'
+import { NewTransactionPage } from '@/routes/money/NewTransactionPage'
 import { ReportsPage } from '@/routes/money/reports/ReportsPage'
 import { CategoriesPage } from '@/routes/money/CategoriesPage'
 import { SourcesPage } from '@/routes/money/SourcesPage'
@@ -15,6 +16,7 @@ import { NoteEditorPage } from '@/routes/notes/NoteEditorPage'
 import { NoteCollectionsPage } from '@/routes/notes/NoteCollectionsPage'
 import { NoteTrashPage } from '@/routes/notes/NoteTrashPage'
 import { TasksPage } from '@/routes/tasks/TasksPage'
+import { NewTaskPage } from '@/routes/tasks/NewTaskPage'
 import { TaskCollectionsPage } from '@/routes/tasks/TaskCollectionsPage'
 import { PlanWeekPage } from '@/routes/tasks/PlanWeekPage'
 import { ReviewWeekPage } from '@/routes/tasks/ReviewWeekPage'
@@ -33,6 +35,7 @@ export function App() {
               <Route element={<AppLayout />}>
                 <Route index element={<HomePage />} />
                 <Route path="money" element={<ReportsPage />} />
+                <Route path="money/new" element={<NewTransactionPage />} />
                 <Route path="money/transactions" element={<MoneyPage />} />
                 <Route path="money/categories" element={<CategoriesPage />} />
                 <Route path="money/sources" element={<SourcesPage />} />
@@ -44,6 +47,7 @@ export function App() {
                 <Route path="notes/new" element={<NoteEditorPage />} />
                 <Route path="notes/:id" element={<NoteEditorPage />} />
                 <Route path="tasks" element={<TasksPage />} />
+                <Route path="tasks/new" element={<NewTaskPage />} />
                 <Route path="tasks/collections" element={<TaskCollectionsPage />} />
                 <Route path="tasks/plan" element={<PlanWeekPage />} />
                 <Route path="tasks/review" element={<ReviewWeekPage />} />

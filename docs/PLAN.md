@@ -671,21 +671,113 @@ initial-paint budget).
 
 ---
 
-## M8 — Home / landing
+## M8 — Home / landing ✅ done
 
 **Deliverable:** the dashboard from PRD §5.1, wired to live data.
 
-- [ ] Greeting header with date, week number, FY label
-- [ ] Money summary card with persisted Week/Month/Year toggle → links to M4
-- [ ] Today's tasks card with inline completion → links to M6
-- [ ] Plan/review banner on the configured days, dismissible for the day
-- [ ] Recent notes card → links to M5
-- [ ] Quick actions row (add income / expense / note / task)
-- [ ] First-run empty state
-- [ ] Skeletons while loading; no layout shift
+- [x] Greeting header with date, week number, FY label
+- [x] Money summary card with persisted Week/Month/Year toggle → links to M4
+- [x] Today's tasks card with inline completion → links to M6
+- [x] Plan/review banner on the configured days, dismissible for the day
+- [x] Recent notes card → links to M5
+- [x] Quick actions row (add income / expense / note / task)
+- [x] First-run empty state
+- [x] Skeletons while loading; no layout shift
 
 **Done when:** every number on Home matches its feature screen exactly.
 **Tag:** `m8` · **Test guide:** TESTING.md §M8
+
+**Verified:** 21 new Vitest unit tests (315 total, up from 294) — `homePrefs.test.ts`
+(4, period-toggle persistence incl. a corrupted-value fallback), `homeBanner.test.ts`
+(9, plan/review-day detection incl. the both-configured-same-day tiebreak and
+independence from each reminder's own `enabled` flag, plus per-day dismissal),
+`taskViews.test.ts` additions (4, `getOverdueCount` counting every overdue task —
+not just the 5 Home actually shows — and `toggleCompletePatch`), `noteViews.test.ts`
+additions (4, `getRecentNotes` sorting by `updatedAt` not `createdAt`, with a case
+that deliberately decouples the two). **44** new Playwright e2e tests (208 total, up
+from 164) — `home.spec.ts` seeds deterministic fixtures via `/debug/data`'s JSON
+import (same mechanism `reports-perf.spec.ts` uses) rather than driving each
+feature's own add-sheet, since only that gives exact control over due-dates,
+edit-recency and reminder-day config independent of whatever day the suite
+actually runs on: the empty first-run state, money totals matching a same-period
+`/money` load exactly, the 7-tasks-capped-to-5 today's-tasks card with a
+same-Today-view comparison against `/tasks` and inline completion updating both
+screens immediately (AC-H3), the 3-most-recently-_edited_ (not created) notes
+card, the plan/review banner appearing only on its configured day and staying
+dismissed for the rest of that day across a reload, every quick action opening
+its create flow pre-set correctly, and every card's own link to its feature
+screen (AC-H4); the accessibility sweep now also explicitly covers `/` populated
+with real data in both themes (the existing top-level sweep already covered `/`'s
+empty state across both Playwright projects' `colorScheme`, but not populated
+cards, which is where the two bugs below were actually caught). Build is
+153.03 KB gzipped JS for the initial bundle (budget 180 KB, up from M5's
+151.61 KB baseline — Home adds no new heavy dependency, so the ~1.4 KB delta is
+just its own code).
+
+**Deviations:**
+
+- `/money/new` and `/tasks/new` didn't exist as real routes before this milestone
+  — only the PWA manifest shortcuts (`vite.config.ts`) and `AppLayout`'s
+  `CHROMELESS_PREFIXES` anticipated them, and Money/Tasks each only ever opened
+  their add-sheet from in-page `addOpen` state. Added `NewTransactionPage`
+  (`/money/new[?type=]`) and `NewTaskPage` (`/tasks/new`) as thin chromeless
+  wrappers around the exact same `TransactionSheet`/`TaskSheet` each list page
+  already uses, rather than inventing a second create flow — Home's quick
+  actions and the manifest shortcuts now both genuinely work.
+- The money summary card's Week/Month/Year toggle reuses `PeriodSelector`, which
+  previously always offered all four periods including "Day". Gave it an
+  optional `periods` prop (defaulting to all four, so Reports is unchanged) so
+  Home can restrict it to the three the PRD actually asks for, instead of
+  forking a second segmented-period control.
+- Extracted `toggleCompletePatch()` into `taskViews.ts` — Home's own inline
+  completion needed the exact "what does toggling actually set" logic that
+  `TasksPage` and `PlanWeekPage` each already duplicated verbatim; all three now
+  share it. Similarly extracted `buildRateLookup()` (the "latest known
+  exchange rate" lookup `ReportsPage` already built inline) into
+  `reports/rateLookup.ts` so Home's money card converts currency exactly the
+  same way Reports does, rather than a second copy that could silently drift.
+- "No data at all" (Home's single empty-state card, per the PRD's literal
+  wording) is judged as zero transactions **and** zero tasks **and** zero notes
+  together — any one of the three having data instead shows the normal cards
+  with their own per-card empty states (e.g. "Nothing due today"), since a
+  blanket empty-state card would be actively wrong once part of the app is
+  actually in use.
+- Today's-tasks rows don't navigate anywhere by tapping the row itself (only the
+  task's own title text is a tap target) — seeded by the first bug below.
+  `ListItem`'s whole-row-as-button pattern, used elsewhere with the same
+  `TaskCheckbox` as its `leading` content, only became a genuine problem once
+  real tasks reached this card; see that bug for why it's flagged rather than
+  silently fixed everywhere it appears.
+
+**Bugs found this milestone:**
+
+- **A JSON import that omits `meta` (as a hand-built test fixture naturally
+  does) silently resets `settings` back to `DEFAULT_SETTINGS` on the very next
+  full page load.** `seedIfNeeded()` (`src/db/seed.ts`) treats a missing
+  `seededAt` meta row as "fresh database" and re-seeds default categories _and_
+  settings; `importAll`'s `replace` mode clears the `meta` table along with
+  everything else, so any imported `settings` survives only until the next
+  reload, at which point seeding quietly overwrites it. Existing fixture-driven
+  e2e tests (`reports-perf.spec.ts`) never noticed because they don't depend on
+  custom settings; Home's plan/review-banner tests do, and initially failed in
+  a way that looked like a banner-logic bug (wrong day, or the wrong banner
+  entirely) before tracing it back to the settings themselves reverting.
+  Home's own fixture now always includes a `seededAt` meta row; not a product
+  bug so nothing in `src/` changed, but worth documenting since the next
+  fixture-based e2e suite will hit it too.
+- **Real (non-empty) task rows fail the accessibility sweep with
+  `no-focusable-content`**: `TaskListItem` (and the equivalent inline markup
+  this milestone almost duplicated for Home) renders a whole clickable row as a
+  `<button>` with `TaskCheckbox` — itself a `<button role="checkbox">` — as its
+  leading content, nesting one interactive element inside another. The
+  top-level accessibility sweep never caught this because it only ever visits
+  `/tasks`, `/tasks/plan` and `/tasks/review` against a fresh, empty database,
+  so `TaskListItem` never actually renders there. Home's own a11y test seeds
+  real tasks, which is what surfaced it. Fixed in Home's own today's-tasks card
+  (no row-level `onClick`; only the task's title text is a separate button) so
+  Home itself passes with zero violations, but `TaskListItem` itself is
+  unchanged — fixing it is a small, well-scoped follow-up for whoever picks up
+  next (M9 or a dedicated a11y pass), not something to fold into M8's diff.
 
 ---
 

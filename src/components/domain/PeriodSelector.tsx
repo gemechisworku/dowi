@@ -12,11 +12,14 @@ const OPTIONS: { value: Period; label: string }[] = [
 export interface PeriodSelectorProps {
   value: Period
   onChange: (value: Period) => void
+  /** Restricts which periods are offered — Home's summary card omits "Day" (PRD §5.1), Reports offers all four. Defaults to all four. */
+  periods?: readonly Period[]
 }
 
 /** Day/Week/Month/FY switch used on Home and in Reports (PRD §5.1, §5.4). */
-export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
+export function PeriodSelector({ value, onChange, periods }: PeriodSelectorProps) {
+  const options = periods ? OPTIONS.filter((o) => periods.includes(o.value)) : OPTIONS
   return (
-    <SegmentedControl label="Report period" options={OPTIONS} value={value} onChange={onChange} />
+    <SegmentedControl label="Report period" options={options} value={value} onChange={onChange} />
   )
 }

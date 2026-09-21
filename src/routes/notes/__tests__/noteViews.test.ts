@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   dateGroupFor,
   filterNotesBySearch,
+  getRecentNotes,
   groupNotesByCollection,
   groupNotesByDate,
 } from '../noteViews'
@@ -194,5 +195,42 @@ describe('filterNotesBySearch', () => {
 
   it('returns nothing when nothing matches', () => {
     expect(filterNotesBySearch([titleMatch, bodyMatch, noMatch], 'xyz')).toEqual([])
+  })
+})
+
+describe('getRecentNotes', () => {
+  it('orders by updatedAt (most recently edited first), not createdAt', () => {
+    const oldestEdit = note({
+      id: 'a',
+      createdAt: '2026-09-10T00:00:00.000Z',
+      updatedAt: '2026-09-10T00:00:00.000Z',
+    })
+    // Created first, but edited most recently — must still come out on top.
+    const recentEdit = note({
+      id: 'b',
+      createdAt: '2026-09-01T00:00:00.000Z',
+      updatedAt: '2026-09-15T00:00:00.000Z',
+    })
+    expect(getRecentNotes([oldestEdit, recentEdit]).map((n) => n.id)).toEqual(['b', 'a'])
+  })
+
+  it('caps at the default of 3', () => {
+    const notes = [1, 2, 3, 4, 5].map((n) =>
+      note({ id: `n${n}`, updatedAt: `2026-09-0${n}T00:00:00.000Z` }),
+    )
+    const result = getRecentNotes(notes)
+    expect(result).toHaveLength(3)
+    expect(result.map((n) => n.id)).toEqual(['n5', 'n4', 'n3'])
+  })
+
+  it('honours a custom limit', () => {
+    const notes = [1, 2, 3].map((n) =>
+      note({ id: `n${n}`, updatedAt: `2026-09-0${n}T00:00:00.000Z` }),
+    )
+    expect(getRecentNotes(notes, 1).map((n) => n.id)).toEqual(['n3'])
+  })
+
+  it('is empty for no notes', () => {
+    expect(getRecentNotes([])).toEqual([])
   })
 })

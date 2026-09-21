@@ -8,9 +8,10 @@ import { BottomNav } from './BottomNav'
 
 // Routes that render full-screen (editors, sheets-as-pages) hide the
 // chrome per PRD §4 ("hidden on full-screen editors"). The note editor
-// (`/notes/new`, `/notes/:id`) is the first of these actually wired up —
-// it wants the whole viewport for typing, the same way Money's/Tasks'
-// still-unbuilt `/money/new` and `/tasks/new` placeholders anticipated.
+// (`/notes/new`, `/notes/:id`) wants the whole viewport for typing;
+// `/money/new` and `/tasks/new` (M8) are the same idea for a create sheet
+// reached directly by URL — Home's quick actions and the PWA manifest
+// shortcuts — rather than via each list page's own local `addOpen` state.
 const CHROMELESS_PREFIXES = ['/money/new', '/notes/new', '/tasks/new']
 
 // Everything else under /notes/ (collections, trash) is an ordinary

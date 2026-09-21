@@ -5,6 +5,7 @@ import { useDatabase } from '@/app/db/useDatabase'
 import type { Task } from '@/db/types'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { formatWeekRangeLabel, getLastWeek, getThisWeek } from './week'
+import { toggleCompletePatch } from './taskViews'
 import { TasksSubNav } from './TasksSubNav'
 import { TaskListItem } from './TaskListItem'
 import { TaskSheet } from './TaskSheet'
@@ -58,10 +59,7 @@ export function PlanWeekPage() {
   }
 
   async function handleToggleComplete(task: Task, done: boolean) {
-    await repos.tasks.update(task.id, {
-      status: done ? 'done' : 'todo',
-      completedAt: done ? new Date().toISOString() : undefined,
-    })
+    await repos.tasks.update(task.id, toggleCompletePatch(done))
   }
 
   async function handleDelete(task: Task) {
