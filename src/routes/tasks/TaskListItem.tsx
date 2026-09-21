@@ -48,8 +48,11 @@ export function TaskListItem({
 
   return (
     <SwipeableRow onSwipeLeft={() => onDelete(task)}>
+      {/* No row-level onClick here — the leading TaskCheckbox is itself a
+          button, and nesting it inside a whole-row button is invalid HTML
+          (axe's no-focusable-content rule). The title is the tap target
+          for opening the task instead, matching Home's today's-tasks card. */}
       <ListItem
-        onClick={() => onOpen(task)}
         leading={
           <TaskCheckbox
             checked={isDone}
@@ -58,14 +61,17 @@ export function TaskListItem({
           />
         }
         title={
-          <span
+          <button
+            type="button"
+            onClick={() => onOpen(task)}
+            className="text-left"
             style={{
               textDecoration: isDone ? 'line-through' : undefined,
               color: isDone ? 'var(--color-text-muted)' : undefined,
             }}
           >
             {task.title}
-          </span>
+          </button>
         }
         subtitle={
           subtitleParts.length > 0 ? (

@@ -774,10 +774,11 @@ just its own code).
   `/tasks`, `/tasks/plan` and `/tasks/review` against a fresh, empty database,
   so `TaskListItem` never actually renders there. Home's own a11y test seeds
   real tasks, which is what surfaced it. Fixed in Home's own today's-tasks card
-  (no row-level `onClick`; only the task's title text is a separate button) so
-  Home itself passes with zero violations, but `TaskListItem` itself is
-  unchanged — fixing it is a small, well-scoped follow-up for whoever picks up
-  next (M9 or a dedicated a11y pass), not something to fold into M8's diff.
+  (no row-level `onClick`; only the task's title text is a separate button),
+  and then applied the identical fix to `TaskListItem` itself (shared by
+  Tasks/Plan/Review) right after M8 landed, rather than leaving it as debt —
+  verified with the full e2e suite (114 affected specs, incl. the existing
+  "tap row to edit" / "tap checkbox to complete" behaviour) still green.
 
 ---
 
