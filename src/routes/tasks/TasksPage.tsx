@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { useDatabase } from '@/app/db/useDatabase'
 import type { Task } from '@/db/types'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
@@ -33,10 +33,33 @@ export function TasksPage() {
   const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<Task | undefined>(undefined)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const today = todayString()
   const collectionById = useMemo(() => new Map(collections.map((c) => [c.id, c])), [collections])
   const thisWeek = useMemo(() => getThisWeek(), [])
+
+  // Deep link from a task-due notification (PRD AC-P4): open that task's
+  // edit sheet directly rather than leaving the tap just land on the list.
+  // Derived straight from the URL + loaded tasks (not synced via an effect,
+  // per the lesson M6 already learned the hard way about set-state-in-effect
+  // races — see PLAN.md's ReviewWeekPage bug note) so it naturally resolves
+  // once `tasks` finishes loading, with no separate "consume the deep link"
+  // step to get out of sync.
+  const deepLinkedTaskId = searchParams.get('taskId')
+  const deepLinkedTask = deepLinkedTaskId ? tasks.find((t) => t.id === deepLinkedTaskId) : undefined
+  const effectiveEditing = editing ?? deepLinkedTask
+
+  function closeEditing() {
+    setEditing(undefined)
+    if (deepLinkedTaskId) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('taskId')
+        return next
+      })
+    }
+  }
 
   async function handleToggleComplete(task: Task, done: boolean) {
     await repos.tasks.update(task.id, {
@@ -216,8 +239,8 @@ export function TasksPage() {
           initialCollectionId={collectionFilter || undefined}
         />
       )}
-      {editing && (
-        <TaskSheet key={editing.id} onClose={() => setEditing(undefined)} task={editing} />
+      {effectiveEditing && (
+        <TaskSheet key={effectiveEditing.id} onClose={closeEditing} task={effectiveEditing} />
       )}
     </div>
   )

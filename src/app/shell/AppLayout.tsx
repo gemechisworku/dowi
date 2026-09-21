@@ -1,4 +1,8 @@
 import { Outlet, useLocation } from 'react-router'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useDatabase } from '@/app/db/useDatabase'
+import { useNotificationRuntime } from '@/app/notifications/useNotificationRuntime'
+import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { TopAppBar } from './TopAppBar'
 import { BottomNav } from './BottomNav'
 
@@ -14,6 +18,13 @@ function isChromeless(pathname: string): boolean {
 export function AppLayout() {
   const location = useLocation()
   const chromeless = isChromeless(location.pathname)
+  const { notificationsRepo } = useDatabase()
+  const unread = useLiveQuery(
+    () => notificationsRepo.listUnread(),
+    [notificationsRepo],
+    EMPTY_ARRAY,
+  )
+  useNotificationRuntime()
 
   if (chromeless) {
     return (
@@ -25,7 +36,7 @@ export function AppLayout() {
 
   return (
     <>
-      <TopAppBar />
+      <TopAppBar unreadNotifications={unread.length} />
       <main className="flex-1 pb-28">
         <Outlet />
       </main>
