@@ -34,6 +34,11 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
   // would otherwise call onClose a second time — this guards onClose to
   // fire exactly once per open/close cycle no matter which path triggered it.
   const closedRef = useRef(false)
+  // Bumped on every run of the history-owning effect below. Lets a given
+  // run's cleanup tell "a later run has since taken over" (generation moved
+  // on) apart from "nothing has, this really is the final close" — see that
+  // effect for why a shared boolean alone can't make that distinction.
+  const mountGenerationRef = useRef(0)
 
   useFocusTrap(containerRef, open)
   useLockBodyScroll(open)
@@ -76,10 +81,29 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
   useEffect(() => {
     if (!open) return
     closedRef.current = false
-    window.history.pushState({ dowiSheet: true }, '')
-    ownsHistoryEntry.current = true
-    pushedHrefRef.current = window.location.href
+    mountGenerationRef.current += 1
+    const myGeneration = mountGenerationRef.current
+
+    // React Strict Mode synchronously reruns this effect (mount → cleanup →
+    // mount) for the *same* open sheet before anything yields. Pushing
+    // unconditionally on every run would push two history entries for one
+    // logical "open" — and because `ownsHistoryEntry` is shared, the first
+    // run's cleanup couldn't tell "the second run since took ownership" apart
+    // from "nothing did, this is a real close", so it went ahead and consumed
+    // whatever entry happened to be on top (the second run's, not its own),
+    // closing the sheet the instant it reopened. Skipping the push whenever
+    // one is already pending makes it idempotent — exactly one entry per
+    // logical open — and the generation counter (below) is what lets a
+    // superseded run's cleanup correctly stand down instead of guessing from
+    // a boolean that every run overwrites the same way.
+    if (!ownsHistoryEntry.current) {
+      window.history.pushState({ dowiSheet: true }, '')
+      ownsHistoryEntry.current = true
+      pushedHrefRef.current = window.location.href
+    }
+
     function handlePopState() {
+      if (mountGenerationRef.current !== myGeneration) return
       ownsHistoryEntry.current = false
       closeOnce()
     }
@@ -90,15 +114,11 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
       // button that calls the outer onClose prop directly) — the pushed
       // entry must still be consumed so it doesn't eat a later back press.
       if (!ownsHistoryEntry.current) return
-      // Deferred rather than called immediately: React (Strict Mode, in
-      // particular) can synchronously run mount → cleanup → mount again for
-      // the *same* open sheet. history.back() only resolves asynchronously
-      // (a later 'popstate'), so calling it here unconditionally would land
-      // after that second mount already pushed its own entry — closing the
-      // sheet the instant it re-opens. Deferring one microtask lets that
-      // second mount claim ownership first; we only actually pop the entry
-      // if nothing did.
+      // Deferred one microtask so a synchronous Strict-Mode remount gets a
+      // chance to run first; the generation check is what actually decides
+      // whether to act, not just having survived the wait.
       queueMicrotask(() => {
+        if (mountGenerationRef.current !== myGeneration) return
         if (ownsHistoryEntry.current) consumeHistoryEntryIfUnchanged()
       })
     }

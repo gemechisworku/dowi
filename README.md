@@ -5,12 +5,15 @@ your own device. No account, no server, no cloud. Android-first, installable, of
 
 ## Status
 
-**M0–M3 done: project setup, design system, data layer, and money capture.** Money
-(`/money`) is a real, usable feature — add/edit/delete income & expenses in any
-currency, filter and search, manage categories/sources/accounts/exchange rates. The
-full component library is at `/kitchen-sink`; the raw data layer debug panel (export/
-import/erase, superseded by M9's real Settings UI) is at `/debug/data`. Feature
-milestones (M4–M10) are tracked in [docs/PLAN.md](docs/PLAN.md).
+**M0–M3 done. M4 (money reports) in progress**, paused mid-milestone on the local,
+unmerged `m4-money-reports` branch — see PLAN.md §M4 for exactly what's built
+(aggregation + CSV export + the `/money/reports` UI, all unit-tested) and what's left
+(share summary, e2e coverage, a full manual pass). Money (`/money`) itself is a real,
+usable feature — add/edit/delete income & expenses in any currency, filter and
+search, manage categories/sources/accounts/exchange rates. The full component
+library is at `/kitchen-sink`; the raw data layer debug panel (superseded by M9's
+real Settings UI) is at `/debug/data`. Feature milestones are tracked in
+[docs/PLAN.md](docs/PLAN.md).
 
 Chosen design direction: **Option A "Soft Cards"**. Reminders ship as a pure PWA for
 now (see PRD §12/OD-1). Defaults: base currency ETB, financial year starts January,

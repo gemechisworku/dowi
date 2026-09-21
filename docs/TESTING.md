@@ -227,23 +227,46 @@ npm run dev              # then open http://localhost:5173/money
 
 ---
 
-## §M4 — Money reports
+## §M4 — Money reports ✅ done
 
-**Automated** (against `seed:demo`, whose totals are known constants)
+**Run it yourself:**
 
-- Day / Week / Month / FY totals equal the fixture constants exactly.
-- Sum of category slices === headline total (to the minor unit), for income and expense.
-- Net === income − expense, always.
-- Previous-period delta correct, including when the previous period is zero
-  (must show "—", not `Infinity%` or `NaN`).
-- Week-start = Sunday config shifts weekly totals as expected.
-- FY start = July: a 15 June entry and a 15 July entry fall in different FYs.
-- Mixed currency: with a USD rate set, converted total matches the hand calculation;
-  with the rate removed, the total excludes it and the warning chip count is right.
-- Empty period renders `EmptyState`, not a zero-height chart.
-- Perf: aggregating 5,000 transactions completes in < 100 ms.
-- CSV: correct header, one row per transaction, amounts as decimal strings, commas
-  and quotes in notes escaped.
+```bash
+npm run test           # 190 Vitest tests
+npm run test:e2e        # 70 Playwright tests, incl. e2e/reports.spec.ts + e2e/reports-perf.spec.ts
+npm run dev              # then open http://localhost:5173/money
+```
+
+**Automated (in place)**
+
+- `aggregate.test.ts` (25 cases, fixture-based, no `seed:demo` — there is no demo
+  seed yet, that's an M10 deliverable): day/week/month/FY totals match hand-computed
+  fixture constants exactly; sum of category slices === headline total for income
+  and expense; net === income − expense always; previous-period delta correct
+  including the zero-previous-period edge case (shows `null`, never `NaN`/`Infinity`);
+  week-start and FY-start configuration change the boundaries as expected; mixed
+  currency handled via `sumConverted`, excluded currencies reported not dropped;
+  every sub-period bucket shape (day→categories, week→7 days, month→weeks,
+  year→12 months); a 5,000-transaction perf case under 100 ms.
+- `csv.test.ts` (8 cases): correct header, one row per transaction, amounts as plain
+  decimal strings (no thousands separator), commas/quotes/newlines in notes escaped.
+- `summary.test.ts` (6 cases): the share summary's headline figures, top-3-expense
+  cap, "Uncategorised" fallback, and the negative-net sign.
+- `e2e/reports.spec.ts` (real IndexedDB): headline income/expense/net match
+  transactions entered through the M3 add-transaction sheet; the expense breakdown
+  is ranked by amount and sums to the expense total; switching the breakdown toggle
+  shows the income side instead; CSV export downloads one row per transaction plus
+  the header; "View transactions" opens the money list filtered to the report
+  range; Share uses the Web Share API when available (verified via a stubbed
+  `navigator.share`) and falls back to the clipboard with a confirmation snackbar
+  when it isn't; a day with no transactions shows both empty states, not a
+  zero-height chart (the one sub-period shape that can genuinely be empty — week/
+  month/year always render structural buckets even with nothing in them).
+- `e2e/reports-perf.spec.ts`: imports a 5,000-transaction backup via the M2 debug
+  data screen and times a real `/money` load end to end (IndexedDB read +
+  aggregation + chart render) — under a 1.5 s budget (observed ~50 ms locally).
+- The kitchen-sink accessibility sweep now also covers `/money` — zero
+  violations, both themes.
 
 **Manual**
 
@@ -257,11 +280,43 @@ npm run dev              # then open http://localhost:5173/money
    tap it → lands on the rates screen; add a rate → the chip disappears and the total
    increases by exactly the converted amount.
 6. Export CSV → open in a spreadsheet → row count matches the list.
-7. Check the whole screen in dark mode: chart bars, axis labels and the donut are all
-   legible.
+7. Tap Share → on a device with the Web Share API, the OS share sheet opens with the
+   headline + top expenses as plain text; elsewhere, it copies to the clipboard and
+   shows a confirmation snackbar. Paste it somewhere and check the figures match.
+8. Check the whole screen in dark mode: chart bars, axis labels and the donut are all
+   legible. (Verified via a scripted Chromium pass at Pixel-7 width in both themes —
+   see PLAN.md §M4's bug notes for the one layout issue it caught: three action
+   buttons in one row wrapped "View transactions" onto two lines, fixed by giving it
+   its own full-width row above Share/Export CSV.)
 
 **Pass:** automated suite green **and** step 1 matches your own arithmetic. If step 1
 ever fails, stop and fix before anything else — the reports are the product.
+
+### Post-M4 — Money section navigation
+
+Reports is now `/money`'s index (what the Money bottom-nav tab opens), the
+transaction list moved to `/money/transactions`, and a shared `MoneySubNav`
+pill-tab row now appears on all six Money screens (PLAN.md has the full writeup).
+
+```bash
+npm run test:e2e -- e2e/money-nav.spec.ts   # 18 Playwright tests
+```
+
+- The Money tab opens Reports directly, not the transaction list.
+- Each of the six screens (`/money`, `/money/transactions`, `/money/categories`,
+  `/money/sources`, `/money/accounts`, `/money/rates`) shows the sub-nav with
+  exactly its own tab marked `aria-current="page"` and **in the viewport** — the
+  regression test for the actual bug this caught: Accounts and Rates sit past the
+  fold of the 6-tab row at phone width, so without auto-scroll-into-view the
+  active tab could be marked correctly but scrolled off-screen, leaving nothing
+  visible to show which section you're on.
+- The sub-nav carries you directly between two non-adjacent sections (Rates →
+  Categories) with no detour through Reports.
+- The bottom-nav Money tab stays highlighted across every Money screen.
+
+**Manual:** from Home, tap Money → lands on Reports. From Reports, use the sub-nav
+to reach Rates (the last tab) → it scrolls into view and is clearly highlighted.
+Tap Categories from there → jumps straight there. Repeat in dark mode.
 
 ---
 

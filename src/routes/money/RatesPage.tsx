@@ -14,6 +14,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { todayString } from '@/lib/period'
+import { MoneySubNav } from './MoneySubNav'
 
 /** Exchange-rate table CRUD (PRD §5.3) — one row per (currency, effective date), most recent first. */
 export function RatesPage() {
@@ -61,6 +62,9 @@ export function RatesPage() {
           Add
         </Button>
       </div>
+
+      <MoneySubNav />
+
       <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
         Base currency is <strong>{base}</strong>. Reports convert any other currency using the most
         recent rate set on or before the report's date.

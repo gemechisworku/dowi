@@ -5,6 +5,7 @@ import { DatabaseProvider } from './db/DatabaseProvider'
 import { SnackbarProvider } from '@/components/ui/SnackbarProvider'
 import { HomePage } from '@/routes/home/HomePage'
 import { MoneyPage } from '@/routes/money/MoneyPage'
+import { ReportsPage } from '@/routes/money/reports/ReportsPage'
 import { CategoriesPage } from '@/routes/money/CategoriesPage'
 import { SourcesPage } from '@/routes/money/SourcesPage'
 import { AccountsPage } from '@/routes/money/AccountsPage'
@@ -23,7 +24,8 @@ export function App() {
             <Routes>
               <Route element={<AppLayout />}>
                 <Route index element={<HomePage />} />
-                <Route path="money" element={<MoneyPage />} />
+                <Route path="money" element={<ReportsPage />} />
+                <Route path="money/transactions" element={<MoneyPage />} />
                 <Route path="money/categories" element={<CategoriesPage />} />
                 <Route path="money/sources" element={<SourcesPage />} />
                 <Route path="money/accounts" element={<AccountsPage />} />

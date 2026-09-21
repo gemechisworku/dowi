@@ -256,24 +256,122 @@ right in a screenshot" and "is actually right" diverge):
 
 ---
 
-## M4 — Money: reports
+## M4 — Money: reports ✅ done
 
 **Deliverable:** the "what did I earn vs spend" answer, for any period.
 
-- [ ] Report screen: `PeriodSelector` (Day/Week/Month/FY) + `PeriodStepper`
-- [ ] Headline Income / Expense / Net + delta vs previous comparable period
-- [ ] `GroupedBarChart` income vs expense across sub-periods (FY→months,
-      Month→weeks, Week→days, Day→categories)
-- [ ] Category breakdown: donut + ranked list (amount, %, count), income/expense toggle
-- [ ] Source and account breakdowns
-- [ ] Mixed-currency handling: "≈" marking, rate footnote, missing-rate warning chip
-      linking to Settings
-- [ ] "View transactions in this period" → the filtered M3 list
-- [ ] CSV export + plain-text summary share
-- [ ] Aggregation runs off indexed queries; memoised; tested against fixtures
+- [x] `buildReport()` (`src/routes/money/reports/aggregate.ts`) — the pure,
+      fixture-tested aggregation core: headline income/expense/net, previous-period
+      delta (`null`, not `NaN`/`Infinity`, when the previous period was exactly
+      zero), category/source/account breakdowns, sub-period buckets for the chart
+      (`FY→months, Month→weeks, Week→days, Day→categories`), and mixed-currency
+      handling via M2's `sumConverted` (excluded currencies are reported, never
+      silently dropped)
+- [x] `ReportsPage` UI: `PeriodSelector` + `PeriodStepper`, headline `StatTile`s,
+      `GroupedBarChart`/`BarChart` for the sub-period view, `DonutChart` + ranked
+      list for the category breakdown (income/expense toggle) with overflow past 5
+      categories folded into an "Other" slice so the donut and the list underneath
+      always sum to the same total, source/account breakdown lists, a missing-rate
+      warning chip linking to `/money/rates`, "View transactions" (→ M3's list,
+      filtered to the period) and "Export CSV"
+- [x] CSV export (`csv.ts`) — RFC 4180 quoting/escaping, and amounts written with
+      `formatMinorUnitsPlain` (no thousands separator) rather than the display
+      formatter — see the bug note below
+- [x] Route wired at `/money/reports`, linked from Money's nav row (superseded
+      shortly after — see "Money section navigation" below: Reports moved to
+      `/money` itself and the list moved to `/money/transactions`)
+- [x] Plain-text summary "share" (`summary.ts` + `ReportsPage`'s Share button) — Web
+      Share API when available, clipboard + a "Summary copied to clipboard" snackbar
+      otherwise
+- [x] Full manual verification pass (TESTING.md §M4) and `e2e/reports.spec.ts` +
+      `e2e/reports-perf.spec.ts`
+- [x] Perf check against a 5,000-row fixture _in the UI path_ (`e2e/reports-perf.spec.ts`
+      imports a 5,000-row backup via the M2 debug import screen and times a real
+      `/money/reports` load: ~50 ms locally against a 1.5 s budget — the aggregation
+      function itself was already covered by a unit test at this scale)
 
 **Done when:** a fixture of known transactions produces exactly the expected totals in
 every period, and the numbers match a hand calculation. **Tag:** `m4` · **Test guide:** TESTING.md §M4
+
+**Verified:** 190 Vitest unit tests (up from 144) — `aggregate.test.ts` (25 cases:
+headline totals, breakdown-sums-to-total, previous-period delta including the
+zero-previous-period edge case, week-start and FY-start configuration, mixed
+currency, empty period, every sub-period bucket shape, and a 5,000-transaction
+perf case under 100 ms), `csv.test.ts` (8 cases), `periodLabel.test.ts` (4 cases),
+`summary.test.ts` (6 cases). **70** Playwright e2e tests (up from 50) —
+`e2e/reports.spec.ts` covers headline totals, ranked category breakdowns, the
+income/expense toggle, CSV export content, "View transactions", and both Share
+code paths against real IndexedDB; `e2e/reports-perf.spec.ts` covers the 5,000-row
+UI-path perf budget; the accessibility sweep now also covers `/money` (Reports)
+(zero violations, both themes). Build is 138.46 KB gzipped JS (budget 180 KB).
+
+**Bugs found this milestone:**
+
+- **Account breakdown summed income and expense together as if the same sign**,
+  producing a meaningless total (e.g. 100,000 income + 30,000 expense through the
+  same account showing as "130,000" instead of a net "70,000"). Fixed by giving
+  `breakdownBy()` an explicit per-transaction sign function for the one breakdown
+  that legitimately mixes both transaction types.
+- **CSV amounts used the display formatter**, which adds a thousands-group
+  separator (`"1,500"` for ¥1,500) — correctly RFC-4180-quoted since it contains a
+  comma, but fragile for a data-interchange format: some spreadsheet locales treat
+  `,` as the decimal separator, and it's needless quoting either way. Added
+  `formatMinorUnitsPlain()` (no grouping) for CSV/data-export use, keeping the
+  grouped `formatMinorUnits()` for on-screen display only.
+- **The add-transaction sheet's dev-mode-only flakiness, carried over from M3 as an
+  unresolved "known issue," was root-caused and fixed.** Reproduced 100 % (15/15)
+  under `test:e2e` pointed at the Vite dev server instead of the production preview
+  build, confirming it really was a Strict-Mode-only race, not environmental noise.
+  The actual bug: `Sheet`'s history-owning effect pushed a _fresh_ history entry on
+  every run, so Strict Mode's synchronous mount → cleanup → mount for one logical
+  open pushed **two** entries — and because the ownership refs (`ownsHistoryEntry`,
+  `pushedHrefRef`) are shared across that remount, the first run's deferred cleanup
+  (the mechanism M3 added for exactly this class of race) couldn't tell "the second
+  run has since taken ownership" apart from "nothing has, this is a real close" —
+  both look identical through a shared boolean. It ended up consuming whatever
+  entry was on top (the second run's) and closed the sheet the instant it reopened.
+  Fixed by (a) skipping the push whenever one is already pending, so exactly one
+  entry is ever pushed per logical open regardless of Strict Mode, and (b) a
+  generation counter each run captures locally, so a superseded run's cleanup can
+  correctly stand down instead of guessing from a ref every run overwrites the same
+  way. Verified with 25 repeated runs against the dev server (0/15 → 25/25).
+- **`DonutChart` keyed its slices by display label**, which collides whenever two
+  distinct data points share a fallback label — e.g. two categories that both no
+  longer exist rendering as "Uncategorised" (reachable via a malformed/legacy
+  import, not through normal in-app deletion, which always requires reassigning to
+  a category that still exists). Surfaced as a React "duplicate key" console error
+  while exercising the M4 perf fixture (which intentionally clears categories to
+  isolate the timing measurement from category-lookup cost). Fixed by keying on
+  array index instead, which is safe here since `DonutChart` always receives a full
+  replacement array rather than an independently-reordered list.
+
+### Post-M4 fix — Money section navigation
+
+Landing on the Money tab put you on the transaction list, and only that one screen
+had links to Reports/Categories/Sources/Accounts/Rates — from any of those five
+screens there was no way to a sibling except back to the list first. Two changes:
+
+- **Reports is now `/money`'s index** (what the Money bottom-nav tab opens
+  directly), and the transaction list moved to `/money/transactions`. Reports is
+  the more useful landing view once there's real data in the app; the trade-off is
+  a first-ever launch with zero transactions lands on mostly-empty report cards
+  instead of the list's clearer "Tap + to log your first income or expense" — worth
+  revisiting if that turns out to matter once M8's Home dashboard exists as an
+  alternative entry point.
+- **`MoneySubNav`** (`src/routes/money/MoneySubNav.tsx`) — a shared pill-tab row now
+  rendered by all six Money screens, replacing the ad hoc link row that used to
+  live only on the list. The 6 tabs don't all fit on one line at phone width, so
+  the row scrolls horizontally; the active tab scrolls itself into view on every
+  navigation so it's never left off-screen with nothing on screen showing which
+  section you're on (caught by screenshotting the real preview build at Pixel-7
+  width — Accounts and Rates, the two tabs past the fold, landed exactly there
+  before the fix).
+
+**Verified:** `e2e/money-nav.spec.ts` (18 cases) — the Money tab opens Reports; each
+of the six screens shows the sub-nav with the right tab marked `aria-current` and
+in the viewport; the sub-nav carries you directly between non-adjacent sections; the
+bottom-nav Money tab stays highlighted throughout. All prior M3/M4 suites updated
+for the new paths and still green (190 unit, 88 e2e, both themes).
 
 ---
 

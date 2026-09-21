@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/Input'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { MoneySubNav } from './MoneySubNav'
 
 interface NamedEntity extends BaseEntity {
   name: string
@@ -88,6 +89,8 @@ export function NamedEntityManager({
           Add
         </Button>
       </div>
+
+      <MoneySubNav />
 
       <Card>
         {items.length === 0 ? (

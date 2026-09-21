@@ -17,6 +17,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { MoneySubNav } from './MoneySubNav'
 
 const ICON_OPTIONS = [
   '🍽️',
@@ -123,6 +124,8 @@ export function CategoriesPage() {
           Add
         </Button>
       </div>
+
+      <MoneySubNav />
 
       <SegmentedControl
         label="Category type"
