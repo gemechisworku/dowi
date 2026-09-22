@@ -302,6 +302,36 @@ test.describe('Settings — Reminders', () => {
     await expect(page.getByRole('switch', { name: 'Evening streak reminder' })).not.toBeChecked()
     await expect(page.getByLabel('Evening streak reminder time')).not.toBeVisible()
   })
+
+  test('a settings row saved before morningNudge/eveningStreak existed does not crash Settings or the reminder scheduler — regression for a real white-screen bug', async ({
+    page,
+  }) => {
+    // A pre-existing install's stored settings.reminders object genuinely
+    // lacks these two keys (they didn't exist yet when the row was last
+    // written) — this is exactly the shape that crashed both the Settings
+    // page render and the reminder catch-up on app open with
+    // "Cannot read properties of undefined (reading 'enabled')" before
+    // settingsRepo.get() started backfilling missing fields against
+    // DEFAULT_SETTINGS.
+    const oldReminders: Record<string, unknown> = { ...REMINDERS_DEFAULT }
+    delete oldReminders.morningNudge
+    delete oldReminders.eveningStreak
+
+    const errors: string[] = []
+    page.on('pageerror', (err) => errors.push(err.message))
+
+    await importFixture(page, fullFixture({ settings: { reminders: oldReminders } }))
+
+    await page.goto('/')
+    await expect(page.getByText(/Week \d+/)).toBeVisible()
+
+    await page.goto('/settings')
+    await expect(page.getByRole('switch', { name: 'Morning nudge' })).toBeChecked()
+    await expect(page.getByLabel('Morning nudge time')).toHaveValue('09:00')
+    await expect(page.getByRole('switch', { name: 'Evening streak reminder' })).toBeChecked()
+
+    expect(errors).toEqual([])
+  })
 })
 
 test.describe('Settings — Data', () => {
