@@ -5,7 +5,13 @@ import { useDatabase } from '@/app/db/useDatabase'
 import type { Task } from '@/db/types'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { todayString } from '@/lib/period'
-import { getAllTasks, getCompletedTasks, getTodayTasks, getUpcomingGroups } from './taskViews'
+import {
+  getAllTasks,
+  getCompletedTasks,
+  getTodayTasks,
+  getUpcomingGroups,
+  toggleCompletePatch,
+} from './taskViews'
 import { formatGroupDateLabel } from './dueLabel'
 import { formatWeekRangeLabel, getThisWeek } from './week'
 import { TasksSubNav } from './TasksSubNav'
@@ -62,10 +68,7 @@ export function TasksPage() {
   }
 
   async function handleToggleComplete(task: Task, done: boolean) {
-    await repos.tasks.update(task.id, {
-      status: done ? 'done' : 'todo',
-      completedAt: done ? new Date().toISOString() : undefined,
-    })
+    await repos.tasks.update(task.id, toggleCompletePatch(done))
   }
 
   async function handleDelete(task: Task) {

@@ -3,11 +3,13 @@ import {
   dueDate,
   getAllTasks,
   getCompletedTasks,
+  getOverdueCount,
   getTodayTasks,
   getUpcomingGroups,
   isDueToday,
   isOverdue,
   subtaskProgress,
+  toggleCompletePatch,
 } from '../taskViews'
 import type { Task } from '@/db/types'
 
@@ -180,6 +182,33 @@ describe('getAllTasks', () => {
       search: 'write',
     })
     expect(result).toEqual([])
+  })
+})
+
+describe('getOverdueCount', () => {
+  it('counts every overdue task, not just however many Home shows', () => {
+    const overdue = [1, 2, 3, 4, 5, 6, 7].map((n) =>
+      task({ id: `overdue-${n}`, dueAt: '2026-09-19T09:00:00.000Z' }),
+    )
+    const dueToday = task({ id: 'today', dueAt: '2026-09-21T09:00:00.000Z' })
+    const done = task({ id: 'done', dueAt: '2026-09-01T09:00:00.000Z', status: 'done' })
+    expect(getOverdueCount([...overdue, dueToday, done], TODAY)).toBe(7)
+  })
+
+  it('is 0 when nothing is overdue', () => {
+    expect(getOverdueCount([task({ dueAt: '2026-09-21T09:00:00.000Z' })], TODAY)).toBe(0)
+  })
+})
+
+describe('toggleCompletePatch', () => {
+  it('marking done sets status and stamps completedAt', () => {
+    const patch = toggleCompletePatch(true)
+    expect(patch.status).toBe('done')
+    expect(typeof patch.completedAt).toBe('string')
+  })
+
+  it('marking not-done clears both', () => {
+    expect(toggleCompletePatch(false)).toEqual({ status: 'todo', completedAt: undefined })
   })
 })
 

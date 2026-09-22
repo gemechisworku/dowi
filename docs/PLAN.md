@@ -671,21 +671,218 @@ initial-paint budget).
 
 ---
 
-## M8 — Home / landing
+## M8 — Home / landing ✅ done
 
 **Deliverable:** the dashboard from PRD §5.1, wired to live data.
 
-- [ ] Greeting header with date, week number, FY label
-- [ ] Money summary card with persisted Week/Month/Year toggle → links to M4
-- [ ] Today's tasks card with inline completion → links to M6
-- [ ] Plan/review banner on the configured days, dismissible for the day
-- [ ] Recent notes card → links to M5
-- [ ] Quick actions row (add income / expense / note / task)
-- [ ] First-run empty state
-- [ ] Skeletons while loading; no layout shift
+- [x] Greeting header with date, week number, FY label
+- [x] Money summary card with persisted Week/Month/Year toggle → links to M4
+- [x] Today's tasks card with inline completion → links to M6
+- [x] Plan/review banner on the configured days, dismissible for the day
+- [x] Recent notes card → links to M5
+- [x] Quick actions row (add income / expense / note / task)
+- [x] First-run empty state
+- [x] Skeletons while loading; no layout shift
 
 **Done when:** every number on Home matches its feature screen exactly.
 **Tag:** `m8` · **Test guide:** TESTING.md §M8
+
+**Verified:** 21 new Vitest unit tests (315 total, up from 294) — `homePrefs.test.ts`
+(4, period-toggle persistence incl. a corrupted-value fallback), `homeBanner.test.ts`
+(9, plan/review-day detection incl. the both-configured-same-day tiebreak and
+independence from each reminder's own `enabled` flag, plus per-day dismissal),
+`taskViews.test.ts` additions (4, `getOverdueCount` counting every overdue task —
+not just the 5 Home actually shows — and `toggleCompletePatch`), `noteViews.test.ts`
+additions (4, `getRecentNotes` sorting by `updatedAt` not `createdAt`, with a case
+that deliberately decouples the two). **44** new Playwright e2e tests (208 total, up
+from 164) — `home.spec.ts` seeds deterministic fixtures via `/debug/data`'s JSON
+import (same mechanism `reports-perf.spec.ts` uses) rather than driving each
+feature's own add-sheet, since only that gives exact control over due-dates,
+edit-recency and reminder-day config independent of whatever day the suite
+actually runs on: the empty first-run state, money totals matching a same-period
+`/money` load exactly, the 7-tasks-capped-to-5 today's-tasks card with a
+same-Today-view comparison against `/tasks` and inline completion updating both
+screens immediately (AC-H3), the 3-most-recently-_edited_ (not created) notes
+card, the plan/review banner appearing only on its configured day and staying
+dismissed for the rest of that day across a reload, every quick action opening
+its create flow pre-set correctly, and every card's own link to its feature
+screen (AC-H4); the accessibility sweep now also explicitly covers `/` populated
+with real data in both themes (the existing top-level sweep already covered `/`'s
+empty state across both Playwright projects' `colorScheme`, but not populated
+cards, which is where the two bugs below were actually caught). Build is
+153.03 KB gzipped JS for the initial bundle (budget 180 KB, up from M5's
+151.61 KB baseline — Home adds no new heavy dependency, so the ~1.4 KB delta is
+just its own code).
+
+**Deviations:**
+
+- `/money/new` and `/tasks/new` didn't exist as real routes before this milestone
+  — only the PWA manifest shortcuts (`vite.config.ts`) and `AppLayout`'s
+  `CHROMELESS_PREFIXES` anticipated them, and Money/Tasks each only ever opened
+  their add-sheet from in-page `addOpen` state. Added `NewTransactionPage`
+  (`/money/new[?type=]`) and `NewTaskPage` (`/tasks/new`) as thin chromeless
+  wrappers around the exact same `TransactionSheet`/`TaskSheet` each list page
+  already uses, rather than inventing a second create flow — Home's quick
+  actions and the manifest shortcuts now both genuinely work.
+- The money summary card's Week/Month/Year toggle reuses `PeriodSelector`, which
+  previously always offered all four periods including "Day". Gave it an
+  optional `periods` prop (defaulting to all four, so Reports is unchanged) so
+  Home can restrict it to the three the PRD actually asks for, instead of
+  forking a second segmented-period control.
+- Extracted `toggleCompletePatch()` into `taskViews.ts` — Home's own inline
+  completion needed the exact "what does toggling actually set" logic that
+  `TasksPage` and `PlanWeekPage` each already duplicated verbatim; all three now
+  share it. Similarly extracted `buildRateLookup()` (the "latest known
+  exchange rate" lookup `ReportsPage` already built inline) into
+  `reports/rateLookup.ts` so Home's money card converts currency exactly the
+  same way Reports does, rather than a second copy that could silently drift.
+- "No data at all" (Home's single empty-state card, per the PRD's literal
+  wording) is judged as zero transactions **and** zero tasks **and** zero notes
+  together — any one of the three having data instead shows the normal cards
+  with their own per-card empty states (e.g. "Nothing due today"), since a
+  blanket empty-state card would be actively wrong once part of the app is
+  actually in use.
+- Today's-tasks rows don't navigate anywhere by tapping the row itself (only the
+  task's own title text is a tap target) — seeded by the first bug below.
+  `ListItem`'s whole-row-as-button pattern, used elsewhere with the same
+  `TaskCheckbox` as its `leading` content, only became a genuine problem once
+  real tasks reached this card; see that bug for why it's flagged rather than
+  silently fixed everywhere it appears.
+
+**Bugs found this milestone:**
+
+- **A JSON import that omits `meta` (as a hand-built test fixture naturally
+  does) silently resets `settings` back to `DEFAULT_SETTINGS` on the very next
+  full page load.** `seedIfNeeded()` (`src/db/seed.ts`) treats a missing
+  `seededAt` meta row as "fresh database" and re-seeds default categories _and_
+  settings; `importAll`'s `replace` mode clears the `meta` table along with
+  everything else, so any imported `settings` survives only until the next
+  reload, at which point seeding quietly overwrites it. Existing fixture-driven
+  e2e tests (`reports-perf.spec.ts`) never noticed because they don't depend on
+  custom settings; Home's plan/review-banner tests do, and initially failed in
+  a way that looked like a banner-logic bug (wrong day, or the wrong banner
+  entirely) before tracing it back to the settings themselves reverting.
+  Home's own fixture now always includes a `seededAt` meta row; not a product
+  bug so nothing in `src/` changed, but worth documenting since the next
+  fixture-based e2e suite will hit it too.
+- **Real (non-empty) task rows fail the accessibility sweep with
+  `no-focusable-content`**: `TaskListItem` (and the equivalent inline markup
+  this milestone almost duplicated for Home) renders a whole clickable row as a
+  `<button>` with `TaskCheckbox` — itself a `<button role="checkbox">` — as its
+  leading content, nesting one interactive element inside another. The
+  top-level accessibility sweep never caught this because it only ever visits
+  `/tasks`, `/tasks/plan` and `/tasks/review` against a fresh, empty database,
+  so `TaskListItem` never actually renders there. Home's own a11y test seeds
+  real tasks, which is what surfaced it. Fixed in Home's own today's-tasks card
+  (no row-level `onClick`; only the task's title text is a separate button),
+  and then applied the identical fix to `TaskListItem` itself (shared by
+  Tasks/Plan/Review) right after M8 landed, rather than leaving it as debt —
+  verified with the full e2e suite (114 affected specs, incl. the existing
+  "tap row to edit" / "tap checkbox to complete" behaviour) still green.
+
+### Post-M8 — Home aligned to the chosen Option A design
+
+M8's first pass used the existing generic components (`StatTile`, plain `Button`
+grid) rather than the specific "Soft Cards" Home layout from
+`design/design-options.html`. Rebuilt to match it: a blue-gradient hero card
+(`Card` with an inline gradient/shadow override) replaces the plain money card,
+carrying the "THIS {PERIOD}" eyebrow, an inverse-styled `PeriodSelector` toggle,
+the signed net figure, and independent income/expense bars sized relative to
+whichever is larger; a row of four icon quick-action tiles sits right below it
+(reordered to Expense/Income/Note/Task, matching the mockup) in place of the old
+bottom 2×2 button grid; the plan/review banner gained a tinted border, real
+"N planned · M done" counts (from the tasks tagged to the current `weekKey`,
+the same filter `ReviewWeekPage` already uses inline), and a filled "Start"
+pill button alongside the existing dismiss control; recent notes gained a
+`CategoryIcon` chip per row, tinted by the note's own `color` when set. Section
+order now matches the mockup too: hero → quick actions → today's tasks →
+banner → recent notes.
+
+Two small, reusable component additions came out of this rather than one-off
+inline hacks: `MoneyText` takes an optional `color` override (for a tinted/dark
+context where the sign-based green/red would clash), and `SegmentedControl`/
+`PeriodSelector` take an optional `variant="inverse"` for a translucent-on-colour
+track — both used only by Home today but generic enough for the next screen
+that needs the same treatment.
+
+**Deviations from a literal pixel match:** the hero's period toggle keeps full
+"Week"/"Month"/"Year" labels rather than the mockup's single-letter "W/M/Y" —
+better for accessibility (a screen reader says "Week", not "W") and
+localization, at a small cost to compactness. Income/expense figures in the
+hero are shown unsigned (as the mockup itself does — colour there would clash
+against the blue background); only the headline net figure is signed
+(`+`/`-`), which is a deliberate divergence from Reports' own net stat (never
+signed) — same underlying number, different headline-vs-detail treatment per
+screen.
+
+**Verified:** all existing M8 Vitest/Playwright coverage still passes
+unchanged (315 unit, 208 e2e) after updating the handful of e2e assertions
+that depended on since-changed copy (quick-action button labels lost their
+"+ " prefix, the banner's CTA text lost its arrow now that "Start" is a real
+button, and the money summary's sign expectations changed as described
+above). Also confirmed visually — real-data screenshots in both light and
+dark, not just the automated suite — before considering this done.
+
+### Post-M8 — Home always shows the real dashboard, even at zero
+
+The `hasNoData` branch replaced the _entire_ dashboard with a single
+full-screen "Welcome to Dowi" card (icon, description, three stacked create
+buttons) whenever transactions+tasks+notes were all empty — jarring in
+practice, since it meant the very first thing a new user saw looked nothing
+like the app they'd actually use, and the takeover screen was reachable again
+any time the database happened to be fully empty (e.g. after erasing
+everything), not just on a literal first run.
+
+Removed that branch entirely. The real dashboard (hero → quick actions →
+today's tasks → banner → recent notes) now always renders once loading is
+done — it already degraded gracefully at zero before this (the hero's bar
+math already guards divide-by-zero; Today's-tasks and Recent-notes already
+have their own inline `EmptyState` for "nothing here yet"), so no per-section
+changes were needed beyond the money hero showing `ETB 0.00` and unstyled
+zero-width bars, which it already did correctly.
+
+In its place: a brief, dismissible entry card (only while `hasNoData`) — one
+line of intro copy and a single "Take the tour" button, plus the usual ✕
+dismiss. Tapping it opens **`GettingStartedTour`**
+(`src/routes/home/GettingStartedTour.tsx`), a real stepped walkthrough —
+2 short steps each for Money/Tasks/Notes (6 total; content in
+`src/routes/home/tourContent.ts`) — built as a `Sheet` (the app's
+established container for substantial content, not `Dialog`, which is
+reserved for tiny confirms) with a `SegmentedControl` category switcher, a
+`ProgressBar` for overall position, and a Back/Next footer that becomes
+"Done" on the last step, plus a "Skip" always available. Step navigation is
+plain component state (`src/routes/home/tourNav.ts`'s pure `nextTourIndex`)
+— deliberately **not** additional history pushes, since `Sheet` already owns
+exactly one push/pop per open cycle; the system back button/gesture just
+closes the whole tour like any other Sheet. `homeTour.ts`'s existing
+dismissal persistence (`dowi:home:tourDismissed`, localStorage, try/catch,
+**permanent** unlike the per-day plan/review banner) is unchanged — closing
+the tour any way (Skip, Done, scrim, Escape) triggers it, same as the entry
+card's own ✕. The entry card also still disappears on its own the moment
+there's any real data, with no dismiss required.
+
+**Bug caught before it was ever committed:** the first wiring had the tour's
+Skip/Done buttons call only the local `setTourOpen(false)` — closing the
+Sheet but never actually marking the tour dismissed, so it would silently
+reappear on the next visit despite having just been completed. An e2e
+assertion (dismissal persists across reload) caught it immediately; fixed by
+having the tour's `onClose` also call the same `handleDismissTour()` the
+entry card's own ✕ uses, so every path out of the tour counts as "seen it."
+
+**Verified:** 10 new Vitest unit tests (325 total, up from 315) —
+`homeTour.test.ts` (4: dismiss round-trip, fails open on a blocked read,
+ignores a blocked write) and `tourNav.test.ts` (6: next/back bounds,
+category-jump landing on the right index). Home's e2e "empty state" describe
+block now covers: the dashboard renders at zero alongside the entry card;
+stepping all the way through the tour via Next, jumping categories via the
+switcher, and landing on "Done" at the last step; Skip/Done and the entry
+card's own ✕ both dismissing permanently across a reload; and the entry card
+disappearing on its own once a fixture with any data is imported — plus a
+dedicated accessibility pass with the tour Sheet open, in both themes (the
+existing sweep can't reach it, since it only ever runs against a
+fixture-seeded, non-empty database). 218 e2e total (up from 208), all
+passing. Confirmed visually with a fresh build against a
+genuinely empty database, in both themes, before considering this done.
 
 ---
 

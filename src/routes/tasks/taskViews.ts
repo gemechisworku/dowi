@@ -24,6 +24,18 @@ export function isDueToday(task: Task, today: string): boolean {
   return task.status !== 'done' && dueDate(task) === today
 }
 
+/**
+ * The patch a task-completion checkbox toggle should apply — shared by
+ * every screen that completes a task inline (Tasks' own list, Plan Week,
+ * Home) so "what does toggling actually set" lives in exactly one place.
+ */
+export function toggleCompletePatch(done: boolean): Pick<Task, 'status' | 'completedAt'> {
+  return {
+    status: done ? 'done' : 'todo',
+    completedAt: done ? new Date().toISOString() : undefined,
+  }
+}
+
 export function subtaskProgress(task: Task): { done: number; total: number } {
   return { done: task.subtasks.filter((s) => s.done).length, total: task.subtasks.length }
 }
@@ -93,6 +105,11 @@ export function getAllTasks(
     .filter((t) => !opts.collectionId || t.collectionId === opts.collectionId)
     .filter((t) => !opts.search || t.title.toLowerCase().includes(opts.search.trim().toLowerCase()))
     .sort(byDueAtAsc)
+}
+
+/** Count of tasks overdue as of `today` — Home's red overdue badge, which counts every overdue task, not just the ones that fit inside its 5-item cap. */
+export function getOverdueCount(tasks: readonly Task[], today: string): number {
+  return tasks.filter((t) => isOverdue(t, today)).length
 }
 
 /** Completed tasks, most recently completed first — the "Completed" view. */

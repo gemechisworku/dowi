@@ -544,7 +544,7 @@ evaluation failed` the first time the full e2e suite ran against a real preview
 
 ---
 
-## §M8 — Home
+## §M8 — Home ✅ done
 
 **Automated**
 

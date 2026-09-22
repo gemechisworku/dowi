@@ -136,6 +136,11 @@ export function groupNotesByCollection(
   return floatPinnedToTop(groups)
 }
 
+/** The `limit` most recently *edited* notes (by `updatedAt`, not `createdAt`) — Home's "Recent notes" card (PRD §5.1). */
+export function getRecentNotes(notes: readonly Note[], limit = 3): Note[] {
+  return [...notes].sort(byUpdatedAtDesc).slice(0, limit)
+}
+
 /** Case-insensitive substring match over title + the derived plain-text body (PRD AC-N5 — body-only matches must hit). */
 export function filterNotesBySearch(notes: readonly Note[], search: string): Note[] {
   const trimmed = search.trim().toLowerCase()

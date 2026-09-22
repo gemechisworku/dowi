@@ -6,6 +6,7 @@ import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { todayString, shiftPeriod, type Period } from '@/lib/period'
 import { buildReport, isFuturePeriod, type BreakdownEntry } from './aggregate'
 import { getPeriodLabel } from './periodLabel'
+import { buildRateLookup } from './rateLookup'
 import { transactionsToCsv, downloadCsv } from './csv'
 import { buildShareSummary } from './summary'
 import { useSnackbar } from '@/components/ui/useSnackbar'
@@ -86,15 +87,7 @@ export function ReportsPage() {
   const fyStartMonth = settings?.fyStartMonth ?? 1
   const baseCurrency = settings?.baseCurrency ?? 'ETB'
 
-  const getRate = useMemo(() => {
-    // Latest rate on or before the report's end date, per currency.
-    return (currency: string): number | undefined => {
-      const candidates = rates
-        .filter((r) => r.currency === currency)
-        .sort((a, b) => (a.effectiveDate < b.effectiveDate ? 1 : -1))
-      return candidates[0]?.rateToBase
-    }
-  }, [rates])
+  const getRate = useMemo(() => buildRateLookup(rates), [rates])
 
   const report = useMemo(
     () =>
