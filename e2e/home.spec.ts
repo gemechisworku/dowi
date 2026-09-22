@@ -191,27 +191,58 @@ test.describe('Home — empty state', () => {
     await expect(page.getByRole('button', { name: 'Expense', exact: true })).toBeVisible()
     await expect(page.getByText('Nothing due today')).toBeVisible()
     await expect(page.getByText('No notes yet')).toBeVisible()
-    // Plus the brief getting-started callout.
-    await expect(page.getByText("New here? Here's where things are.")).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Money', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Tasks', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Notes', exact: true })).toBeVisible()
+    // Plus the brief entry point into the guided tour.
+    await expect(page.getByText('New here?', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Take the tour' })).toBeVisible()
   })
 
-  test('each getting-started row opens the right screen', async ({ page }) => {
+  test('the tour walks through all 3 categories and their steps', async ({ page }) => {
     await page.goto('/')
-    await page.getByRole('button', { name: 'Tasks', exact: true }).click()
-    await expect(page).toHaveURL('/tasks')
+    await page.getByRole('button', { name: 'Take the tour' }).click()
+
+    const tour = page.getByRole('dialog', { name: 'Getting started' })
+    await expect(tour.getByText('Log income & expenses')).toBeVisible()
+    await expect(tour.getByRole('button', { name: 'Back' })).toHaveCount(0)
+
+    await tour.getByRole('button', { name: 'Next' }).click()
+    await expect(tour.getByText('See your reports')).toBeVisible()
+    await tour.getByRole('button', { name: 'Next' }).click()
+    await expect(tour.getByText('Capture and organize')).toBeVisible()
+
+    // The category switcher jumps straight to a section's first step.
+    await tour.getByRole('radio', { name: /Notes/ }).click()
+    await expect(tour.getByText('Write freely')).toBeVisible()
+
+    await tour.getByRole('button', { name: 'Next' }).click()
+    await expect(tour.getByText('Find things fast')).toBeVisible()
+    // Last step: no "Next", a "Done" instead.
+    await expect(tour.getByRole('button', { name: 'Next' })).toHaveCount(0)
+    await expect(tour.getByRole('button', { name: 'Done' })).toBeVisible()
   })
 
-  test('dismissing the callout hides it, and it stays hidden across a reload', async ({ page }) => {
+  test('finishing or skipping the tour dismisses it permanently, across a reload', async ({
+    page,
+  }) => {
     await page.goto('/')
-    await expect(page.getByText("New here? Here's where things are.")).toBeVisible()
-    await page.getByRole('button', { name: 'Dismiss getting-started tips' }).click()
-    await expect(page.getByText("New here? Here's where things are.")).toHaveCount(0)
+    await page.getByRole('button', { name: 'Take the tour' }).click()
+    await page.getByRole('button', { name: 'Skip' }).click()
+    await expect(page.getByRole('dialog', { name: 'Getting started' })).toHaveCount(0)
+    await expect(page.getByText('New here?', { exact: true })).toHaveCount(0)
 
     await page.reload()
-    await expect(page.getByText("New here? Here's where things are.")).toHaveCount(0)
+    await expect(page.getByText('New here?', { exact: true })).toHaveCount(0)
+  })
+
+  test('dismissing the callout without opening the tour also hides it permanently', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await expect(page.getByText('New here?', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Dismiss getting-started tips' }).click()
+    await expect(page.getByText('New here?', { exact: true })).toHaveCount(0)
+
+    await page.reload()
+    await expect(page.getByText('New here?', { exact: true })).toHaveCount(0)
   })
 
   test('the callout disappears on its own once there is any data, without being dismissed', async ({
@@ -222,7 +253,7 @@ test.describe('Home — empty state', () => {
       buildFixture({ weeklyPlanDay: NOT_TODAY, weeklyReviewDay: NOT_TODAY }),
     )
     await page.goto('/')
-    await expect(page.getByText("New here? Here's where things are.")).toHaveCount(0)
+    await expect(page.getByText('New here?', { exact: true })).toHaveCount(0)
   })
 })
 
@@ -471,6 +502,27 @@ test.describe('Home — accessibility', () => {
 
   test('zero automatically-detectable accessibility violations, dark theme', async ({ page }) => {
     await gotoWithTheme(page, 'dark')
+    const results = await new AxeBuilder({ page }).analyze()
+    expect(results.violations).toEqual([])
+  })
+})
+
+// A separate describe block — the tour's entry point only renders on a
+// genuinely empty database (`hasNoData`), unlike the fixture-seeded
+// beforeEach every other a11y test above uses.
+test.describe('Home — accessibility, getting-started tour open', () => {
+  test('zero violations with the tour open, light theme', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('dowi:theme', 'light'))
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Take the tour' }).click()
+    const results = await new AxeBuilder({ page }).analyze()
+    expect(results.violations).toEqual([])
+  })
+
+  test('zero violations with the tour open, dark theme', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('dowi:theme', 'dark'))
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Take the tour' }).click()
     const results = await new AxeBuilder({ page }).analyze()
     expect(results.violations).toEqual([])
   })

@@ -20,6 +20,7 @@ import { getRecentNotes } from '../notes/noteViews'
 import { readHomePeriod, writeHomePeriod, type HomePeriod } from './homePrefs'
 import { getBannerKind, isBannerDismissed, dismissBannerForToday } from './homeBanner'
 import { isTourDismissed, dismissTour } from './homeTour'
+import { GettingStartedTour } from './GettingStartedTour'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -52,13 +53,6 @@ const QUICK_ACTIONS = [
   { icon: '💰', label: 'Income', href: '/money/new?type=income' },
   { icon: '📝', label: 'Note', href: '/notes/new' },
   { icon: '✅', label: 'Task', href: '/tasks/new' },
-] as const
-
-/** The brief "where things are" map shown while there's no data at all yet. */
-const TOUR_HIGHLIGHTS = [
-  { icon: '💰', label: 'Money', description: 'Track income & expenses', href: '/money' },
-  { icon: '✅', label: 'Tasks', description: 'Plan and review your week', href: '/tasks' },
-  { icon: '📝', label: 'Notes', description: 'Write things down', href: '/notes' },
 ] as const
 
 function greetingFor(hour: number): string {
@@ -104,6 +98,7 @@ export function HomePage() {
   const today = todayString()
   const [dismissedToday, setDismissedToday] = useState(() => isBannerDismissed(today))
   const [tourDismissed, setTourDismissed] = useState(isTourDismissed)
+  const [tourOpen, setTourOpen] = useState(false)
 
   // PeriodSelector is generically typed over the full `Period` union (it's
   // shared with Reports, which offers all four); restricting its `periods`
@@ -197,38 +192,26 @@ export function HomePage() {
         </div>
       ) : (
         <>
-          {/* Brief, dismissible "where things are" map — shown only while there's
+          {/* Brief entry point into the guided tour — shown only while there's
               no data at all yet, never as a replacement for the real dashboard
               below (which already renders correctly at all-zero values). */}
           {hasNoData && !tourDismissed && (
-            <Card className="flex flex-col gap-2.5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold">New here? Here's where things are.</p>
-                <IconButton
-                  aria-label="Dismiss getting-started tips"
-                  icon="✕"
-                  variant="ghost"
-                  onClick={handleDismissTour}
-                />
+            <Card className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">New here?</p>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  Take a 1-minute tour of Money, Tasks and Notes.
+                </p>
               </div>
-              <div className="flex flex-col">
-                {TOUR_HIGHLIGHTS.map((item) => (
-                  <ListItem
-                    key={item.label}
-                    leading={<CategoryIcon icon={item.icon} />}
-                    title={
-                      <button
-                        type="button"
-                        onClick={() => navigate(item.href)}
-                        className="text-left font-semibold"
-                      >
-                        {item.label}
-                      </button>
-                    }
-                    subtitle={item.description}
-                  />
-                ))}
-              </div>
+              <Button size="sm" onClick={() => setTourOpen(true)}>
+                Take the tour
+              </Button>
+              <IconButton
+                aria-label="Dismiss getting-started tips"
+                icon="✕"
+                variant="ghost"
+                onClick={handleDismissTour}
+              />
             </Card>
           )}
 
@@ -473,6 +456,18 @@ export function HomePage() {
             )}
           </Card>
         </>
+      )}
+
+      {tourOpen && (
+        <GettingStartedTour
+          onClose={() => {
+            setTourOpen(false)
+            // Any way of closing the tour (Skip, Done, scrim, Escape, back
+            // gesture) counts as "seen it" — same permanent dismissal as
+            // the entry card's own ✕, so it never re-prompts afterward.
+            handleDismissTour()
+          }}
+        />
       )}
     </div>
   )

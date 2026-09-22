@@ -841,28 +841,47 @@ have their own inline `EmptyState` for "nothing here yet"), so no per-section
 changes were needed beyond the money hero showing `ETB 0.00` and unstyled
 zero-width bars, which it already did correctly.
 
-In its place: a brief, dismissible "getting started" callout (only while
-`hasNoData`) — one line of intro copy plus three short tappable rows (💰
-Money / ✅ Tasks / 📝 Notes, each a one-line description + a tap straight to
-that tab), reusing the exact `ListItem` + `CategoryIcon` + button-as-title
-shape already established for Recent notes and Today's tasks, so it carries
-no new interactive-nesting a11y risk. New `src/routes/home/homeTour.ts`
-persists its dismissal (`dowi:home:tourDismissed`, localStorage, try/catch —
-same shape as `homeBanner.ts`'s dismiss) — but **permanently**, not per-day
-like the plan/review banner, since "seen it once" is the right semantics
-here. The callout also disappears on its own the moment there's any real
-data, with no dismiss required — the common path, since adding a first
-transaction/task/note is exactly what it's pointing you toward.
+In its place: a brief, dismissible entry card (only while `hasNoData`) — one
+line of intro copy and a single "Take the tour" button, plus the usual ✕
+dismiss. Tapping it opens **`GettingStartedTour`**
+(`src/routes/home/GettingStartedTour.tsx`), a real stepped walkthrough —
+2 short steps each for Money/Tasks/Notes (6 total; content in
+`src/routes/home/tourContent.ts`) — built as a `Sheet` (the app's
+established container for substantial content, not `Dialog`, which is
+reserved for tiny confirms) with a `SegmentedControl` category switcher, a
+`ProgressBar` for overall position, and a Back/Next footer that becomes
+"Done" on the last step, plus a "Skip" always available. Step navigation is
+plain component state (`src/routes/home/tourNav.ts`'s pure `nextTourIndex`)
+— deliberately **not** additional history pushes, since `Sheet` already owns
+exactly one push/pop per open cycle; the system back button/gesture just
+closes the whole tour like any other Sheet. `homeTour.ts`'s existing
+dismissal persistence (`dowi:home:tourDismissed`, localStorage, try/catch,
+**permanent** unlike the per-day plan/review banner) is unchanged — closing
+the tour any way (Skip, Done, scrim, Escape) triggers it, same as the entry
+card's own ✕. The entry card also still disappears on its own the moment
+there's any real data, with no dismiss required.
 
-**Verified:** 4 new Vitest unit tests (319 total, up from 315) —
-`homeTour.test.ts` (dismiss round-trip, fails open on a blocked read, ignores
-a blocked write). Home's e2e "empty state" describe block was rewritten (4
-tests, up from 2) to check the dashboard itself renders at zero (hero,
-quick actions, each card's own empty state) alongside the callout, that each
-callout row navigates correctly, that dismissing persists across a reload,
-and that the callout disappears on its own once a fixture with any data is
-imported — 212 e2e total (up from 208), all passing, both themes, including
-the accessibility sweep. Confirmed visually with a fresh build against a
+**Bug caught before it was ever committed:** the first wiring had the tour's
+Skip/Done buttons call only the local `setTourOpen(false)` — closing the
+Sheet but never actually marking the tour dismissed, so it would silently
+reappear on the next visit despite having just been completed. An e2e
+assertion (dismissal persists across reload) caught it immediately; fixed by
+having the tour's `onClose` also call the same `handleDismissTour()` the
+entry card's own ✕ uses, so every path out of the tour counts as "seen it."
+
+**Verified:** 10 new Vitest unit tests (325 total, up from 315) —
+`homeTour.test.ts` (4: dismiss round-trip, fails open on a blocked read,
+ignores a blocked write) and `tourNav.test.ts` (6: next/back bounds,
+category-jump landing on the right index). Home's e2e "empty state" describe
+block now covers: the dashboard renders at zero alongside the entry card;
+stepping all the way through the tour via Next, jumping categories via the
+switcher, and landing on "Done" at the last step; Skip/Done and the entry
+card's own ✕ both dismissing permanently across a reload; and the entry card
+disappearing on its own once a fixture with any data is imported — plus a
+dedicated accessibility pass with the tour Sheet open, in both themes (the
+existing sweep can't reach it, since it only ever runs against a
+fixture-seeded, non-empty database). 218 e2e total (up from 208), all
+passing. Confirmed visually with a fresh build against a
 genuinely empty database, in both themes, before considering this done.
 
 ---
