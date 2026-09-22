@@ -25,9 +25,23 @@ export const DEFAULT_SETTINGS: Settings = {
 /** Settings is a single row keyed by the fixed id "settings" — no list/CRUD, just get/update. */
 export function createSettingsRepo(db: DowiDatabase) {
   return {
+    /**
+     * Merges the stored row over `DEFAULT_SETTINGS` (top-level *and*
+     * `reminders`) rather than returning it as-is — a settings row
+     * persisted before a field existed (e.g. an install from before
+     * `morningNudge`/`eveningStreak` were added) genuinely lacks that key
+     * in IndexedDB, and every new-field addition since M9's `density` has
+     * relied on exactly this being handled once here, not re-derived at
+     * every call site that reads `settings.reminders.<newKind>.enabled`.
+     */
     async get(): Promise<Settings> {
       const existing = await db.settings.get('settings')
-      return existing ?? DEFAULT_SETTINGS
+      if (!existing) return DEFAULT_SETTINGS
+      return {
+        ...DEFAULT_SETTINGS,
+        ...existing,
+        reminders: { ...DEFAULT_SETTINGS.reminders, ...existing.reminders },
+      }
     },
 
     async update(patch: Partial<Omit<Settings, 'id'>>): Promise<Settings> {

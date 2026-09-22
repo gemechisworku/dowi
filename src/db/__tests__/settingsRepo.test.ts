@@ -49,4 +49,32 @@ describe('settingsRepo', () => {
     await settingsRepo.reset()
     expect(await settingsRepo.get()).toEqual(DEFAULT_SETTINGS)
   })
+
+  it('backfills a top-level field missing from a row saved before that field existed', async () => {
+    // Simulates a real pre-existing install: writes straight to the table,
+    // bypassing the repo, the way an old app version's persisted row
+    // genuinely looks once a new Settings field is added later.
+    const withoutDensity: Record<string, unknown> = { ...DEFAULT_SETTINGS }
+    delete withoutDensity.density
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deliberately simulating a pre-migration row that's missing a field TS would otherwise require
+    await db.settings.put(withoutDensity as any)
+
+    const settings = await settingsRepo.get()
+    expect(settings.density).toBe(DEFAULT_SETTINGS.density)
+    expect(settings.baseCurrency).toBe(DEFAULT_SETTINGS.baseCurrency) // still respects what *was* stored
+  })
+
+  it('backfills a reminders sub-field missing from a row saved before that reminder kind existed — regression for the real crash this caused (undefined.enabled)', async () => {
+    const oldReminders: Record<string, unknown> = { ...DEFAULT_SETTINGS.reminders }
+    delete oldReminders.morningNudge
+    delete oldReminders.eveningStreak
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deliberately simulating a pre-migration row
+    await db.settings.put({ ...DEFAULT_SETTINGS, reminders: oldReminders } as any)
+
+    const settings = await settingsRepo.get()
+    expect(settings.reminders.morningNudge).toEqual(DEFAULT_SETTINGS.reminders.morningNudge)
+    expect(settings.reminders.eveningStreak).toEqual(DEFAULT_SETTINGS.reminders.eveningStreak)
+    // Doesn't clobber what the old row *did* have.
+    expect(settings.reminders.weeklyPlan).toEqual(DEFAULT_SETTINGS.reminders.weeklyPlan)
+  })
 })
