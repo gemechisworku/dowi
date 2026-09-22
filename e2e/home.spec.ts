@@ -179,19 +179,50 @@ const NOT_TODAY = (new Date().getDay() + 3) % 7
 const TODAY_DOW = new Date().getDay()
 
 test.describe('Home — empty state', () => {
-  test('a fresh database shows the welcome empty state, not a blank screen', async ({ page }) => {
+  test('a fresh database shows the real dashboard at zero, not a takeover screen', async ({
+    page,
+  }) => {
     await page.goto('/')
-    await expect(page.getByText('Welcome to Dowi')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Log your first expense' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Add your first task' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Write your first note' })).toBeVisible()
+    // The dashboard itself renders — hero at zero, quick actions, and each
+    // card's own empty state — rather than being replaced by anything. Net
+    // at exactly zero gets no +/- prefix (see MoneyText/formatMoney: the
+    // sign is only ever added for a strictly positive or negative amount).
+    await expect(page.getByText('ETB 0.00', { exact: true }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Expense', exact: true })).toBeVisible()
+    await expect(page.getByText('Nothing due today')).toBeVisible()
+    await expect(page.getByText('No notes yet')).toBeVisible()
+    // Plus the brief getting-started callout.
+    await expect(page.getByText("New here? Here's where things are.")).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Money', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Tasks', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Notes', exact: true })).toBeVisible()
   })
 
-  test('the empty state CTAs open the right create flow', async ({ page }) => {
+  test('each getting-started row opens the right screen', async ({ page }) => {
     await page.goto('/')
-    await page.getByRole('button', { name: 'Add your first task' }).click()
-    await expect(page).toHaveURL('/tasks/new')
-    await expect(page.getByRole('dialog', { name: 'Add task' })).toBeVisible()
+    await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+    await expect(page).toHaveURL('/tasks')
+  })
+
+  test('dismissing the callout hides it, and it stays hidden across a reload', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText("New here? Here's where things are.")).toBeVisible()
+    await page.getByRole('button', { name: 'Dismiss getting-started tips' }).click()
+    await expect(page.getByText("New here? Here's where things are.")).toHaveCount(0)
+
+    await page.reload()
+    await expect(page.getByText("New here? Here's where things are.")).toHaveCount(0)
+  })
+
+  test('the callout disappears on its own once there is any data, without being dismissed', async ({
+    page,
+  }) => {
+    await importFixture(
+      page,
+      buildFixture({ weeklyPlanDay: NOT_TODAY, weeklyReviewDay: NOT_TODAY }),
+    )
+    await page.goto('/')
+    await expect(page.getByText("New here? Here's where things are.")).toHaveCount(0)
   })
 })
 

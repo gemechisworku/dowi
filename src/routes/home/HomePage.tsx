@@ -19,6 +19,7 @@ import { getThisWeek } from '../tasks/week'
 import { getRecentNotes } from '../notes/noteViews'
 import { readHomePeriod, writeHomePeriod, type HomePeriod } from './homePrefs'
 import { getBannerKind, isBannerDismissed, dismissBannerForToday } from './homeBanner'
+import { isTourDismissed, dismissTour } from './homeTour'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -51,6 +52,13 @@ const QUICK_ACTIONS = [
   { icon: '💰', label: 'Income', href: '/money/new?type=income' },
   { icon: '📝', label: 'Note', href: '/notes/new' },
   { icon: '✅', label: 'Task', href: '/tasks/new' },
+] as const
+
+/** The brief "where things are" map shown while there's no data at all yet. */
+const TOUR_HIGHLIGHTS = [
+  { icon: '💰', label: 'Money', description: 'Track income & expenses', href: '/money' },
+  { icon: '✅', label: 'Tasks', description: 'Plan and review your week', href: '/tasks' },
+  { icon: '📝', label: 'Notes', description: 'Write things down', href: '/notes' },
 ] as const
 
 function greetingFor(hour: number): string {
@@ -95,6 +103,7 @@ export function HomePage() {
   const [period, setPeriod] = useState<HomePeriod>(readHomePeriod)
   const today = todayString()
   const [dismissedToday, setDismissedToday] = useState(() => isBannerDismissed(today))
+  const [tourDismissed, setTourDismissed] = useState(isTourDismissed)
 
   // PeriodSelector is generically typed over the full `Period` union (it's
   // shared with Reports, which offers all four); restricting its `periods`
@@ -109,6 +118,11 @@ export function HomePage() {
   function handleDismissBanner() {
     dismissBannerForToday(today)
     setDismissedToday(true)
+  }
+
+  function handleDismissTour() {
+    dismissTour()
+    setTourDismissed(true)
   }
 
   async function handleToggleComplete(task: Task, done: boolean) {
@@ -181,29 +195,43 @@ export function HomePage() {
           <Skeleton height={220} rounded="lg" />
           <Skeleton height={140} rounded="lg" />
         </div>
-      ) : hasNoData ? (
-        <Card>
-          <EmptyState
-            icon="👋"
-            title="Welcome to Dowi"
-            description="Money, tasks and notes — all local, all yours. Start with whichever you need first."
-            action={
-              <div className="flex flex-col gap-2">
-                <Button onClick={() => navigate('/money/new?type=expense')}>
-                  Log your first expense
-                </Button>
-                <Button variant="secondary" onClick={() => navigate('/tasks/new')}>
-                  Add your first task
-                </Button>
-                <Button variant="secondary" onClick={() => navigate('/notes/new')}>
-                  Write your first note
-                </Button>
-              </div>
-            }
-          />
-        </Card>
       ) : (
         <>
+          {/* Brief, dismissible "where things are" map — shown only while there's
+              no data at all yet, never as a replacement for the real dashboard
+              below (which already renders correctly at all-zero values). */}
+          {hasNoData && !tourDismissed && (
+            <Card className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold">New here? Here's where things are.</p>
+                <IconButton
+                  aria-label="Dismiss getting-started tips"
+                  icon="✕"
+                  variant="ghost"
+                  onClick={handleDismissTour}
+                />
+              </div>
+              <div className="flex flex-col">
+                {TOUR_HIGHLIGHTS.map((item) => (
+                  <ListItem
+                    key={item.label}
+                    leading={<CategoryIcon icon={item.icon} />}
+                    title={
+                      <button
+                        type="button"
+                        onClick={() => navigate(item.href)}
+                        className="text-left font-semibold"
+                      >
+                        {item.label}
+                      </button>
+                    }
+                    subtitle={item.description}
+                  />
+                ))}
+              </div>
+            </Card>
+          )}
+
           {/* Hero (Option A "Soft Cards" — design/design-options.html): a single
               blue-gradient card carries the headline net figure. The toggle sits
               outside the tap-to-open-Reports button below so its own radio

@@ -823,6 +823,48 @@ button, and the money summary's sign expectations changed as described
 above). Also confirmed visually — real-data screenshots in both light and
 dark, not just the automated suite — before considering this done.
 
+### Post-M8 — Home always shows the real dashboard, even at zero
+
+The `hasNoData` branch replaced the _entire_ dashboard with a single
+full-screen "Welcome to Dowi" card (icon, description, three stacked create
+buttons) whenever transactions+tasks+notes were all empty — jarring in
+practice, since it meant the very first thing a new user saw looked nothing
+like the app they'd actually use, and the takeover screen was reachable again
+any time the database happened to be fully empty (e.g. after erasing
+everything), not just on a literal first run.
+
+Removed that branch entirely. The real dashboard (hero → quick actions →
+today's tasks → banner → recent notes) now always renders once loading is
+done — it already degraded gracefully at zero before this (the hero's bar
+math already guards divide-by-zero; Today's-tasks and Recent-notes already
+have their own inline `EmptyState` for "nothing here yet"), so no per-section
+changes were needed beyond the money hero showing `ETB 0.00` and unstyled
+zero-width bars, which it already did correctly.
+
+In its place: a brief, dismissible "getting started" callout (only while
+`hasNoData`) — one line of intro copy plus three short tappable rows (💰
+Money / ✅ Tasks / 📝 Notes, each a one-line description + a tap straight to
+that tab), reusing the exact `ListItem` + `CategoryIcon` + button-as-title
+shape already established for Recent notes and Today's tasks, so it carries
+no new interactive-nesting a11y risk. New `src/routes/home/homeTour.ts`
+persists its dismissal (`dowi:home:tourDismissed`, localStorage, try/catch —
+same shape as `homeBanner.ts`'s dismiss) — but **permanently**, not per-day
+like the plan/review banner, since "seen it once" is the right semantics
+here. The callout also disappears on its own the moment there's any real
+data, with no dismiss required — the common path, since adding a first
+transaction/task/note is exactly what it's pointing you toward.
+
+**Verified:** 4 new Vitest unit tests (319 total, up from 315) —
+`homeTour.test.ts` (dismiss round-trip, fails open on a blocked read, ignores
+a blocked write). Home's e2e "empty state" describe block was rewritten (4
+tests, up from 2) to check the dashboard itself renders at zero (hero,
+quick actions, each card's own empty state) alongside the callout, that each
+callout row navigates correctly, that dismissing persists across a reload,
+and that the callout disappears on its own once a fixture with any data is
+imported — 212 e2e total (up from 208), all passing, both themes, including
+the accessibility sweep. Confirmed visually with a fresh build against a
+genuinely empty database, in both themes, before considering this done.
+
 ---
 
 ## M9 — Settings & data management
