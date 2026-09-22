@@ -1,0 +1,125 @@
+/**
+ * ProseMirror/Tiptap content styling for the note editor. Scoped under
+ * `.dowi-note-content` (set via editorProps.attributes.class in
+ * NoteEditor.tsx) rather than the bare `.ProseMirror` class Tiptap adds
+ * automatically, so this never leaks into anything else that might use
+ * ProseMirror later. Imported only by the lazy-loaded NoteEditor chunk, so
+ * it never reaches the app's initial CSS payload either.
+ */
+
+.dowi-note-content {
+  outline: none;
+  color: var(--color-text);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+.dowi-note-content > * + * {
+  margin-top: var(--space-3);
+}
+
+.dowi-note-content h1,
+.dowi-note-content h2,
+.dowi-note-content h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  margin-top: var(--space-5);
+}
+
+.dowi-note-content h1 {
+  font-size: var(--text-2xl);
+}
+.dowi-note-content h2 {
+  font-size: var(--text-xl);
+}
+.dowi-note-content h3 {
+  font-size: var(--text-lg);
+}
+
+.dowi-note-content mark {
+  border-radius: 3px;
+  padding: 0 2px;
+  color: inherit;
+}
+
+.dowi-note-content ul,
+.dowi-note-content ol {
+  padding-left: var(--space-5);
+}
+.dowi-note-content ul {
+  list-style: disc;
+}
+.dowi-note-content ol {
+  list-style: decimal;
+}
+
+.dowi-note-content ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+.dowi-note-content ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.dowi-note-content ul[data-type='taskList'] li > label {
+  margin-top: 3px;
+  user-select: none;
+}
+.dowi-note-content ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.dowi-note-content ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.dowi-note-content blockquote {
+  border-left: 3px solid var(--color-border-strong);
+  padding-left: var(--space-4);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.dowi-note-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--color-surface-2);
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+}
+
+.dowi-note-content pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--color-surface-3);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  overflow-x: auto;
+}
+.dowi-note-content pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.dowi-note-content hr {
+  border: none;
+  border-top: 2px solid var(--color-border-strong);
+  margin: var(--space-4) 0;
+}
+
+.dowi-note-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.dowi-note-content p.is-editor-empty:first-child::before,
+.dowi-note-content .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--color-text-muted);
+}

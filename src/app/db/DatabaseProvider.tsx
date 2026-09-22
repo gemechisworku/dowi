@@ -5,6 +5,7 @@ import { createSettingsRepo } from '@/db/settingsRepo'
 import { createNotificationsRepo } from '@/db/notificationsRepo'
 import { seedIfNeeded } from '@/db/seed'
 import { requestPersistentStorage } from '@/db/storage'
+import { sweepExpiredNoteTrash } from '@/db/notesTrashSweep'
 import { DatabaseContext, type DatabaseContextValue } from './DatabaseContext'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -31,9 +32,11 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
         await seedIfNeeded(db)
         void requestPersistentStorage()
         if (cancelled) return
+        const repos = createRepositories(db)
+        void sweepExpiredNoteTrash(repos.notes)
         setValue({
           db,
-          repos: createRepositories(db),
+          repos,
           settingsRepo: createSettingsRepo(db),
           notificationsRepo: createNotificationsRepo(db),
         })

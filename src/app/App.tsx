@@ -11,6 +11,9 @@ import { SourcesPage } from '@/routes/money/SourcesPage'
 import { AccountsPage } from '@/routes/money/AccountsPage'
 import { RatesPage } from '@/routes/money/RatesPage'
 import { NotesPage } from '@/routes/notes/NotesPage'
+import { NoteEditorPage } from '@/routes/notes/NoteEditorPage'
+import { NoteCollectionsPage } from '@/routes/notes/NoteCollectionsPage'
+import { NoteTrashPage } from '@/routes/notes/NoteTrashPage'
 import { TasksPage } from '@/routes/tasks/TasksPage'
 import { TaskCollectionsPage } from '@/routes/tasks/TaskCollectionsPage'
 import { PlanWeekPage } from '@/routes/tasks/PlanWeekPage'
@@ -36,6 +39,10 @@ export function App() {
                 <Route path="money/accounts" element={<AccountsPage />} />
                 <Route path="money/rates" element={<RatesPage />} />
                 <Route path="notes" element={<NotesPage />} />
+                <Route path="notes/collections" element={<NoteCollectionsPage />} />
+                <Route path="notes/trash" element={<NoteTrashPage />} />
+                <Route path="notes/new" element={<NoteEditorPage />} />
+                <Route path="notes/:id" element={<NoteEditorPage />} />
                 <Route path="tasks" element={<TasksPage />} />
                 <Route path="tasks/collections" element={<TaskCollectionsPage />} />
                 <Route path="tasks/plan" element={<PlanWeekPage />} />
