@@ -54,7 +54,7 @@ export function TransactionSheet({ onClose, transaction, initialType }: Transact
       ? (transaction.amountMinorUnits / 10 ** minorUnitExponent(transaction.currency)).toString()
       : '',
   )
-  const [currency, setCurrency] = useState(transaction?.currency ?? settings?.baseCurrency ?? 'ETB')
+  const [currency, setCurrency] = useState(transaction?.currency ?? 'ETB')
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? '')
   const [date, setDate] = useState(transaction?.date ?? todayString())
   const [accountId, setAccountId] = useState(transaction?.accountId ?? '')
@@ -63,6 +63,25 @@ export function TransactionSheet({ onClose, transaction, initialType }: Transact
   const [tagsInput, setTagsInput] = useState(transaction?.tags.join(', ') ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // `settings` loads asynchronously (Dexie/IndexedDB) and is never available
+  // yet on this component's very first render, so reading it in a
+  // `useState` initializer above (as this used to for currency, and as a
+  // first pass at defaultAccountId did too) silently never applies: the
+  // initializer only runs once, and nothing re-syncs it once `settings`
+  // actually arrives a tick later. Applying it once, right when it first
+  // becomes available, is React's own "adjusting state during render"
+  // pattern (react.dev/learn/you-might-not-need-an-effect) rather than an
+  // effect — it re-runs synchronously before anything paints, so there's
+  // no flash of the wrong default. Only for a brand-new transaction, and
+  // only once, so it never overwrites an existing transaction's own stored
+  // values or a user's in-progress edit.
+  const [settingsApplied, setSettingsApplied] = useState(false)
+  if (!isEdit && !settingsApplied && settings) {
+    setSettingsApplied(true)
+    setCurrency(settings.baseCurrency)
+    if (settings.defaultAccountId) setAccountId(settings.defaultAccountId)
+  }
 
   const categoriesForType = categories.filter((c) => c.type === type)
 

@@ -19,6 +19,11 @@ import { Button } from '@/components/ui/Button'
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { AppearanceSettings } from './AppearanceSettings'
+import { MoneySettings } from './MoneySettings'
+import { DataSettings } from './DataSettings'
+import { AboutSettings } from './AboutSettings'
+import changelogRaw from '../../../CHANGELOG.md?raw'
 
 const DAY_OPTIONS = [
   { value: '0', label: 'Sunday' },
@@ -50,8 +55,11 @@ type ReminderKey = keyof Pick<
 >
 
 /**
- * Settings → Reminders (PRD §5.7/§5.8). This screen covers only what M7
- * needs — Appearance/Money/Data/About land with the rest of Settings later.
+ * Settings (PRD §5.8), assembled from one file per section — Reminders
+ * (and its Notifications/Quiet hours siblings) is what M7 originally built
+ * here; M9 added Appearance, Money, Data and About as their own components
+ * rather than growing this one file past 700+ lines, the same way Money's
+ * and Tasks's own sub-screens each get their own file.
  */
 export function SettingsPage() {
   const { db, settingsRepo, notificationsRepo, repos } = useDatabase()
@@ -73,6 +81,11 @@ export function SettingsPage() {
 
   async function patchReminders(patch: Partial<ReminderConfig>) {
     await settingsRepo.update({ reminders: { ...settings.reminders, ...patch } })
+  }
+
+  /** Shared by Appearance/Money — a plain pass-through to settingsRepo.update, since neither section needs anything more than "write this patch". */
+  async function handleSettingsPatch(patch: Partial<Settings>) {
+    await settingsRepo.update(patch)
   }
 
   async function ensurePermissionThenEnable(key: ReminderKey) {
@@ -133,6 +146,9 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 px-4 pt-1 pb-6">
       <h1 className="text-lg font-bold tracking-tight">Settings</h1>
+
+      <AppearanceSettings settings={settings} onPatch={handleSettingsPatch} />
+      <MoneySettings settings={settings} onPatch={handleSettingsPatch} />
 
       <section>
         <SectionHeader title="Notifications" />
@@ -313,6 +329,9 @@ export function SettingsPage() {
           </p>
         </Card>
       </section>
+
+      <DataSettings />
+      <AboutSettings changelog={changelogRaw} />
 
       <ConfirmDialog
         open={explainerOpen}

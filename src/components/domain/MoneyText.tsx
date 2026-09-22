@@ -1,5 +1,6 @@
 import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/cn'
+import { useHideAmounts } from '@/app/settings/useHideAmounts'
 
 export interface MoneyTextProps {
   /**
@@ -36,6 +37,8 @@ export function MoneyText({
   className,
   color: colorOverride,
 }: MoneyTextProps) {
+  const hideAmounts = useHideAmounts()
+
   const color =
     colorOverride ??
     (sign === 'income'
@@ -54,7 +57,16 @@ export function MoneyText({
   return (
     <span
       className={cn('tabular-nums', className)}
-      style={{ color, fontVariantNumeric: 'tabular-nums' }}
+      style={{
+        color,
+        fontVariantNumeric: 'tabular-nums',
+        // Settings → Money → "hide amounts": a reversible CSS blur rather
+        // than swapping in placeholder text, so the layout never shifts
+        // and turning it back off needs no re-render of the amount itself.
+        filter: hideAmounts ? 'blur(6px)' : undefined,
+        userSelect: hideAmounts ? 'none' : undefined,
+      }}
+      aria-hidden={hideAmounts || undefined}
     >
       {formatMoney(displayAmount, currency, { showSign, approximate })}
     </span>

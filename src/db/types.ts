@@ -138,6 +138,7 @@ export interface Settings {
   fyStartMonth: number
   theme: 'system' | 'light' | 'dark'
   textSize: 's' | 'm' | 'l'
+  density: 'comfortable' | 'compact'
   hideAmounts: boolean
   defaultAccountId?: string
   reminders: ReminderConfig

@@ -886,20 +886,136 @@ genuinely empty database, in both themes, before considering this done.
 
 ---
 
-## M9 — Settings & data management
+## M9 — Settings & data management ✅ done
 
 **Deliverable:** everything configurable, and your data under your control.
 
-- [ ] Appearance: theme, text size, density
-- [ ] Money: base currency, rates CRUD, FY start month, week start, default account,
+- [x] Appearance: theme, text size, density
+- [x] Money: base currency, rates CRUD, FY start month, week start, default account,
       hide-amounts privacy blur
-- [ ] Reminders: per-reminder day/time/offsets, quiet hours, test notification
-- [ ] Data: export JSON, import (merge/replace with diff preview), storage usage,
+- [x] Reminders: per-reminder day/time/offsets, quiet hours, test notification
+- [x] Data: export JSON, import (merge/replace with diff preview), storage usage,
       persistent-storage request, Trash, erase-all with type-to-confirm
-- [ ] About: version, build date, changelog, check for update, licences
+- [x] About: version, build date, changelog, check for update, licences
 
 **Done when:** every setting persists across a cold restart and takes effect at once.
 **Tag:** `m9` · **Test guide:** TESTING.md §M9
+
+Reminders/quiet-hours/test-notification were already built in M7 — this
+milestone left that section alone and added Appearance, Money, Data and
+About as their own files (`AppearanceSettings.tsx`, `MoneySettings.tsx`,
+`DataSettings.tsx`, `AboutSettings.tsx`) composed into the existing
+`SettingsPage.tsx`, rather than growing one file past 700+ lines — the same
+split Money/Tasks/Notes already use for their own sub-screens.
+
+Two previously-unwired `Settings` fields got wired up: `textSize` (`s`/`m`/`l`)
+and `hideAmounts` now do something, applied respectively via a `data-text-size`
+root attribute (`ApplyAppearance.tsx`, mirroring how `ThemeProvider` applies
+`data-theme`) and a CSS blur in `MoneyText` (the one place every amount
+renders, via a new `useHideAmounts()` hook — the same
+`useDatabase()`+`useLiveQuery` pattern `baseCurrency`/`weekStartsOn` already
+use to reach deep components). `defaultAccountId` now pre-fills a new
+transaction's account field. A `density` field (`comfortable`/`compact`) was
+added to `Settings` (no schema/Dexie version bump needed — the `settings`
+table is keyed `&id` only, so a new plain field on the stored object is
+free) and wired to `Card`'s own padding (`--space-card`, `src/styles/tokens.css`)
+— deliberately narrow in scope (one shared primitive, not a full spacing-system
+rewrite) rather than density-tuning every screen individually, which was
+enough to make the setting real and visible without a much larger project.
+
+**Theme reconciliation:** `ThemeProvider`/`useTheme()` (its own `dowi:theme`
+localStorage key, applied before React mounts to avoid a flash) stays the
+actual source of truth for what's rendered — Appearance's theme control
+calls `setPreference()` for the real effect, and separately mirrors the same
+choice into `Settings.theme` in Dexie purely so it travels with an
+exported/imported backup (`exportAll`/`importAll` already round-trip the
+whole `settings` row as-is, so no backup-format change was needed). Restoring
+a backup on a different device won't repaint that device before Settings is
+opened once — `ThemeProvider` never reads the DB, by design, to keep the
+no-flash guarantee — but the choice is there waiting rather than silently lost.
+
+**`/debug/data` (M2's temporary data-layer panel) was kept, not removed** —
+its job (a real Settings → Data screen) is done, but `grep -rn "/debug/data" e2e`
+showed three specs (`data-persistence.spec.ts`, `reports-perf.spec.ts`,
+`home.spec.ts`) depend on its JSON-import input as their fixture-seeding
+mechanism, the only way those tests get deterministic due-dates/reminder-days
+independent of what day the suite runs on. Its docblock now says so
+explicitly, since it's internal dev tooling from here, not a stand-in
+Settings screen.
+
+Import's "preview of what will change before confirming" (PRD §5.8) is a
+UI-layer read only, per M2's own PLAN.md note that the counts are already
+there — `computeImportPreview()` (`src/routes/settings/importPreview.ts`)
+just takes each table's array length from the parsed-and-validated file;
+`db/backup.ts` gained no new function, only an export of its existing
+`TABLE_KEYS`. Erase-all's type-to-confirm is a new, dedicated
+`TypeToConfirmDialog` (`src/components/ui/`) rather than a variant bolted
+onto `ConfirmDialog`'s plain confirm/cancel API, which every other
+destructive action in the app uses as-is — no precedent existed for this
+(confirmed via grep) and forcing an unused `confirmPhrase` prop onto
+`ConfirmDialog` would have been the wrong trade. The app version comes from
+`package.json` via a `vite.config.ts` `define` (`__APP_VERSION__`, declared
+in a new `src/vite-env.d.ts`) rather than a JSON import, since not every
+tsconfig project (app/node/sw) enables `resolveJsonModule`. A minimal
+`CHANGELOG.md` was added (a single "0.1.0 — initial development" entry —
+this isn't a release yet); About reads its latest heading via a `?raw`
+import and falls back gracefully if it's ever missing. "Check for update"
+is a manual one-shot action (`checkForServiceWorkerUpdate()` calling the
+registration's own `.update()` and reporting found/not-found) — the passive
+new-SW-detected → snackbar → reload flow is explicitly M10's job per its own
+PLAN.md checklist, so this deliberately stops short of it.
+
+**Verified:** 13 new Vitest unit tests (338 total, up from 325) —
+`textSize.test.ts` (2, normalizing an unknown/missing size to 'm'),
+`importPreview.test.ts` (3, per-table counts and the cross-table total),
+`TypeToConfirmDialog.test.ts` (6: the trimmed/case-sensitive phrase match,
+the confirm button staying disabled until it matches, and the typed text
+clearing on every reopen), plus 2 `MoneyText` additions covering the
+hide-amounts blur on and off. **26** new Playwright e2e tests (244 total, up
+from 218) in `e2e/settings.spec.ts` — theme/text-size/density/base-currency
+persisting across a real reload and taking effect immediately; a default
+account pre-filling a new transaction; changing the FY start month actually
+changing a Year report's total (two fixture transactions straddling the
+July boundary); hide-amounts blurring amounts on both Home and the Money
+transaction list; export → erase (typed-confirm) → import round-tripping a
+category through both light and dark; a corrupted file failing safely with
+no data loss; erase-all refusing a wrong phrase or a cancel; storage usage
+and the persistent-storage request both reporting something; and About
+showing a version and a check-for-update result. The existing top-level
+accessibility sweep (`kitchen-sink.spec.ts`) already included `/settings`
+against a seeded database and needed no change to cover the new sections;
+`settings.spec.ts` adds its own pass against a fresh, empty database too.
+Build is 157.59 KB gzipped JS for the initial bundle (budget 180 KB, up
+from M8's 154.27 KB baseline — all four new Settings sections plus the new
+`TypeToConfirmDialog`/import-preview UI, for a ~3.3 KB delta).
+
+**Bugs found this milestone:**
+
+- **A new transaction's currency/account defaults could never actually
+  apply.** `TransactionSheet` read `settings?.baseCurrency`/
+  `settings?.defaultAccountId` inside a `useState` initializer — but
+  `settings` loads asynchronously (Dexie/IndexedDB) and is always still
+  `undefined` on a component's very first render, and a `useState`
+  initializer only runs once, so the real value arriving a tick later never
+  took effect. Confirmed via a raw-IndexedDB read in a throwaway e2e probe:
+  the correct value was genuinely persisted in the database the whole time —
+  the sheet's own initial state just never picked it up. Fixed by applying
+  the setting once, the moment it actually becomes available, via React's
+  "adjusting state during render" pattern (comparing against a tracked
+  previous value, as `TypeToConfirmDialog`'s open/close reset already does)
+  rather than a `useState` initializer or an effect — this re-runs
+  synchronously before anything paints, so there's no flash of the wrong
+  default. The same fix applies to `MoneySettings`' own base-currency input,
+  which had the identical bug for the identical reason (its local edit
+  buffer, `currencyInput`, never resynced after the underlying setting
+  changed from its own async-loading default).
+- A stale `vite preview` server left running from an earlier local test
+  invocation was silently reused by `playwright.config.ts`'s
+  `reuseExistingServer: !process.env.CI`, serving pre-fix code against tests
+  written for the fix and producing several confusing failures that looked
+  like real persistence bugs. Not a product bug, but worth noting here since
+  it cost real debugging time before a raw-IndexedDB check ruled out an
+  actual data-loss bug and pointed at the stale server instead.
 
 ---
 

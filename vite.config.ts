@@ -1,10 +1,24 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Read rather than `import ... with { type: 'json' }` — this file is
+// shared by the app, node and sw tsconfigs (tsconfig.json's `references`),
+// and not all of them enable resolveJsonModule; a plain read avoids having
+// to touch every one of them just to expose one string.
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
+  version: string
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+  // Settings → About reads this as a global (declared in src/vite-env.d.ts)
+  // rather than importing package.json — see the comment above.
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     react(),
     tailwindcss(),
