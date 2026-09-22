@@ -72,6 +72,29 @@ the app standalone (no browser chrome) and it keeps working with Wi-Fi off.
 > Push notification testing (M7 onward) needs a secure context, which a plain LAN IP
 > doesn't satisfy. See [docs/TESTING.md](docs/TESTING.md) for a tunnelling option.
 
+## Deploying (Vercel)
+
+`vercel.json` at the repo root configures the build for zero-config deploys — connect
+the repo at [vercel.com/new](https://vercel.com/new) and it just builds. Nothing about
+the app changes: Dowi has no backend and no API calls (PRD D2 — local-only storage
+via IndexedDB), so this only gives the app a real HTTPS origin. That matters because
+Android's full PWA install (a standalone WebAPK, no browser chrome) is minted
+server-side against the origin's actual TLS certificate — the LAN + Chrome-flag
+approach above only fakes a secure context locally, so it can't produce a true
+standalone install the way a real HTTPS deploy does.
+
+Two things the config exists specifically to get right:
+
+- **SPA fallback** — `rewrites` sends every path to `index.html` (static files still
+  take precedence per Vercel's own docs) so a hard refresh on a route like `/settings`
+  doesn't 404 before React Router ever loads.
+- **Service worker caching** — `sw.js`, `manifest.webmanifest` and `index.html` are
+  set `no-cache` so the CDN never serves a stale service worker; this is what makes
+  the update flow (`src/app/pwa/UpdatePrompt.tsx`) actually work in production —
+  a cached-stale `sw.js` would silently defeat the whole "new SW detected → reload"
+  mechanism. Hashed files under `/assets/` are safe to cache immutably forever, since
+  Vite gives every build a new filename.
+
 ## Project layout
 
 ```
