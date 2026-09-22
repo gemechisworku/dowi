@@ -19,6 +19,8 @@ const REMINDERS_DEFAULT = {
   taskDue: { enabled: true, offsets: [0, 1440] },
   dailyAgenda: { enabled: false, time: '07:30' },
   backupNudge: { enabled: true, intervalDays: 30 },
+  morningNudge: { enabled: true, time: '09:00' },
+  eveningStreak: { enabled: true, time: '21:00' },
   quietHours: { enabled: true, start: '22:00', end: '07:00' },
 }
 
@@ -266,6 +268,39 @@ test.describe('Settings — Money', () => {
     await page.getByRole('link', { name: 'Home' }).click()
     const heroAmount = page.locator('[aria-hidden="true"]', { hasText: /ETB/ }).first()
     await expect(heroAmount).toHaveCSS('filter', /blur/)
+  })
+})
+
+test.describe('Settings — Reminders', () => {
+  test('morning nudge and evening streak reminder default on, at 09:00 and 21:00', async ({
+    page,
+  }) => {
+    await page.goto('/settings')
+    await expect(page.getByRole('switch', { name: 'Morning nudge' })).toBeChecked()
+    await expect(page.getByLabel('Morning nudge time')).toHaveValue('09:00')
+    await expect(page.getByRole('switch', { name: 'Evening streak reminder' })).toBeChecked()
+    await expect(page.getByLabel('Evening streak reminder time')).toHaveValue('21:00')
+    await expect(page.getByText("Only sent if you haven't added anything today yet")).toBeVisible()
+  })
+
+  test('morning nudge time change persists across a reload', async ({ page }) => {
+    await page.goto('/settings')
+    await page.getByLabel('Morning nudge time').fill('08:15')
+
+    await page.reload()
+    await expect(page.getByLabel('Morning nudge time')).toHaveValue('08:15')
+  })
+
+  test('turning off the evening streak reminder persists and hides its time picker', async ({
+    page,
+  }) => {
+    await page.goto('/settings')
+    await page.getByRole('switch', { name: 'Evening streak reminder' }).click()
+    await expect(page.getByLabel('Evening streak reminder time')).not.toBeVisible()
+
+    await page.reload()
+    await expect(page.getByRole('switch', { name: 'Evening streak reminder' })).not.toBeChecked()
+    await expect(page.getByLabel('Evening streak reminder time')).not.toBeVisible()
   })
 })
 

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router'
 import { useDatabase } from '@/app/db/useDatabase'
 import type { Settings, Task } from '@/db/types'
 import { DEFAULT_SETTINGS } from '@/db/settingsRepo'
+import { SEEDED_META_KEY } from '@/db/seed'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import {
   getFinancialYearLabel,
@@ -17,6 +18,7 @@ import { buildRateLookup } from '../money/reports/rateLookup'
 import { getOverdueCount, getTodayTasks, toggleCompletePatch } from '../tasks/taskViews'
 import { getThisWeek } from '../tasks/week'
 import { getRecentNotes } from '../notes/noteViews'
+import { getUsageWeekNumber } from './usageWeek'
 import { readHomePeriod, writeHomePeriod, type HomePeriod } from './homePrefs'
 import { getBannerKind, isBannerDismissed, dismissBannerForToday } from './homeBanner'
 import { isTourDismissed, dismissTour } from './homeTour'
@@ -77,7 +79,7 @@ function noteSnippet(text: string, max = 90): string {
  * detection + per-day dismissal).
  */
 export function HomePage() {
-  const { repos, settingsRepo } = useDatabase()
+  const { db, repos, settingsRepo } = useDatabase()
   const navigate = useNavigate()
 
   const settings = useLiveQuery(
@@ -85,6 +87,7 @@ export function HomePage() {
     [settingsRepo],
     DEFAULT_SETTINGS,
   ) as Settings
+  const installedAtMeta = useLiveQuery(() => db.meta.get(SEEDED_META_KEY), [db])
   // Deliberately no EMPTY_ARRAY default here (unlike most other screens'
   // useLiveQuery calls) — `undefined` is what distinguishes "still loading"
   // from "loaded and genuinely empty", which is exactly what decides
@@ -162,7 +165,7 @@ export function HomePage() {
   const expenseBarPct = (report.expense.totalMinorUnits / barMax) * 100
 
   const now = new Date()
-  const thisWeek = useMemo(() => getThisWeek(), [])
+  const usageWeek = getUsageWeekNumber(installedAtMeta?.value, now)
   const fyLabel = useMemo(() => {
     const range = getFinancialYearRange(today, fyStartMonth)
     return getFinancialYearLabel(range, fyStartMonth)
@@ -179,7 +182,7 @@ export function HomePage() {
           {greetingFor(now.getHours())} <span aria-hidden="true">👋</span>
         </h1>
         <p className="mt-0.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          {DATE_FORMATTER.format(now)} · Week {thisWeek.weekKey.split('-W')[1]} · {fyLabel}
+          {DATE_FORMATTER.format(now)} · Week {usageWeek} · {fyLabel}
         </p>
       </header>
 

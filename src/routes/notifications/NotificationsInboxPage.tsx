@@ -18,6 +18,8 @@ const TYPE_ICON: Record<NotificationType, string> = {
   'task-due': '✅',
   'daily-agenda': '☀️',
   'backup-nudge': '💾',
+  'morning-nudge': '☀️',
+  'evening-streak': '🔥',
 }
 
 const TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {

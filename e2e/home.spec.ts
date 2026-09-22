@@ -42,6 +42,8 @@ function baseSettings(overrides: { weeklyPlanDay: number; weeklyReviewDay: numbe
       taskDue: { enabled: true, offsets: [0, 1440] },
       dailyAgenda: { enabled: false, time: '07:30' },
       backupNudge: { enabled: true, intervalDays: 30 },
+      morningNudge: { enabled: false, time: '09:00' },
+      eveningStreak: { enabled: false, time: '21:00' },
       quietHours: { enabled: true, start: '22:00', end: '07:00' },
     },
   }

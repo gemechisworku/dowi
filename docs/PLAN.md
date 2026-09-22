@@ -1075,6 +1075,78 @@ above is real and fixed, not assumed.
 
 ---
 
+### Post-M9 — Home usage week, daily streaks & encouragement reminders
+
+Three related additions, all outside the original M-numbered checklist:
+
+- **Home's "Week N" now counts weeks of _using Dowi_, not the real
+  calendar/ISO week.** A person installing the app in September was
+  previously shown "Week 39" — technically correct (it's the real ISO
+  week) but meaningless as a sense of "how long have I been doing this."
+  `getUsageWeekNumber()` (`src/routes/home/usageWeek.ts`) counts elapsed
+  weeks since `meta.seededAt` (already the app's de facto "first used"
+  timestamp — it's what the M7 backup-nudge reminder uses as its own
+  baseline) and replaces only the header's displayed number. Money's
+  financial-year totals and Tasks' weekly-plan grouping are untouched —
+  both still use the real calendar week/FY exactly as before; this is a
+  display-only change to one string on Home.
+- **A daily-use streak** (`src/db/streakRepo.ts`) — `{currentStreak,
+longestStreak, lastActiveDate, lastCelebratedStreak}` stored as a second
+  row in the existing `meta` table (keyed `&key`, same as `seededAt` — no
+  schema/Dexie version bump, the same "free field" precedent M9 already
+  established for `density`). Hooked into `createRepositories()`'s
+  `transactions`/`tasks`/`notes` `.create()` — deliberately _not_
+  categories/collections/rates, since those are configuration, not usage.
+  A second action on the same day is a no-op (not a double-count); a gap
+  of more than one day resets `currentStreak` to 1 without erasing
+  `longestStreak`.
+- **A 7-day (and every further multiple of 7) celebration** —
+  `StreakCelebrationOverlay` (`src/app/streaks/`), mounted once at the app
+  root so it can fire from any screen, not just Home (a qualifying action
+  can happen from Money, Notes or Tasks just as easily). Purely an in-app,
+  animated reward — hand-rolled CSS confetti (`ConfettiBurst.tsx`, no new
+  dependency, respects `prefers-reduced-motion`) inside the existing
+  `Dialog` primitive for correct focus-trap/`alertdialog` semantics for
+  free. This is a deliberately different, opt-in, celebratory mechanic
+  from what `docs/PRD.md`'s weekly-plan/review section calls "no streaks,
+  no guilt UI" — that line is specifically about not nagging over the
+  plan/review ritual, not a blanket ban on ever acknowledging sustained
+  use elsewhere.
+- **Two new reminder kinds**, same engine and Settings treatment as every
+  existing M7 reminder: **Morning nudge** (default on, 09:00) and
+  **Evening streak reminder** (default on, 21:00 — but only actually
+  fires if `streakLastActiveDate` shows nothing qualifying has happened
+  yet that day; Settings says so explicitly rather than leaving the
+  condition invisible). `computeDueReminders()` stays dependency-free
+  (per its own docblock) — the evening check is done with a small local
+  `toLocalDateString()` rather than importing `@/lib/period`.
+  `createWebScheduler.catchUp()` reads the live streak state itself
+  (`createStreakRepo(db).get()`, using the `db` handle it already has) —
+  `WebSchedulerDeps` and `src/sw.ts`'s periodicsync path needed no
+  signature changes at all.
+
+**Verified:** 31 new Vitest unit tests (369 total, up from 338) —
+`usageWeek.test.ts` (8: week-1-through-day-7, the day-8 rollover, a
+long-time-user case deliberately far from any calendar/usage-week
+coincidence, missing/invalid/future-install fallbacks), `streakRepo.test.ts`
+(17: the pure consecutive/same-day/gap/milestone state machine plus
+repo-level persistence), and additions to `reminders.test.ts` (5) and
+`scheduler.test.ts` (1, proving `catchUp()` actually reads live streak
+state end-to-end, not just `computeDueReminders` in isolation). **18** new
+Playwright e2e tests (266 total, up from 248) — `e2e/streaks.spec.ts`
+covers a real qualifying action crossing a 7-day streak showing the
+celebration exactly once and the dismissal surviving a reload, a
+non-multiple-of-7 action showing nothing, a same-day repeat not
+re-triggering an already-celebrated milestone, a zero-violations
+accessibility pass with the celebration open, and Home showing week 1 on
+day one vs. week 2 at the 8-day mark; `e2e/settings.spec.ts` gained a
+"Settings — Reminders" block for the two new toggles' defaults and
+persistence. Full existing suite (typecheck, lint, unit, e2e both themes)
+stayed green throughout. Build is 159.67 KB gzipped JS (budget 180 KB, up
+from M9's 158.34 KB baseline).
+
+---
+
 ## M10 — Polish & release
 
 **Deliverable:** v1.0 on your phone.

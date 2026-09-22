@@ -18,6 +18,8 @@ const REMINDERS_OFF: ReminderConfig = {
   taskDue: { enabled: false, offsets: [0, 1440] },
   dailyAgenda: { enabled: false, time: '07:30' },
   backupNudge: { enabled: false, intervalDays: 30 },
+  morningNudge: { enabled: false, time: '09:00' },
+  eveningStreak: { enabled: false, time: '21:00' },
   quietHours: { enabled: false, start: '22:00', end: '07:00' },
 }
 
@@ -99,6 +101,28 @@ describe('createWebScheduler.catchUp', () => {
     await scheduler.catchUp()
 
     expect(await notificationsRepo.list()).toHaveLength(1)
+  })
+
+  it('suppresses the evening streak reminder once a real qualifying activity was recorded today — proves catchUp actually reads the live streak state, not just computeDueReminders in isolation', async () => {
+    vi.mocked(permission.getNotificationPermission).mockReturnValue('granted')
+    vi.mocked(deliver.showOsNotification).mockResolvedValue(true)
+    await settingsRepo.update({
+      reminders: { ...REMINDERS_OFF, eveningStreak: { enabled: true, time: '00:00' } },
+    })
+    const repos = createRepositories(db)
+    await repos.transactions.create({
+      type: 'income',
+      amountMinorUnits: 1000,
+      currency: 'ETB',
+      date: new Date().toISOString().slice(0, 10),
+      categoryId: 'cat-1',
+      tags: [],
+    })
+
+    await scheduler.catchUp()
+
+    const all = await notificationsRepo.list()
+    expect(all.find((n) => n.type === 'evening-streak')).toBeUndefined()
   })
 })
 

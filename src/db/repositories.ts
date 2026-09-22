@@ -1,5 +1,6 @@
 import type { DowiDatabase } from './db'
 import { createSoftDeleteRepo } from './softDeleteRepo'
+import { createStreakRepo } from './streakRepo'
 import type {
   Account,
   Category,
@@ -36,18 +37,47 @@ export function createRepositories(db: DowiDatabase) {
   const noteCollections = createSoftDeleteRepo<NoteCollection, CreateInput<NoteCollection>>(
     db.noteCollections,
   )
-  const notes = createSoftDeleteRepo<Note, CreateInput<Note>>(db.notes)
+  const baseNotes = createSoftDeleteRepo<Note, CreateInput<Note>>(db.notes)
   const taskCollections = createSoftDeleteRepo<TaskCollection, CreateInput<TaskCollection>>(
     db.taskCollections,
   )
-  const tasks = createSoftDeleteRepo<Task, CreateInput<Task>>(db.tasks)
+  const baseTasks = createSoftDeleteRepo<Task, CreateInput<Task>>(db.tasks)
   const baseTransactions = createSoftDeleteRepo<Transaction, CreateInput<Transaction>>(
     db.transactions,
   )
   const rates = createSoftDeleteRepo<ExchangeRate, CreateInput<ExchangeRate>>(db.rates)
 
+  // Streak tracking (PRD-adjacent, added post-M9): every real income/expense,
+  // note or task counts as "used the app today" — deliberately not
+  // categories/collections/rates, which are configuration, not usage.
+  const streak = createStreakRepo(db)
+
+  const notes = {
+    ...baseNotes,
+    async create(input: CreateInput<Note>): Promise<Note> {
+      const record = await baseNotes.create(input)
+      await streak.recordQualifyingActivity()
+      return record
+    },
+  }
+
+  const tasks = {
+    ...baseTasks,
+    async create(input: CreateInput<Task>): Promise<Task> {
+      const record = await baseTasks.create(input)
+      await streak.recordQualifyingActivity()
+      return record
+    },
+  }
+
   const transactions = {
     ...baseTransactions,
+
+    async create(input: CreateInput<Transaction>): Promise<Transaction> {
+      const record = await baseTransactions.create(input)
+      await streak.recordQualifyingActivity()
+      return record
+    },
 
     /** list() with optional filters, still excluding soft-deleted rows. */
     async listFiltered(filters: TransactionFilters = {}): Promise<Transaction[]> {
@@ -104,6 +134,7 @@ export function createRepositories(db: DowiDatabase) {
     tasks,
     transactions,
     rates: { ...rates, getRateForCurrency },
+    streak,
   }
 }
 

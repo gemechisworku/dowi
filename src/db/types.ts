@@ -103,7 +103,13 @@ export interface Task extends BaseEntity {
 }
 
 export type NotificationType =
-  'weekly-plan' | 'weekly-review' | 'task-due' | 'daily-agenda' | 'backup-nudge'
+  | 'weekly-plan'
+  | 'weekly-review'
+  | 'task-due'
+  | 'daily-agenda'
+  | 'backup-nudge'
+  | 'morning-nudge'
+  | 'evening-streak'
 
 export interface AppNotification {
   id: string
@@ -126,6 +132,10 @@ export interface ReminderConfig {
   taskDue: { enabled: boolean; offsets: number[] }
   dailyAgenda: { enabled: boolean; time: string }
   backupNudge: { enabled: boolean; intervalDays: number }
+  /** Encourages the day's first check-in. */
+  morningNudge: { enabled: boolean; time: string }
+  /** Only actually fires if no qualifying action (an income/expense, note or task added) has happened yet that day — see computeDueReminders. */
+  eveningStreak: { enabled: boolean; time: string }
   quietHours: { enabled: boolean; start: string; end: string }
 }
 
