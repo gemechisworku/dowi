@@ -28,8 +28,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-full transition-colors peer-checked:[background:var(--color-primary)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2"
-          style={{ background: 'var(--color-border-strong)' }}
+          className="pointer-events-none absolute inset-0 rounded-full bg-[var(--color-border-strong)] transition-colors peer-checked:bg-[var(--color-primary)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2"
         />
         <span
           aria-hidden="true"

@@ -22,7 +22,17 @@ declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<PrecacheEntry | string>
 }
 
-self.skipWaiting()
+// Deliberately NOT calling self.skipWaiting() unconditionally here — that
+// would force every new worker to activate (and clientsClaim() below to
+// take over every open tab) the instant it finishes installing, regardless
+// of registerType: 'prompt' or whether the app ever actually asked. A
+// waiting worker only skips waiting in response to the page's own
+// "SKIP_WAITING" message below, which is exactly what the update prompt's
+// "Reload" action (src/app/pwa/UpdatePrompt.tsx, via vite-plugin-pwa's
+// updateServiceWorker()) sends once the user has agreed to it.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
+})
 clientsClaim()
 
 precacheAndRoute(self.__WB_MANIFEST)

@@ -20,8 +20,7 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(function Radio(
           ref={ref}
           id={generatedId}
           type="radio"
-          className="peer absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-full border-2 transition-colors checked:border-[var(--color-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-          style={{ borderColor: 'var(--color-border-strong)' }}
+          className="peer absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-full border-2 border-[var(--color-border-strong)] transition-colors checked:border-[var(--color-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
           {...props}
         />
         {/* Absolutely positioned for the same reason as Checkbox's checkmark — see its comment. */}

@@ -1,4 +1,23 @@
 import { useNavigate } from 'react-router'
+import { useTheme } from '@/app/theme/useTheme'
+import type { ThemePreference } from '@/app/theme/ThemeContext'
+import { useDatabase } from '@/app/db/useDatabase'
+
+const THEME_CYCLE: Record<ThemePreference, ThemePreference> = {
+  system: 'light',
+  light: 'dark',
+  dark: 'system',
+}
+const THEME_ICON: Record<ThemePreference, string> = {
+  system: '🌓',
+  light: '☀️',
+  dark: '🌙',
+}
+const THEME_LABEL: Record<ThemePreference, string> = {
+  system: 'system',
+  light: 'light',
+  dark: 'dark',
+}
 
 interface TopAppBarProps {
   /** Screen title. Omit for routes that render their own large heading. */
@@ -15,6 +34,19 @@ interface TopAppBarProps {
  */
 export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: TopAppBarProps) {
   const navigate = useNavigate()
+  const { preference, setPreference } = useTheme()
+  const { settingsRepo } = useDatabase()
+  const nextPreference = THEME_CYCLE[preference]
+
+  // Mirrors Settings → Appearance's own theme control: ThemeProvider's
+  // localStorage preference stays the actual source of truth for what's
+  // rendered (applied before React mounts, to avoid a flash), and this
+  // additionally writes the choice into Settings.theme purely so it
+  // travels with an exported/imported backup — see AppearanceSettings.tsx.
+  function handleThemeCycle() {
+    setPreference(nextPreference)
+    void settingsRepo.update({ theme: nextPreference })
+  }
 
   return (
     <header
@@ -37,6 +69,15 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
       </div>
 
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label={`Switch to ${THEME_LABEL[nextPreference]} theme (currently ${THEME_LABEL[preference]})`}
+          onClick={handleThemeCycle}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-base"
+          style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)' }}
+        >
+          {THEME_ICON[preference]}
+        </button>
         <button
           type="button"
           aria-label={

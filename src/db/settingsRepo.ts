@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fyStartMonth: 1, // January
   theme: 'system',
   textSize: 'm',
+  density: 'comfortable',
   hideAmounts: false,
   reminders: {
     weeklyPlan: { enabled: true, day: 1, time: '08:00' }, // Monday

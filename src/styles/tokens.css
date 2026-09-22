@@ -132,6 +132,9 @@
   /* ---- Touch ---- */
   --tap-target-min: 44px;
 
+  /* ---- Density (Settings → Appearance, M9) ---- */
+  --space-card: 1rem;
+
   /*
    * Tells the browser which native UI (date/time picker icons, scrollbars,
    * form control chrome) to render, independent of our own CSS colours.
@@ -241,6 +244,27 @@ html,
 body {
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+/*
+ * Settings → Appearance (M9). Text size scales the root font-size so every
+ * `rem`-based measurement in the app (nearly all of them) scales with it —
+ * additive to, not a replacement for, OS-level up-to-200% text scaling
+ * (PRD §6.2). Density is deliberately narrow in scope for now: it only
+ * tightens Card's own padding (--space-card, above) rather than every
+ * screen's spacing, which is enough to make the setting real and visible
+ * without a full spacing-system rewrite.
+ */
+html[data-text-size='s'] {
+  font-size: 15px;
+}
+
+html[data-text-size='l'] {
+  font-size: 18px;
+}
+
+:root[data-density='compact'] {
+  --space-card: 0.75rem;
 }
 
 /* One consistent focus style across every interactive element. */

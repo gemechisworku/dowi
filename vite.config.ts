@@ -1,15 +1,34 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Read rather than `import ... with { type: 'json' }` — this file is
+// shared by the app, node and sw tsconfigs (tsconfig.json's `references`),
+// and not all of them enable resolveJsonModule; a plain read avoids having
+// to touch every one of them just to expose one string.
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
+  version: string
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+  // Settings → About reads this as a global (declared in src/vite-env.d.ts)
+  // rather than importing package.json — see the comment above.
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
+      // The app registers the service worker itself, via useRegisterSW()
+      // (src/app/pwa/UpdatePrompt.tsx) — the default auto-injected register
+      // script would otherwise register it a second, uncoordinated way with
+      // no hook into needRefresh/offlineReady.
+      injectRegister: false,
       // injectManifest (not the default generateSW) — M7 needs
       // `notificationclick` and `periodicsync` handlers of its own
       // (src/sw.ts), which generateSW's black-box service worker has no

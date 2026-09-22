@@ -34,7 +34,8 @@ export interface BackupData {
   meta: MetaEntry[]
 }
 
-const TABLE_KEYS = [
+/** Exported so the Settings → Data import preview (UI layer) can compute per-table counts from a parsed-but-not-yet-imported file without a new backend function — see docs/PLAN.md's M2 note. */
+export const TABLE_KEYS = [
   'transactions',
   'categories',
   'sources',

@@ -22,6 +22,7 @@ function baseSettings(
     fyStartMonth: 1,
     theme: 'system',
     textSize: 'm',
+    density: 'comfortable',
     hideAmounts: false,
     reminders: { ...REMINDERS_OFF, ...overrides },
     ...settingsOverrides,

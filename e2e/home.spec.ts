@@ -317,9 +317,11 @@ test.describe("Home — today's tasks", () => {
   })
 
   test("matches the Tasks screen's own Today view", async ({ page }) => {
-    const homeTitles = await page
-      .getByRole('checkbox', { name: /^Mark "(Overdue|Due today)/ })
-      .evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')))
+    const homeChecklist = page.getByRole('checkbox', { name: /^Mark "(Overdue|Due today)/ })
+    await expect(homeChecklist).toHaveCount(5)
+    const homeTitles = await homeChecklist.evaluateAll((els) =>
+      els.map((el) => el.getAttribute('aria-label')),
+    )
 
     await page.goto('/tasks')
     await expect(page.getByRole('checkbox').first()).toBeVisible()

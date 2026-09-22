@@ -13,9 +13,17 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useSnackbar } from '@/components/ui/useSnackbar'
 
 /**
- * Not a real app screen — a temporary panel for exercising the M2 data
- * layer end to end (persistence, export/import, storage usage) before M9
- * builds the real Settings → Data UI. See docs/TESTING.md §M2.
+ * Not a real app screen — a panel for exercising the M2 data layer end to
+ * end (persistence, export/import, storage usage). M9 built the real thing
+ * at Settings → Data (src/routes/settings/DataSettings.tsx), so this is no
+ * longer needed as a UI — but it's kept (route and all) as internal dev
+ * tooling rather than removed, because several e2e specs depend on this
+ * exact route as their fixture-import mechanism (`e2e/data-persistence.spec.ts`,
+ * `e2e/reports-perf.spec.ts`, `e2e/home.spec.ts`): its file input is the only
+ * way those tests seed deterministic data (due dates, reminder days, etc.)
+ * without depending on "today" lining up with a hardcoded fixture date.
+ * Removing it would mean rebuilding that fixture-import path elsewhere for
+ * no functional gain. See docs/TESTING.md §M2.
  */
 export function DataDebugPage() {
   const { repos, db } = useDatabase()

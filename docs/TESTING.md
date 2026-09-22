@@ -569,7 +569,7 @@ evaluation failed` the first time the full e2e suite ran against a real preview
 
 ---
 
-## §M9 — Settings & data
+## §M9 — Settings & data ✅ done
 
 **Automated**
 
