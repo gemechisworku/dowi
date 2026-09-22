@@ -107,6 +107,28 @@ test.describe('Settings — Appearance', () => {
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-density', 'compact')
   })
+
+  test('an enabled Switch is visibly a different colour than a disabled one', async ({ page }) => {
+    // Regression test for a real bug: the Switch track had both an inline
+    // `style` background *and* a `peer-checked:bg-[...]` class targeting
+    // the same property — inline styles always win over classes regardless
+    // of specificity, so the "on" colour could never actually render, no
+    // matter what the class said. Only a real browser's computed style
+    // catches this class of bug; a jsdom/class-name check would not have.
+    await page.goto('/settings')
+    const on = page.getByRole('switch', { name: 'Task due reminders' })
+    const off = page.getByRole('switch', { name: 'Daily agenda' })
+    await expect(on).toBeChecked()
+    await expect(off).not.toBeChecked()
+
+    const trackColor = (locator: typeof on) =>
+      locator
+        .locator('xpath=following-sibling::span[1]')
+        .evaluate((el) => getComputedStyle(el).backgroundColor)
+
+    const [onColor, offColor] = await Promise.all([trackColor(on), trackColor(off)])
+    expect(onColor).not.toBe(offColor)
+  })
 })
 
 test.describe('Settings — Money', () => {
