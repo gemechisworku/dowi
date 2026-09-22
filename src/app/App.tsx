@@ -3,6 +3,7 @@ import { AppLayout } from './shell/AppLayout'
 import { ThemeProvider } from './theme/ThemeProvider'
 import { DatabaseProvider } from './db/DatabaseProvider'
 import { ApplyAppearance } from './settings/ApplyAppearance'
+import { UpdatePrompt } from './pwa/UpdatePrompt'
 import { SnackbarProvider } from '@/components/ui/SnackbarProvider'
 import { HomePage } from '@/routes/home/HomePage'
 import { MoneyPage } from '@/routes/money/MoneyPage'
@@ -30,6 +31,7 @@ export function App() {
   return (
     <ThemeProvider>
       <SnackbarProvider>
+        <UpdatePrompt />
         <DatabaseProvider>
           <ApplyAppearance />
           <BrowserRouter>

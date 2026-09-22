@@ -24,6 +24,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
+      // The app registers the service worker itself, via useRegisterSW()
+      // (src/app/pwa/UpdatePrompt.tsx) — the default auto-injected register
+      // script would otherwise register it a second, uncoordinated way with
+      // no hook into needRefresh/offlineReady.
+      injectRegister: false,
       // injectManifest (not the default generateSW) — M7 needs
       // `notificationclick` and `periodicsync` handlers of its own
       // (src/sw.ts), which generateSW's black-box service worker has no

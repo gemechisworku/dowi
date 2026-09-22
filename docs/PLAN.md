@@ -1017,6 +1017,62 @@ from M8's 154.27 KB baseline — all four new Settings sections plus the new
   it cost real debugging time before a raw-IndexedDB check ruled out an
   actual data-loss bug and pointed at the stale server instead.
 
+### Pulled forward from M10 — the update flow (new SW → snackbar → reload)
+
+Real, repeated friction during this session's own M8/M9 testing — a rebuilt
+app kept looking unchanged because the browser's old service worker was
+still serving its old cache, with nothing in the app to tell the user an
+update existed — made the case for building this now rather than waiting
+for M10.
+
+**A genuine bug surfaced while building it, and it's very likely the actual
+root cause of that friction:** `src/sw.ts` called `self.skipWaiting()`
+**unconditionally**, at the top level, on every install — meaning a new
+worker never actually waited the way `registerType: 'prompt'` (vite.config.ts)
+assumes it will. Paired with the immediate `clientsClaim()` already there,
+every rebuild silently seized every open tab the moment it finished
+installing, with no prompt, no consent, and no way for the app to say
+anything about it. Fixed by removing the unconditional call and adding a
+`message` listener that only calls `self.skipWaiting()` in response to an
+explicit `"SKIP_WAITING"` message — which is exactly what the new update
+prompt's "Reload" action sends, and only when a person actually clicks it.
+
+**`src/app/pwa/UpdatePrompt.tsx`** (rendered once, at the top of `App.tsx`)
+is the other half: `useRegisterSW()` from `virtual:pwa-register/react` is
+now the app's one and only service-worker registration path
+(`vite.config.ts` gained `injectRegister: false` to retire the old
+auto-injected register script, which had no hook into `needRefresh` at
+all and would otherwise register the SW a second, uncoordinated way). When
+`needRefresh` flips true, a snackbar reads "Update available" with a
+"Reload" action, for up to 15s (longer than the default 5s undo window —
+missing it costs nothing, the update just waits). Reloading is never
+automatic; it only happens from that click, via
+`updateServiceWorker(true)`, which messages the waiting worker and reloads
+once it takes control. `src/app/serviceWorker/checkForUpdate.ts` (M9's own
+manual "Check for update" button in About) is unaffected — it reads
+whatever registration already exists, which is now this one instead of the
+old auto-injected one, and remains a genuinely different, complementary
+action ("check right now" vs. "tell me the moment you notice, unprompted").
+
+**Verified:** typecheck/lint clean; full suite unaffected (338 Vitest, 248
+Playwright, both themes — `UpdatePrompt` renders nothing under normal
+conditions, so no existing test needed to change). The mechanism itself
+needs a real second build to exercise (there's no "old" and "new" service
+worker without one), which doesn't fit the fast, repeatable CI-style
+suite — mirroring how M0's install/offline "Done when" criteria were also
+one-off verified rather than folded into automated e2e — so it was proven
+with a real, disposable script instead of a permanent test: load the app
+(service worker A activates), make a genuine code change to `src/sw.ts`
+and rebuild against the _same still-running_ preview server (service
+worker B, byte-different), call `registration.update()` from the
+already-open page, and confirm the whole chain end to end — the "Update
+available" snackbar appears, clicking Reload hands control to the new
+worker, and the app keeps working afterward with zero console errors.
+Also confirmed directly at the registration level (before wiring the
+snackbar) that a new worker now genuinely reaches the `waiting` state
+instead of self-activating — the concrete proof the `skipWaiting()` bug
+above is real and fixed, not assumed.
+
 ---
 
 ## M10 — Polish & release
@@ -1028,7 +1084,13 @@ from M8's 154.27 KB baseline — all four new Settings sections plus the new
 - [ ] Performance: bundle budget ≤ 180 KB gz initial, lazy routes, virtualised lists,
       Lighthouse ≥ 90 Performance/PWA/Accessibility/Best-practices
 - [ ] Every empty, loading and error state reviewed
-- [ ] Offline verification, install flow, update flow (new SW → snackbar → reload)
+- [ ] Offline verification, install flow
+- [x] Update flow (new SW → snackbar → reload) — pulled forward, built ahead
+      of schedule (`src/app/pwa/UpdatePrompt.tsx`) after repeated real
+      friction during M8/M9 testing (a stale service worker silently serving
+      an old build with no way for the app to tell the user). See the
+      "Pulled-forward update flow" note after M9's own section for the
+      write-up and the real bug it also fixed in `src/sw.ts`.
 - [ ] Privacy check: zero outbound network requests after load (automated test)
 - [ ] Seed/demo data toggle for screenshots; `docs/DATA-FORMAT.md`; README refresh
 - [ ] Hosting decision (GitHub Pages / Netlify / Cloudflare Pages — static, free)
