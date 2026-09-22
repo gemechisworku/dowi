@@ -27,6 +27,13 @@ export interface ComputeDueRemindersInput {
   /** When the app was first used — the baseline for the very first backup nudge. */
   installedAt: string
   /**
+   * Local "YYYY-MM-DD" of the most recent qualifying action (an
+   * income/expense, note or task added — see `src/db/streakRepo.ts`), or
+   * null/undefined if none has ever been recorded. Used only to decide
+   * whether the evening streak reminder still needs to fire.
+   */
+  streakLastActiveDate?: string | null
+  /**
    * How far back a missed reminder is still worth catching up on (AC-P2).
    * A reminder older than this is treated as missed and silently skipped
    * rather than resurrected, so re-opening the app after months away
@@ -58,6 +65,14 @@ function mostRecentWeeklyOccurrence(day: number, time: string, from: Date): Date
   }
   /* istanbul ignore next -- unreachable: day is always 0-6, so the loop above always finds a match within 7 days */
   return candidate
+}
+
+/** Local "YYYY-MM-DD" for `d` — hand-rolled rather than imported from `@/lib/period` so this file stays free of any runtime dependency (see the module docblock). */
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 /** The most recent moment matching `time`, today if it's already passed, otherwise yesterday. */
@@ -111,6 +126,7 @@ export function computeDueReminders({
   now,
   existing,
   installedAt,
+  streakLastActiveDate = null,
   catchUpWindowMs = DEFAULT_CATCH_UP_WINDOW_MS,
 }: ComputeDueRemindersInput): DueReminder[] {
   const due: DueReminder[] = []
@@ -176,6 +192,42 @@ export function computeDueReminders({
         body: "Here's what's on today.",
         scheduledFor,
         deepLink: '/tasks',
+      })
+    }
+  }
+
+  if (reminders.morningNudge.enabled) {
+    const occurrence = mostRecentDailyOccurrence(reminders.morningNudge.time, now)
+    const scheduledFor = occurrence.toISOString()
+    if (
+      withinCatchUpWindow(occurrence) &&
+      !alreadyExists(existing, 'morning-nudge', scheduledFor, '/')
+    ) {
+      due.push({
+        type: 'morning-nudge',
+        title: 'Good morning ☀️',
+        body: "Log today's income, expenses, notes or tasks to keep Dowi useful.",
+        scheduledFor,
+        deepLink: '/',
+      })
+    }
+  }
+
+  if (reminders.eveningStreak.enabled) {
+    const occurrence = mostRecentDailyOccurrence(reminders.eveningStreak.time, now)
+    const scheduledFor = occurrence.toISOString()
+    const alreadyActiveThatDay = streakLastActiveDate === toLocalDateString(occurrence)
+    if (
+      withinCatchUpWindow(occurrence) &&
+      !alreadyActiveThatDay &&
+      !alreadyExists(existing, 'evening-streak', scheduledFor, '/')
+    ) {
+      due.push({
+        type: 'evening-streak',
+        title: "Don't lose your streak 🔥",
+        body: "You haven't added anything today yet — keep your streak alive.",
+        scheduledFor,
+        deepLink: '/',
       })
     }
   }

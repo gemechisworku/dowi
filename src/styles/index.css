@@ -22,3 +22,34 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* Streak-milestone celebration (src/app/streaks/ConfettiBurst.tsx). */
+.dowi-confetti-piece {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation-name: dowi-confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes dowi-confetti-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(var(--confetti-drift), 110dvh, 0) rotate(var(--confetti-rotate));
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dowi-confetti-piece {
+    animation: none;
+    opacity: 0;
+  }
+}

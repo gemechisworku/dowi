@@ -11,6 +11,7 @@ import type { NotificationsRepo } from '@/db/notificationsRepo'
 import type { SettingsRepo } from '@/db/settingsRepo'
 import type { Repositories } from '@/db/repositories'
 import { SEEDED_META_KEY } from '@/db/seed'
+import { createStreakRepo } from '@/db/streakRepo'
 import { computeDueReminders, isWithinQuietHours } from '@/lib/reminders'
 import { showOsNotification } from './deliver'
 import {
@@ -52,15 +53,23 @@ export function createWebScheduler({
 }: WebSchedulerDeps): ReminderScheduler {
   return {
     async catchUp() {
-      const [settings, tasks, existing, installedMeta] = await Promise.all([
+      const [settings, tasks, existing, installedMeta, streak] = await Promise.all([
         settingsRepo.get(),
         tasksRepo.list(),
         notificationsRepo.list(),
         db.meta.get(SEEDED_META_KEY),
+        createStreakRepo(db).get(),
       ])
       const now = new Date()
       const installedAt = installedMeta?.value ?? now.toISOString()
-      const due = computeDueReminders({ settings, tasks, now, existing, installedAt })
+      const due = computeDueReminders({
+        settings,
+        tasks,
+        now,
+        existing,
+        installedAt,
+        streakLastActiveDate: streak.lastActiveDate,
+      })
       if (due.length === 0) return
 
       const permission = getNotificationPermission()

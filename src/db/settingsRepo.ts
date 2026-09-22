@@ -16,6 +16,8 @@ export const DEFAULT_SETTINGS: Settings = {
     taskDue: { enabled: true, offsets: [0, 1440] }, // at due time, and 1 day before
     dailyAgenda: { enabled: false, time: '07:30' },
     backupNudge: { enabled: true, intervalDays: 30 },
+    morningNudge: { enabled: true, time: '09:00' },
+    eveningStreak: { enabled: true, time: '21:00' },
     quietHours: { enabled: true, start: '22:00', end: '07:00' },
   },
 }

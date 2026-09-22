@@ -51,7 +51,13 @@ const PERMISSION_TONE: Record<NotificationPermissionState, BadgeTone> = {
 
 type ReminderKey = keyof Pick<
   ReminderConfig,
-  'weeklyPlan' | 'weeklyReview' | 'taskDue' | 'dailyAgenda' | 'backupNudge'
+  | 'weeklyPlan'
+  | 'weeklyReview'
+  | 'taskDue'
+  | 'dailyAgenda'
+  | 'backupNudge'
+  | 'morningNudge'
+  | 'eveningStreak'
 >
 
 /**
@@ -252,6 +258,52 @@ export function SettingsPage() {
                     })
                   }
                 />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Switch
+              label="Morning nudge"
+              checked={reminders.morningNudge.enabled}
+              onChange={(e) => handleToggle('morningNudge', e.target.checked)}
+            />
+            {reminders.morningNudge.enabled && (
+              <div className="pl-1">
+                <TimePicker
+                  aria-label="Morning nudge time"
+                  value={reminders.morningNudge.time}
+                  onChange={(e) =>
+                    patchReminders({
+                      morningNudge: { ...reminders.morningNudge, time: e.target.value },
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Switch
+              label="Evening streak reminder"
+              checked={reminders.eveningStreak.enabled}
+              onChange={(e) => handleToggle('eveningStreak', e.target.checked)}
+            />
+            {reminders.eveningStreak.enabled && (
+              <div className="flex flex-col gap-1 pl-1">
+                <TimePicker
+                  aria-label="Evening streak reminder time"
+                  value={reminders.eveningStreak.time}
+                  onChange={(e) =>
+                    patchReminders({
+                      eveningStreak: { ...reminders.eveningStreak, time: e.target.value },
+                    })
+                  }
+                />
+                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                  Only sent if you haven&apos;t added anything today yet — skipped automatically
+                  once you have.
+                </p>
               </div>
             )}
           </div>
