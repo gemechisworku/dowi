@@ -22,6 +22,8 @@ export interface MoneyTextProps {
   showSign?: boolean
   approximate?: boolean
   className?: string
+  /** Overrides the sign-based colour — for a tinted/dark context (e.g. Home's gradient hero) where green/red would clash. */
+  color?: string
 }
 
 /** The one place amounts are formatted for display — every screen renders money through this. */
@@ -32,13 +34,15 @@ export function MoneyText({
   showSign = false,
   approximate = false,
   className,
+  color: colorOverride,
 }: MoneyTextProps) {
   const color =
-    sign === 'income'
+    colorOverride ??
+    (sign === 'income'
       ? 'var(--color-income)'
       : sign === 'expense'
         ? 'var(--color-expense)'
-        : 'var(--color-text)'
+        : 'var(--color-text)')
 
   const displayAmount =
     sign === 'expense'

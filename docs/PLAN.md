@@ -780,6 +780,49 @@ just its own code).
   verified with the full e2e suite (114 affected specs, incl. the existing
   "tap row to edit" / "tap checkbox to complete" behaviour) still green.
 
+### Post-M8 — Home aligned to the chosen Option A design
+
+M8's first pass used the existing generic components (`StatTile`, plain `Button`
+grid) rather than the specific "Soft Cards" Home layout from
+`design/design-options.html`. Rebuilt to match it: a blue-gradient hero card
+(`Card` with an inline gradient/shadow override) replaces the plain money card,
+carrying the "THIS {PERIOD}" eyebrow, an inverse-styled `PeriodSelector` toggle,
+the signed net figure, and independent income/expense bars sized relative to
+whichever is larger; a row of four icon quick-action tiles sits right below it
+(reordered to Expense/Income/Note/Task, matching the mockup) in place of the old
+bottom 2×2 button grid; the plan/review banner gained a tinted border, real
+"N planned · M done" counts (from the tasks tagged to the current `weekKey`,
+the same filter `ReviewWeekPage` already uses inline), and a filled "Start"
+pill button alongside the existing dismiss control; recent notes gained a
+`CategoryIcon` chip per row, tinted by the note's own `color` when set. Section
+order now matches the mockup too: hero → quick actions → today's tasks →
+banner → recent notes.
+
+Two small, reusable component additions came out of this rather than one-off
+inline hacks: `MoneyText` takes an optional `color` override (for a tinted/dark
+context where the sign-based green/red would clash), and `SegmentedControl`/
+`PeriodSelector` take an optional `variant="inverse"` for a translucent-on-colour
+track — both used only by Home today but generic enough for the next screen
+that needs the same treatment.
+
+**Deviations from a literal pixel match:** the hero's period toggle keeps full
+"Week"/"Month"/"Year" labels rather than the mockup's single-letter "W/M/Y" —
+better for accessibility (a screen reader says "Week", not "W") and
+localization, at a small cost to compactness. Income/expense figures in the
+hero are shown unsigned (as the mockup itself does — colour there would clash
+against the blue background); only the headline net figure is signed
+(`+`/`-`), which is a deliberate divergence from Reports' own net stat (never
+signed) — same underlying number, different headline-vs-detail treatment per
+screen.
+
+**Verified:** all existing M8 Vitest/Playwright coverage still passes
+unchanged (315 unit, 208 e2e) after updating the handful of e2e assertions
+that depended on since-changed copy (quick-action button labels lost their
+"+ " prefix, the banner's CTA text lost its arrow now that "Start" is a real
+button, and the money summary's sign expectations changed as described
+above). Also confirmed visually — real-data screenshots in both light and
+dark, not just the automated suite — before considering this done.
+
 ---
 
 ## M9 — Settings & data management

@@ -28,9 +28,9 @@ import { IconButton } from '@/components/ui/IconButton'
 import { Badge } from '@/components/ui/Badge'
 import { ListItem } from '@/components/ui/ListItem'
 import { PeriodSelector } from '@/components/domain/PeriodSelector'
-import { StatTile } from '@/components/domain/StatTile'
 import { MoneyText } from '@/components/domain/MoneyText'
 import { TaskCheckbox } from '@/components/domain/TaskCheckbox'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
@@ -40,18 +40,18 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
 
 const HOME_PERIODS = ['week', 'month', 'year'] as const
 
-const BANNER_COPY: Record<
-  'plan' | 'review',
-  { title: string; cta: string; href: string; icon: string }
-> = {
-  plan: { title: 'Plan your week', cta: 'Plan your week →', href: '/tasks/plan', icon: '🗓️' },
-  review: {
-    title: 'Review your week',
-    cta: 'Review your week →',
-    href: '/tasks/review',
-    icon: '✅',
-  },
+const BANNER_COPY: Record<'plan' | 'review', { title: string; href: string; icon: string }> = {
+  plan: { title: 'Plan your week', href: '/tasks/plan', icon: '🗓️' },
+  review: { title: 'Review your week', href: '/tasks/review', icon: '✅' },
 }
+
+/** Order and copy match the chosen Option A ("Soft Cards") design (design/design-options.html). */
+const QUICK_ACTIONS = [
+  { icon: '💸', label: 'Expense', href: '/money/new?type=expense' },
+  { icon: '💰', label: 'Income', href: '/money/new?type=income' },
+  { icon: '📝', label: 'Note', href: '/notes/new' },
+  { icon: '✅', label: 'Task', href: '/tasks/new' },
+] as const
 
 function greetingFor(hour: number): string {
   if (hour < 12) return 'Good morning'
@@ -138,6 +138,19 @@ export function HomePage() {
 
   const bannerKind = getBannerKind(settings.reminders, today)
   const showBanner = bannerKind !== null && !dismissedToday
+  const weekTasks = useMemo(
+    () => (tasks ?? EMPTY_ARRAY).filter((t) => t.weekKey === getThisWeek().weekKey),
+    [tasks],
+  )
+  const weekDoneCount = weekTasks.filter((t) => t.status === 'done').length
+
+  // Each bar's width is relative to whichever of income/expense is larger, so
+  // the pair always reads as a comparison rather than two unrelated gauges —
+  // Option A's mockup shows this for the income > expense case; this
+  // generalises it to the reverse case too.
+  const barMax = Math.max(report.income.totalMinorUnits, report.expense.totalMinorUnits, 1)
+  const incomeBarPct = (report.income.totalMinorUnits / barMax) * 100
+  const expenseBarPct = (report.expense.totalMinorUnits / barMax) * 100
 
   const now = new Date()
   const thisWeek = useMemo(() => getThisWeek(), [])
@@ -163,8 +176,8 @@ export function HomePage() {
 
       {isLoading ? (
         <div className="flex flex-col gap-4">
-          <Skeleton height={96} rounded="lg" />
-          <Skeleton height={168} rounded="lg" />
+          <Skeleton height={210} rounded="lg" />
+          <Skeleton height={72} rounded="lg" />
           <Skeleton height={220} rounded="lg" />
           <Skeleton height={140} rounded="lg" />
         </div>
@@ -191,108 +204,118 @@ export function HomePage() {
         </Card>
       ) : (
         <>
-          {showBanner && bannerKind && (
-            <Card
-              className="flex items-center justify-between gap-3"
-              style={{ background: 'var(--color-primary-soft)' }}
-            >
-              <button
-                type="button"
-                onClick={() => navigate(BANNER_COPY[bannerKind].href)}
-                className="flex flex-1 items-center gap-2.5 text-left"
+          {/* Hero (Option A "Soft Cards" — design/design-options.html): a single
+              blue-gradient card carries the headline net figure. The toggle sits
+              outside the tap-to-open-Reports button below so its own radio
+              buttons never nest inside another button (axe no-focusable-content). */}
+          <Card
+            style={{
+              background: 'linear-gradient(150deg, var(--blue-600), var(--blue-700) 60%, #1e3a8a)',
+              boxShadow: '0 10px 24px rgba(37, 99, 235, 0.28)',
+              color: '#ffffff',
+            }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className="text-[11px] font-semibold uppercase tracking-wide"
+                style={{ opacity: 0.85 }}
               >
-                <span aria-hidden="true" className="text-xl">
-                  {BANNER_COPY[bannerKind].icon}
-                </span>
-                <span className="font-semibold" style={{ color: 'var(--color-primary)' }}>
-                  {BANNER_COPY[bannerKind].cta}
-                </span>
-              </button>
-              <IconButton
-                aria-label="Dismiss for today"
-                icon="✕"
-                variant="ghost"
-                onClick={handleDismissBanner}
+                This {period}
+              </span>
+              <PeriodSelector
+                value={period}
+                onChange={handlePeriodChange}
+                periods={HOME_PERIODS}
+                variant="inverse"
               />
-            </Card>
-          )}
-
-          <Card>
-            <SectionHeader
-              title="Money"
-              action={
-                <button
-                  type="button"
-                  onClick={() => navigate('/money')}
-                  className="text-xs font-semibold"
-                  style={{ color: 'var(--color-primary)' }}
-                >
-                  Reports ›
-                </button>
-              }
-            />
-            <PeriodSelector value={period} onChange={handlePeriodChange} periods={HOME_PERIODS} />
+            </div>
             <button
               type="button"
               onClick={() => navigate('/money')}
               className="mt-3 block w-full text-left"
             >
-              <p className="text-xs font-semibold" style={{ color: 'var(--color-text-muted)' }}>
-                {periodLabel}
+              <p className="text-[11px]" style={{ opacity: 0.8 }}>
+                Net balance · {periodLabel}
               </p>
-              <div className="mt-1 flex gap-4">
-                <StatTile
-                  label="Income"
-                  value={
+              <p className="mt-0.5 text-[31px] font-extrabold tracking-tight">
+                <MoneyText
+                  amountMinorUnits={report.netMinorUnits}
+                  currency={baseCurrency}
+                  showSign
+                  color="#ffffff"
+                />
+              </p>
+              <div className="mt-3.5 flex gap-4">
+                <div className="flex-1">
+                  <p className="text-[10.5px]" style={{ opacity: 0.8 }}>
+                    Income
+                  </p>
+                  <p className="text-sm font-bold">
                     <MoneyText
                       amountMinorUnits={report.income.totalMinorUnits}
                       currency={baseCurrency}
-                      sign="income"
                       approximate={report.income.wasConverted}
+                      color="#ffffff"
                     />
-                  }
-                />
-                <StatTile
-                  label="Expense"
-                  value={
+                  </p>
+                  <div
+                    className="mt-1.5 h-1.5 overflow-hidden rounded-full"
+                    style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+                    role="img"
+                    aria-label={`Income vs expense comparison for ${periodLabel}`}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${incomeBarPct}%`, background: '#ffffff' }}
+                    />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10.5px]" style={{ opacity: 0.8 }}>
+                    Expense
+                  </p>
+                  <p className="text-sm font-bold">
                     <MoneyText
                       amountMinorUnits={report.expense.totalMinorUnits}
                       currency={baseCurrency}
-                      sign="expense"
                       approximate={report.expense.wasConverted}
+                      color="#ffffff"
                     />
-                  }
-                />
-                <StatTile
-                  label="Net"
-                  value={
-                    <MoneyText amountMinorUnits={report.netMinorUnits} currency={baseCurrency} />
-                  }
-                />
-              </div>
-              {(report.income.totalMinorUnits > 0 || report.expense.totalMinorUnits > 0) && (
-                <div
-                  className="mt-3 flex overflow-hidden"
-                  style={{ height: 6, borderRadius: 'var(--radius-pill)' }}
-                  role="img"
-                  aria-label={`Income vs expense comparison for ${periodLabel}`}
-                >
+                  </p>
                   <div
-                    style={{
-                      flexGrow: Math.max(report.income.totalMinorUnits, 1),
-                      background: 'var(--color-income)',
-                    }}
-                  />
-                  <div
-                    style={{
-                      flexGrow: Math.max(report.expense.totalMinorUnits, 1),
-                      background: 'var(--color-expense)',
-                    }}
-                  />
+                    className="mt-1.5 h-1.5 overflow-hidden rounded-full"
+                    style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${expenseBarPct}%`, background: 'var(--blue-200)' }}
+                    />
+                  </div>
                 </div>
-              )}
+              </div>
             </button>
           </Card>
+
+          <div className="flex gap-2">
+            {QUICK_ACTIONS.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => navigate(action.href)}
+                className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2.5 text-center text-[10.5px] font-semibold"
+                style={{
+                  background: 'var(--color-surface)',
+                  boxShadow: 'var(--shadow-card)',
+                  color: 'var(--color-text)',
+                }}
+              >
+                <span aria-hidden="true" className="text-[17px]">
+                  {action.icon}
+                </span>
+                {action.label}
+              </button>
+            ))}
+          </div>
 
           <Card>
             <SectionHeader
@@ -360,6 +383,35 @@ export function HomePage() {
             )}
           </Card>
 
+          {showBanner && bannerKind && (
+            <Card
+              className="flex items-center gap-3"
+              style={{
+                background: 'var(--color-primary-soft)',
+                border: '1px solid var(--blue-200)',
+              }}
+            >
+              <span aria-hidden="true" className="text-xl">
+                {BANNER_COPY[bannerKind].icon}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold">{BANNER_COPY[bannerKind].title}</p>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  {weekTasks.length} planned · {weekDoneCount} done
+                </p>
+              </div>
+              <Button size="sm" onClick={() => navigate(BANNER_COPY[bannerKind].href)}>
+                Start
+              </Button>
+              <IconButton
+                aria-label="Dismiss for today"
+                icon="✕"
+                variant="ghost"
+                onClick={handleDismissBanner}
+              />
+            </Card>
+          )}
+
           <Card>
             <SectionHeader
               title="Recent notes"
@@ -382,6 +434,9 @@ export function HomePage() {
                   <ListItem
                     key={note.id}
                     onClick={() => navigate(`/notes/${note.id}`)}
+                    leading={
+                      <CategoryIcon icon="📝" color={note.color || 'var(--color-primary)'} />
+                    }
                     title={note.title || 'Untitled'}
                     subtitle={note.contentText ? noteSnippet(note.contentText) : undefined}
                   />
@@ -389,24 +444,6 @@ export function HomePage() {
               </div>
             )}
           </Card>
-
-          <div>
-            <SectionHeader title="Quick actions" />
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="secondary" onClick={() => navigate('/money/new?type=income')}>
-                + Income
-              </Button>
-              <Button variant="secondary" onClick={() => navigate('/money/new?type=expense')}>
-                + Expense
-              </Button>
-              <Button variant="secondary" onClick={() => navigate('/notes/new')}>
-                + Note
-              </Button>
-              <Button variant="secondary" onClick={() => navigate('/tasks/new')}>
-                + Task
-              </Button>
-            </div>
-          </div>
         </>
       )}
     </div>

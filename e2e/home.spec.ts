@@ -205,9 +205,14 @@ test.describe('Home — money summary', () => {
   })
 
   test('income, expense and net match a same-period Reports load exactly', async ({ page }) => {
+    // Home's gradient hero (Option A) shows income/expense as plain
+    // magnitudes (colour would clash against the blue background) and
+    // signs only the headline net figure — Reports keeps its own,
+    // unsigned convention for net. Same underlying numbers, each screen's
+    // own established formatting.
     await expect(page.getByText('ETB 200.00', { exact: true }).first()).toBeVisible()
-    await expect(page.getByText('-ETB 75.00', { exact: true }).first()).toBeVisible()
-    await expect(page.getByText('ETB 125.00', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('ETB 75.00', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('+ETB 125.00', { exact: true }).first()).toBeVisible()
 
     await page.goto('/money')
     await expect(page.getByText('ETB 200.00', { exact: true }).first()).toBeVisible()
@@ -216,7 +221,7 @@ test.describe('Home — money summary', () => {
   })
 
   test('tapping the money card opens Reports', async ({ page }) => {
-    await page.getByText('ETB 125.00', { exact: true }).first().click()
+    await page.getByText('+ETB 125.00', { exact: true }).first().click()
     await expect(page).toHaveURL('/money')
   })
 
@@ -328,8 +333,8 @@ test.describe('Home — weekly plan/review banner', () => {
       buildFixture({ weeklyPlanDay: TODAY_DOW, weeklyReviewDay: NOT_TODAY }),
     )
     await page.goto('/')
-    await expect(page.getByText('Plan your week →')).toBeVisible()
-    await page.getByText('Plan your week →').click()
+    await expect(page.getByText('Plan your week', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Start' }).click()
     await expect(page).toHaveURL('/tasks/plan')
   })
 
@@ -339,7 +344,7 @@ test.describe('Home — weekly plan/review banner', () => {
       buildFixture({ weeklyPlanDay: NOT_TODAY, weeklyReviewDay: TODAY_DOW }),
     )
     await page.goto('/')
-    await expect(page.getByText('Review your week →')).toBeVisible()
+    await expect(page.getByText('Review your week', { exact: true })).toBeVisible()
   })
 
   test('stays hidden on a day that matches neither', async ({ page }) => {
@@ -348,8 +353,8 @@ test.describe('Home — weekly plan/review banner', () => {
       buildFixture({ weeklyPlanDay: NOT_TODAY, weeklyReviewDay: NOT_TODAY }),
     )
     await page.goto('/')
-    await expect(page.getByText('Plan your week →')).toHaveCount(0)
-    await expect(page.getByText('Review your week →')).toHaveCount(0)
+    await expect(page.getByText('Plan your week', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Review your week', { exact: true })).toHaveCount(0)
   })
 
   test('dismissing stays dismissed for the rest of the day, across a reload', async ({ page }) => {
@@ -358,12 +363,12 @@ test.describe('Home — weekly plan/review banner', () => {
       buildFixture({ weeklyPlanDay: TODAY_DOW, weeklyReviewDay: NOT_TODAY }),
     )
     await page.goto('/')
-    await expect(page.getByText('Plan your week →')).toBeVisible()
+    await expect(page.getByText('Plan your week', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Dismiss for today' }).click()
-    await expect(page.getByText('Plan your week →')).toHaveCount(0)
+    await expect(page.getByText('Plan your week', { exact: true })).toHaveCount(0)
 
     await page.reload()
-    await expect(page.getByText('Plan your week →')).toHaveCount(0)
+    await expect(page.getByText('Plan your week', { exact: true })).toHaveCount(0)
   })
 })
 
@@ -377,7 +382,7 @@ test.describe('Home — quick actions', () => {
   })
 
   test('Add income opens the transaction sheet pre-set to income', async ({ page }) => {
-    await page.getByRole('button', { name: '+ Income' }).click()
+    await page.getByRole('button', { name: 'Income', exact: true }).click()
     await expect(page).toHaveURL('/money/new?type=income')
     await expect(page.getByRole('dialog', { name: 'Add transaction' })).toBeVisible()
     await expect(page.getByRole('radio', { name: 'Income' })).toHaveAttribute(
@@ -387,7 +392,7 @@ test.describe('Home — quick actions', () => {
   })
 
   test('Add expense opens the transaction sheet pre-set to expense', async ({ page }) => {
-    await page.getByRole('button', { name: '+ Expense' }).click()
+    await page.getByRole('button', { name: 'Expense', exact: true }).click()
     await expect(page).toHaveURL('/money/new?type=expense')
     await expect(page.getByRole('dialog', { name: 'Add transaction' })).toBeVisible()
     await expect(page.getByRole('radio', { name: 'Expense' })).toHaveAttribute(
@@ -397,12 +402,12 @@ test.describe('Home — quick actions', () => {
   })
 
   test('New note opens the note editor', async ({ page }) => {
-    await page.getByRole('button', { name: '+ Note' }).click()
+    await page.getByRole('button', { name: 'Note', exact: true }).click()
     await expect(page).toHaveURL('/notes/new')
   })
 
   test('New task opens the add-task sheet', async ({ page }) => {
-    await page.getByRole('button', { name: '+ Task' }).click()
+    await page.getByRole('button', { name: 'Task', exact: true }).click()
     await expect(page).toHaveURL('/tasks/new')
     await expect(page.getByRole('dialog', { name: 'Add task' })).toBeVisible()
   })
