@@ -19,10 +19,11 @@ async function addExpense(
   category: string,
 ) {
   await page.getByRole('button', { name: 'Add transaction' }).click()
-  await expect(page.getByRole('dialog', { name: 'Add transaction' })).toBeVisible()
-  for (const key of digits) await page.getByRole('button', { name: key, exact: true }).click()
-  await page.getByRole('button', { name: new RegExp(category) }).click()
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Add transaction' })
+  await expect(dialog).toBeVisible()
+  for (const key of digits) await dialog.getByRole('button', { name: key, exact: true }).click()
+  await dialog.getByRole('button', { name: new RegExp(category) }).click()
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(page.getByRole('dialog')).not.toBeVisible()
 }
 
@@ -91,6 +92,54 @@ test.describe('Money — transaction capture', () => {
 
     await page.getByRole('button', { name: /Income ✕/ }).click()
     await expect(page.getByText('-ETB 10.00').first()).toBeVisible()
+  })
+})
+
+test.describe('Money — date presets and paging', () => {
+  test('defaults to "Today" and shows a just-added transaction', async ({ page }) => {
+    await page.goto('/money/transactions')
+    await expect(page.getByRole('button', { name: 'Today', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await addExpense(page, ['2', '0'], 'Food')
+    await expect(page.getByText('-ETB 20.00').first()).toBeVisible()
+  })
+
+  test('switching to "All" then back to "Today" round-trips correctly', async ({ page }) => {
+    await page.goto('/money/transactions')
+    await addExpense(page, ['2', '0'], 'Food')
+
+    await page.getByRole('button', { name: 'All', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(page.getByText('-ETB 20.00').first()).toBeVisible()
+
+    await page.getByRole('button', { name: 'Today', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Today', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(page.getByText('-ETB 20.00').first()).toBeVisible()
+  })
+
+  test('paging shows Prev/Next once there is more than one page, and Prev is disabled on page 1', async ({
+    page,
+  }) => {
+    await page.goto('/money/transactions')
+    for (let i = 0; i < 32; i++) {
+      await addExpense(page, ['1'], 'Food')
+    }
+    await page.getByRole('button', { name: 'All', exact: true }).click()
+
+    await expect(page.getByText('Page 1 of 2')).toBeVisible()
+    await expect(page.getByRole('button', { name: '‹ Prev' })).toBeDisabled()
+
+    await page.getByRole('button', { name: 'Next ›' }).click()
+    await expect(page.getByText('Page 2 of 2')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Next ›' })).toBeDisabled()
   })
 })
 
