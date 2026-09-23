@@ -619,6 +619,61 @@ bug. Cosmetic and convenience items go on the v1.1 list.
 
 ---
 
+## §M11 — Notification & Money/Home polish
+
+> Extends §M7: the morning/evening "already logged today" guard, an evening
+> summary/streak-at-risk split, a notification detail page, the daily streak
+> reward overlay, personalization, Money date presets + paging, and a
+> proactive update prompt. Deliberately staying PWA-only, no backend —
+> reminders still deliver via the existing catch-up-on-open
+> `ReminderScheduler` (PRD D4); a real Web Push backend was evaluated and
+> intentionally not adopted, to avoid any external paid service.
+
+**Automated (in place)**
+
+- `reminders.test.ts` — the morning nudge is now suppressed once something's
+  been logged that day (mirroring the pre-existing evening-streak guard), and
+  a same-day double-fire (opened once at 21:05 after skipping a day) is
+  covered explicitly as _expected_ same-day behaviour given catch-up-on-open
+  delivery, not a bug. The evening slot's branch into `evening-streak`
+  (streak-at-risk) vs. `evening-summary` (recap) based on whether anything
+  qualifying happened that day is covered both ways, plus its own dedup case.
+- `dailySummary.test.ts` — today-only filtering and base-currency-only netting
+  for the evening-summary recap.
+- `streakRepo.test.ts` — `shouldShowDailyOverlay`'s milestone-day deferral and
+  once-per-day gating; `markDailyBadgeShown` persistence.
+- `e2e/notifications.spec.ts` — the inbox row now opens a detail page (not a
+  direct deep-link jump) whose action button does the deep-linking; the
+  detail page's evening-summary/streak breakdowns; a not-found state for a
+  cleared/unknown id.
+- `e2e/streaks.spec.ts` — the daily reward overlay shows once, is dismissible,
+  survives a reload without reappearing same-day, and defers to the existing
+  7-day milestone dialog (no double celebration).
+- `e2e/home.spec.ts` / `e2e/settings.spec.ts` — the profile-name prompt/field
+  and its personalization of the Home greeting.
+- `e2e/money.spec.ts` — the Today/This week/This month/All date presets
+  (defaulting to Today) and numbered paging.
+
+**Manual (real phone, PWA installed)**
+
+1. Settings → Reminders → enable the morning nudge and evening reminder,
+   granting permission when asked.
+2. Log a transaction before the evening time → the **evening-summary**
+   notification arrives (a recap), not the streak-at-risk one. Skip logging
+   anything one day → confirm the streak-at-risk variant arrives instead,
+   mentioning the current streak.
+3. Tap a notification in the inbox → it opens the detail page, not a direct
+   deep-link jump; the action button there does the deep-linking.
+4. Log something to increment the streak → the daily reward overlay appears
+   with the current count; on a 7-day multiple, only the bigger milestone
+   dialog shows, not both.
+5. Set a display name in Settings → Profile → the Home greeting and reminder
+   copy pick it up.
+6. Money → confirm it opens on "Today" by default, the other presets and
+   custom range work, and paging appears once there are enough transactions.
+
+---
+
 ## Bug-report template
 
 ```
