@@ -4,6 +4,7 @@ import {
   createStreakRepo,
   DEFAULT_STREAK_STATE,
   isNewMilestone,
+  shouldShowDailyOverlay,
   type StreakState,
 } from '../streakRepo'
 import { createTestDb } from './testDb'
@@ -77,6 +78,61 @@ describe('isNewMilestone', () => {
   })
 })
 
+describe('shouldShowDailyOverlay', () => {
+  it('is false when nothing has been logged today', () => {
+    expect(
+      shouldShowDailyOverlay(
+        state({ currentStreak: 3, lastActiveDate: '2026-09-21' }),
+        '2026-09-22',
+      ),
+    ).toBe(false)
+  })
+
+  it('is true the first time today is checked after logging today', () => {
+    expect(
+      shouldShowDailyOverlay(
+        state({ currentStreak: 3, lastActiveDate: '2026-09-22' }),
+        '2026-09-22',
+      ),
+    ).toBe(true)
+  })
+
+  it('is false once already shown today', () => {
+    expect(
+      shouldShowDailyOverlay(
+        state({
+          currentStreak: 3,
+          lastActiveDate: '2026-09-22',
+          lastDailyBadgeShownDate: '2026-09-22',
+        }),
+        '2026-09-22',
+      ),
+    ).toBe(false)
+  })
+
+  it('defers to the milestone celebration on a new-milestone day — no double celebration', () => {
+    expect(
+      shouldShowDailyOverlay(
+        state({ currentStreak: 7, lastActiveDate: '2026-09-22', lastCelebratedStreak: 0 }),
+        '2026-09-22',
+      ),
+    ).toBe(false)
+  })
+
+  it('shows again on a later day once a previous day’s badge was already marked shown', () => {
+    expect(
+      shouldShowDailyOverlay(
+        state({
+          currentStreak: 4,
+          lastActiveDate: '2026-09-22',
+          lastDailyBadgeShownDate: '2026-09-21',
+        }),
+        '2026-09-22',
+      ),
+    ).toBe(true)
+  })
+})
+
 describe('createStreakRepo', () => {
   it('defaults to zero state when nothing has been recorded', async () => {
     const repo = createStreakRepo(createTestDb())
@@ -111,5 +167,13 @@ describe('createStreakRepo', () => {
     const celebrated = await repo.markCelebrated(1)
     expect(celebrated).toMatchObject({ currentStreak: 1, lastCelebratedStreak: 1 })
     expect(await repo.get()).toEqual(celebrated)
+  })
+
+  it('markDailyBadgeShown persists lastDailyBadgeShownDate without touching the rest of the state', async () => {
+    const repo = createStreakRepo(createTestDb())
+    await repo.recordQualifyingActivity('2026-09-22')
+    const shown = await repo.markDailyBadgeShown('2026-09-22')
+    expect(shown).toMatchObject({ currentStreak: 1, lastDailyBadgeShownDate: '2026-09-22' })
+    expect(await repo.get()).toEqual(shown)
   })
 })

@@ -1174,6 +1174,45 @@ from M9's 158.34 KB baseline).
 
 ---
 
+## M11 — Notification & Money/Home polish
+
+**Deliverable:** the morning/evening reminder bug fixed, a richer notification
+experience, and a few independent Money/Home/Settings fixes. Deliberately staying
+PWA-only with no backend — a real Web Push backend was evaluated (would let reminders
+fire at their own time regardless of whether the app is open) but intentionally not
+adopted, to avoid any external paid service; see PRD §12 for the tradeoff as
+evaluated.
+
+- [x] Fix: morning nudge gains the same "already logged today" guard the evening
+      reminder already had (`src/lib/reminders.ts`) — the actual root cause of
+      morning/evening arriving bunched together (both were only ever delivered on
+      next app open, never at their own time)
+- [x] Evening reminder branches into `evening-streak` (streak-at-risk) vs.
+      `evening-summary` (today's recap), based on whether anything qualifying
+      happened that day — resolves "only send if nothing logged" vs. "summarize
+      the day" being contradictory as one unconditional message
+- [x] Notification detail page (`/notifications/:id`) — tapping an inbox row opens
+      it instead of jumping straight to its deep link; a single action button does
+      the deep-linking
+- [x] Daily streak reward overlay (`StreakDailyOverlay`) — shown once per day the
+      app is opened after a qualifying action, distinct from and deferring to the
+      existing 7-day milestone dialog
+- [x] Personalization: optional display name (Settings → Profile + a soft one-time
+      Home prompt), threaded into the Home greeting and all reminder copy
+- [x] Money: date-range presets (Today/This week/This month/All + custom) and
+      real numbered paging, replacing infinite scroll
+- [x] Home: Expense amount rendered in red (a contrast-safe pill, not bare text on
+      the blue hero gradient — bare red text there fails WCAG AA at any saturation
+      that still reads as "red")
+- [x] Proactive update prompt (blocking dialog, not a snackbar) + periodic
+      self-check; Settings → About reflects the same state passively instead of
+      requiring a manual check
+
+**Tag:** `v0.2.0` (pre-`v1.0.0` — M4/M10 remain the actual release gate) ·
+**Test guide:** TESTING.md §M11
+
+---
+
 ## Dependency order
 
 ```

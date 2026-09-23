@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useAppUpdate } from '@/app/pwa/useAppUpdate'
 import { checkForServiceWorkerUpdate } from '@/app/serviceWorker/checkForUpdate'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { useSnackbar } from '@/components/ui/useSnackbar'
 
 /**
@@ -26,10 +28,14 @@ export interface AboutSettingsProps {
   changelog?: string
 }
 
-/** Settings → About (PRD §5.8): version, build date, changelog, manual update check, licences. */
+/** Settings → About (PRD §5.8): version, build date, changelog, update status, licences. */
 export function AboutSettings({ changelog }: AboutSettingsProps) {
   const { show } = useSnackbar()
   const [checking, setChecking] = useState(false)
+  // Reads the same registration state UpdatePrompt.tsx's dialog is driven
+  // by, via AppUpdateProvider — see AppUpdateContext.tsx for why this
+  // can't just call useRegisterSW() again itself.
+  const { needRefresh, updateApp } = useAppUpdate()
 
   async function handleCheckForUpdate() {
     setChecking(true)
@@ -73,15 +79,24 @@ export function AboutSettings({ changelog }: AboutSettingsProps) {
           </div>
         </dl>
 
-        <Button
-          size="sm"
-          variant="secondary"
-          loading={checking}
-          onClick={handleCheckForUpdate}
-          className="self-start"
-        >
-          Check for update
-        </Button>
+        {needRefresh ? (
+          <div className="flex items-center gap-2">
+            <Badge tone="primary">Update available</Badge>
+            <Button size="sm" onClick={updateApp}>
+              Update app
+            </Button>
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={checking}
+            onClick={handleCheckForUpdate}
+            className="self-start"
+          >
+            Check for update
+          </Button>
+        )}
 
         <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
           Dowi is built entirely on open-source software — React, Dexie, Tailwind, Tiptap and more —

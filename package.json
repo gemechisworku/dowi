@@ -1,7 +1,7 @@
 {
   "name": "dowi",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Dowi — a local-first personal assistant PWA for money, notes and tasks",
   "scripts": {

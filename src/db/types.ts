@@ -110,6 +110,27 @@ export type NotificationType =
   | 'backup-nudge'
   | 'morning-nudge'
   | 'evening-streak'
+  | 'evening-summary'
+
+/**
+ * Extra, type-specific detail rendered on the notification detail page
+ * (`/notifications/:id`) beyond `title`/`body` — every field optional since
+ * which ones apply depends on `AppNotification.type`. A flat bag rather
+ * than a discriminated union: nothing here is a correctness-sensitive
+ * invariant, just extra display detail, so the plumbing stays simple.
+ */
+export interface NotificationDetailData {
+  /** morning-nudge, evening-streak: the streak count as of when this fired. */
+  currentStreak?: number
+  /** evening-summary: today's activity recap. */
+  txCount?: number
+  netMinorUnits?: number
+  currency?: string
+  tasksDone?: number
+  notesAdded?: number
+  /** task-due: which task this reminder is about. */
+  taskId?: string
+}
 
 export interface AppNotification {
   id: string
@@ -124,6 +145,7 @@ export interface AppNotification {
   /** In-app route to open when tapped, e.g. "/tasks/abc123". */
   deepLink?: string
   createdAt: string
+  data?: NotificationDetailData
 }
 
 export interface ReminderConfig {
@@ -141,6 +163,8 @@ export interface ReminderConfig {
 
 export interface Settings {
   id: 'settings'
+  /** Optional, for personalizing greetings and reminder copy — never required. */
+  displayName?: string
   baseCurrency: string
   /** 0 = Sunday .. 6 = Saturday, matching Date#getDay(). */
   weekStartsOn: number

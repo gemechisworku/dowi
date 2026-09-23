@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useDatabase } from '@/app/db/useDatabase'
-import type { Transaction } from '@/db/types'
+import type { Settings, Transaction } from '@/db/types'
+import { DEFAULT_SETTINGS } from '@/db/settingsRepo'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { groupByMonthAndDay } from './groupTransactions'
 import { useTransactionFilters } from './useTransactionFilters'
+import { TRANSACTION_PRESETS, presetDateRange } from './transactionPresets'
 import { TransactionFilterSheet, type FilterFormValue } from './TransactionFilterSheet'
 import { TransactionSheet } from './TransactionSheet'
 import { MoneySubNav } from './MoneySubNav'
@@ -12,48 +14,49 @@ import { Card } from '@/components/ui/Card'
 import { ListItem } from '@/components/ui/ListItem'
 import { IconButton } from '@/components/ui/IconButton'
 import { Chip } from '@/components/ui/Chip'
+import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SwipeableRow } from '@/components/ui/SwipeableRow'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
 import { MoneyText } from '@/components/domain/MoneyText'
 import { useSnackbar } from '@/components/ui/useSnackbar'
 
-const PAGE_SIZE = 60
+const PAGE_SIZE = 30
 
 export function MoneyPage() {
-  const { repos } = useDatabase()
-  const { filters, setFilters, clearAll, activeCount } = useTransactionFilters()
+  const { repos, settingsRepo } = useDatabase()
+  const { filters, preset, page, setFilters, setPreset, setPage, clearAll, activeCount } =
+    useTransactionFilters()
+  const settings = useLiveQuery(
+    () => settingsRepo.get(),
+    [settingsRepo],
+    DEFAULT_SETTINGS,
+  ) as Settings
   const categories = useLiveQuery(() => repos.categories.list(), [repos], EMPTY_ARRAY)
   const accounts = useLiveQuery(() => repos.accounts.list(), [repos], EMPTY_ARRAY)
   const sources = useLiveQuery(() => repos.sources.list(), [repos], EMPTY_ARRAY)
 
+  // Preset chips (Today/This week/This month/All) resolve their date bounds
+  // fresh every render rather than freezing them into the URL — only
+  // "custom" (the filter sheet's own From/To) reads fromDate/toDate from
+  // `filters` directly. See transactionPresets.ts.
+  const effectiveFilters = useMemo(() => {
+    if (preset === 'custom') return filters
+    const { fromDate, toDate } = presetDateRange(preset, settings.weekStartsOn)
+    return { ...filters, fromDate, toDate }
+  }, [filters, preset, settings.weekStartsOn])
+
   const filtered = useLiveQuery(
-    () => repos.transactions.listFiltered(filters),
-    [repos, filters],
+    () => repos.transactions.listFiltered(effectiveFilters),
+    [repos, effectiveFilters],
     EMPTY_ARRAY,
   )
   const sorted = useMemo(() => [...filtered].sort((a, b) => (a.date < b.date ? 1 : -1)), [filtered])
 
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const visible = sorted.slice(0, visibleCount)
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const visible = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const groups = useMemo(() => groupByMonthAndDay(visible), [visible])
-  const hasMore = visibleCount < sorted.length
-
-  // Infinite scroll: reveal another page once the sentinel below the list
-  // scrolls into view, rather than requiring a "Load more" tap.
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel || !hasMore) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) setVisibleCount((c) => c + PAGE_SIZE)
-      },
-      { rootMargin: '200px' },
-    )
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [hasMore])
 
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
@@ -103,7 +106,7 @@ export function MoneyPage() {
   if (filters.text) filterChips.push({ key: 'q', label: `"${filters.text}"` })
 
   function removeChip(key: keyof FilterFormValue) {
-    if (key === 'from') setFilters({ from: undefined, to: undefined })
+    if (key === 'from') setPreset('all')
     else setFilters({ [key]: undefined })
   }
 
@@ -124,6 +127,15 @@ export function MoneyPage() {
       <div className="px-4 pt-2">
         <MoneySubNav />
       </div>
+
+      <div className="flex flex-wrap gap-2 px-4 pb-2 pt-1">
+        {TRANSACTION_PRESETS.map((p) => (
+          <Chip key={p.value} selected={preset === p.value} onClick={() => setPreset(p.value)}>
+            {p.label}
+          </Chip>
+        ))}
+      </div>
+
       {filterChips.length > 0 && (
         <div className="flex flex-wrap gap-2 px-4 pb-2">
           {filterChips.map((chip) => (
@@ -212,18 +224,27 @@ export function MoneyPage() {
           ))
         )}
 
-        {hasMore && (
-          // Auto-loads via the IntersectionObserver above once this scrolls
-          // into view; also directly tappable as a fallback.
-          <div ref={sentinelRef} className="py-4 text-center">
-            <button
-              type="button"
-              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-              className="text-sm font-semibold"
-              style={{ color: 'var(--color-primary)' }}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between gap-3 py-4">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => setPage(currentPage - 1)}
             >
-              Load more
-            </button>
+              ‹ Prev
+            </Button>
+            <span className="text-xs font-semibold" style={{ color: 'var(--color-text-muted)' }}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              Next ›
+            </Button>
           </div>
         )}
       </div>
@@ -260,7 +281,12 @@ export function MoneyPage() {
             to: filters.toDate,
             q: filters.text,
           }}
-          onApply={(value) =>
+          onApply={(value) => {
+            const isEmpty = Object.values(value).every((v) => v === undefined)
+            if (isEmpty) {
+              clearAll()
+              return
+            }
             setFilters({
               type: value.type,
               categoryId: value.categoryId,
@@ -270,8 +296,9 @@ export function MoneyPage() {
               from: value.from,
               to: value.to,
               q: value.q,
+              preset: 'custom',
             })
-          }
+          }}
         />
       )}
     </div>

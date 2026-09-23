@@ -479,6 +479,48 @@ test.describe('Home — quick actions', () => {
   })
 })
 
+test.describe('Home — profile personalization', () => {
+  test.beforeEach(async ({ page }) => {
+    await importFixture(
+      page,
+      buildFixture({ weeklyPlanDay: NOT_TODAY, weeklyReviewDay: NOT_TODAY }),
+    )
+    await page.goto('/')
+  })
+
+  test('saving a name in the prompt personalizes the greeting and persists across a reload', async ({
+    page,
+  }) => {
+    await expect(page.getByText('What should we call you?')).toBeVisible()
+    await page.getByLabel('Your name').fill('Abebe')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+
+    await expect(page.getByText('What should we call you?')).toHaveCount(0)
+    await expect(
+      page.getByRole('heading', { name: /^Good (morning|afternoon|evening), Abebe/ }),
+    ).toBeVisible()
+
+    await page.reload()
+    await expect(page.getByText('What should we call you?')).toHaveCount(0)
+    await expect(
+      page.getByRole('heading', { name: /^Good (morning|afternoon|evening), Abebe/ }),
+    ).toBeVisible()
+  })
+
+  test('dismissing the prompt hides it permanently, across a reload, without setting a name', async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: 'Dismiss profile prompt' }).click()
+    await expect(page.getByText('What should we call you?')).toHaveCount(0)
+
+    await page.reload()
+    await expect(page.getByText('What should we call you?')).toHaveCount(0)
+    await expect(
+      page.getByRole('heading', { name: /^Good (morning|afternoon|evening)$/ }),
+    ).toBeVisible()
+  })
+})
+
 test.describe('Home — accessibility', () => {
   // Set via localStorage *before* the app boots (same key ThemeProvider
   // itself reads/writes) rather than flipping `data-theme` after the page

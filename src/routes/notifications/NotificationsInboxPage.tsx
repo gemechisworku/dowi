@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate } from 'react-router'
 import { useDatabase } from '@/app/db/useDatabase'
-import type { AppNotification, NotificationType } from '@/db/types'
+import type { AppNotification } from '@/db/types'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
+import { getNotificationTypeCopy } from './notificationDetailCopy'
 import { Card } from '@/components/ui/Card'
 import { ListItem } from '@/components/ui/ListItem'
 import { Button } from '@/components/ui/Button'
@@ -11,16 +12,6 @@ import { SwipeableRow } from '@/components/ui/SwipeableRow'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useSnackbar } from '@/components/ui/useSnackbar'
-
-const TYPE_ICON: Record<NotificationType, string> = {
-  'weekly-plan': '🗓️',
-  'weekly-review': '📋',
-  'task-due': '✅',
-  'daily-agenda': '☀️',
-  'backup-nudge': '💾',
-  'morning-nudge': '☀️',
-  'evening-streak': '🔥',
-}
 
 const TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -47,9 +38,12 @@ export function NotificationsInboxPage() {
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
-  async function handleOpen(notification: AppNotification) {
-    if (!notification.read) await notificationsRepo.markRead(notification.id)
-    if (notification.deepLink) navigate(notification.deepLink)
+  function handleOpen(notification: AppNotification) {
+    // Marking read now happens on the detail page itself, since that's
+    // also where an OS-tap deep link (not just an inbox tap) should land
+    // eventually — a single place owns "opening this notification" rather
+    // than duplicating the read-state write here too.
+    navigate(`/notifications/${notification.id}`)
   }
 
   async function handleClear(notification: AppNotification) {
@@ -94,7 +88,7 @@ export function NotificationsInboxPage() {
                 onClick={() => handleOpen(notification)}
                 leading={
                   <span aria-hidden="true" className="text-xl">
-                    {TYPE_ICON[notification.type]}
+                    {getNotificationTypeCopy(notification.type).icon}
                   </span>
                 }
                 title={

@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { ProfileSettings } from './ProfileSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { MoneySettings } from './MoneySettings'
 import { DataSettings } from './DataSettings'
@@ -76,7 +77,7 @@ export function SettingsPage() {
     DEFAULT_SETTINGS,
   ) as Settings
   const scheduler = useMemo(
-    () => createWebScheduler({ db, settingsRepo, notificationsRepo, tasksRepo: repos.tasks }),
+    () => createWebScheduler({ db, settingsRepo, notificationsRepo, repos }),
     [db, settingsRepo, notificationsRepo, repos],
   )
 
@@ -153,6 +154,7 @@ export function SettingsPage() {
     <div className="flex flex-col gap-6 px-4 pt-1 pb-6">
       <h1 className="text-lg font-bold tracking-tight">Settings</h1>
 
+      <ProfileSettings settings={settings} onPatch={handleSettingsPatch} />
       <AppearanceSettings settings={settings} onPatch={handleSettingsPatch} />
       <MoneySettings settings={settings} onPatch={handleSettingsPatch} />
 

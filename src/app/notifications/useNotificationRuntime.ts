@@ -24,7 +24,7 @@ export function useNotificationRuntime(): void {
   const ranCatchUp = useRef(false)
 
   const scheduler = useMemo(
-    () => createWebScheduler({ db, settingsRepo, notificationsRepo, tasksRepo: repos.tasks }),
+    () => createWebScheduler({ db, settingsRepo, notificationsRepo, repos }),
     [db, settingsRepo, notificationsRepo, repos],
   )
 

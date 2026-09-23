@@ -7,7 +7,16 @@
  * Vitest without mocking anything.
  */
 
-import type { AppNotification, NotificationType, ReminderConfig, Settings, Task } from '@/db/types'
+import type {
+  AppNotification,
+  NotificationDetailData,
+  NotificationType,
+  ReminderConfig,
+  Settings,
+  Task,
+} from '@/db/types'
+import type { DailySummary } from '@/lib/dailySummary'
+import { formatMoney } from '@/lib/money'
 
 export interface DueReminder {
   type: NotificationType
@@ -16,6 +25,7 @@ export interface DueReminder {
   /** ISO 8601 datetime. */
   scheduledFor: string
   deepLink?: string
+  data?: NotificationDetailData
 }
 
 export interface ComputeDueRemindersInput {
@@ -29,10 +39,19 @@ export interface ComputeDueRemindersInput {
   /**
    * Local "YYYY-MM-DD" of the most recent qualifying action (an
    * income/expense, note or task added — see `src/db/streakRepo.ts`), or
-   * null/undefined if none has ever been recorded. Used only to decide
-   * whether the evening streak reminder still needs to fire.
+   * null/undefined if none has ever been recorded. Used to decide whether
+   * the morning nudge and evening streak reminders still need to fire —
+   * both are suppressed once something's already been logged that day.
    */
   streakLastActiveDate?: string | null
+  /** The current streak count, purely for personalizing morning/evening copy — not a gating input. */
+  currentStreak?: number
+  /**
+   * Today's activity recap, used only by the evening slot's "already
+   * logged something" branch (evening-summary) — see computeDueReminders.
+   * When omitted, that branch is simply skipped (no summary to show).
+   */
+  dailySummary?: DailySummary
   /**
    * How far back a missed reminder is still worth catching up on (AC-P2).
    * A reminder older than this is treated as missed and silently skipped
@@ -120,6 +139,64 @@ function formatOffsetLabel(minutes: number): string {
   return `${days} day${days === 1 ? '' : 's'}`
 }
 
+/** The evening-summary reminder's body — a short recap of a day that already had some activity. */
+function summarizeDay(summary: DailySummary): string {
+  const parts: string[] = []
+  if (summary.txCount > 0) {
+    const netLabel = formatMoney(summary.netMinorUnits, summary.currency, { showSign: true })
+    parts.push(
+      `${summary.txCount} transaction${summary.txCount === 1 ? '' : 's'} (net ${netLabel})`,
+    )
+  }
+  if (summary.tasksDone > 0) {
+    parts.push(`${summary.tasksDone} task${summary.tasksDone === 1 ? '' : 's'} done`)
+  }
+  if (summary.notesAdded > 0) {
+    parts.push(`${summary.notesAdded} note${summary.notesAdded === 1 ? '' : 's'} added`)
+  }
+  const recap = parts.length > 0 ? parts.join(', ') : 'You were active in Dowi today'
+  return `Today: ${recap}. Keep it up tomorrow!`
+}
+
+export interface ReminderCopy {
+  title: string
+  body: string
+}
+
+/**
+ * These three builders are the single source of truth for morning/evening
+ * notification copy — `computeDueReminders` below calls them for the local
+ * catch-up path, and `src/notifications/deviceSync.ts` calls them again to
+ * pre-render the same text for server-driven Web Push, so wording can
+ * never drift between the two delivery paths.
+ */
+export function buildMorningNudgeCopy(displayName?: string): ReminderCopy {
+  return {
+    title: displayName ? `Good morning, ${displayName} ☀️` : 'Good morning ☀️',
+    body: "Log today's income, expenses, notes or tasks to keep Dowi useful.",
+  }
+}
+
+export function buildEveningStreakCopy(displayName?: string, currentStreak?: number): ReminderCopy {
+  return {
+    title: displayName ? `Don't lose your streak, ${displayName} 🔥` : "Don't lose your streak 🔥",
+    body:
+      currentStreak && currentStreak > 0
+        ? `You're on a ${currentStreak}-day streak — don't let it end tonight.`
+        : "You haven't added anything today yet — keep your streak alive.",
+  }
+}
+
+export function buildEveningSummaryCopy(
+  displayName?: string,
+  summary?: DailySummary,
+): ReminderCopy {
+  return {
+    title: displayName ? `Nice work today, ${displayName} 🎉` : 'Nice work today 🎉',
+    body: summary ? summarizeDay(summary) : 'Keep it up tomorrow!',
+  }
+}
+
 export function computeDueReminders({
   settings,
   tasks,
@@ -127,6 +204,8 @@ export function computeDueReminders({
   existing,
   installedAt,
   streakLastActiveDate = null,
+  currentStreak,
+  dailySummary,
   catchUpWindowMs = DEFAULT_CATCH_UP_WINDOW_MS,
 }: ComputeDueRemindersInput): DueReminder[] {
   const due: DueReminder[] = []
@@ -199,16 +278,18 @@ export function computeDueReminders({
   if (reminders.morningNudge.enabled) {
     const occurrence = mostRecentDailyOccurrence(reminders.morningNudge.time, now)
     const scheduledFor = occurrence.toISOString()
+    const alreadyActiveThatDay = streakLastActiveDate === toLocalDateString(occurrence)
     if (
       withinCatchUpWindow(occurrence) &&
+      !alreadyActiveThatDay &&
       !alreadyExists(existing, 'morning-nudge', scheduledFor, '/')
     ) {
       due.push({
         type: 'morning-nudge',
-        title: 'Good morning ☀️',
-        body: "Log today's income, expenses, notes or tasks to keep Dowi useful.",
+        ...buildMorningNudgeCopy(settings.displayName),
         scheduledFor,
         deepLink: '/',
+        data: currentStreak !== undefined ? { currentStreak } : undefined,
       })
     }
   }
@@ -217,18 +298,33 @@ export function computeDueReminders({
     const occurrence = mostRecentDailyOccurrence(reminders.eveningStreak.time, now)
     const scheduledFor = occurrence.toISOString()
     const alreadyActiveThatDay = streakLastActiveDate === toLocalDateString(occurrence)
-    if (
-      withinCatchUpWindow(occurrence) &&
-      !alreadyActiveThatDay &&
-      !alreadyExists(existing, 'evening-streak', scheduledFor, '/')
-    ) {
-      due.push({
-        type: 'evening-streak',
-        title: "Don't lose your streak 🔥",
-        body: "You haven't added anything today yet — keep your streak alive.",
-        scheduledFor,
-        deepLink: '/',
-      })
+
+    // One configured time, branching into two distinct notification types
+    // depending on whether anything qualifying happened today (requirement
+    // "only send if nothing logged yet" vs. "summarize what happened" can't
+    // both describe a single unconditional message — see reminders' PRD
+    // notes / PLAN.md for the reasoning).
+    if (withinCatchUpWindow(occurrence)) {
+      if (!alreadyActiveThatDay) {
+        if (!alreadyExists(existing, 'evening-streak', scheduledFor, '/')) {
+          due.push({
+            type: 'evening-streak',
+            ...buildEveningStreakCopy(settings.displayName, currentStreak),
+            scheduledFor,
+            deepLink: '/',
+            data: currentStreak !== undefined ? { currentStreak } : undefined,
+          })
+        }
+      } else if (dailySummary && !alreadyExists(existing, 'evening-summary', scheduledFor, '/')) {
+        const { txCount, netMinorUnits, currency, tasksDone, notesAdded } = dailySummary
+        due.push({
+          type: 'evening-summary',
+          ...buildEveningSummaryCopy(settings.displayName, dailySummary),
+          scheduledFor,
+          deepLink: '/',
+          data: { txCount, netMinorUnits, currency, tasksDone, notesAdded },
+        })
+      }
     }
   }
 

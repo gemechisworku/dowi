@@ -34,7 +34,7 @@ describe('createWebScheduler.catchUp', () => {
     settingsRepo = createSettingsRepo(db)
     notificationsRepo = createNotificationsRepo(db)
     const repos = createRepositories(db)
-    scheduler = createWebScheduler({ db, settingsRepo, notificationsRepo, tasksRepo: repos.tasks })
+    scheduler = createWebScheduler({ db, settingsRepo, notificationsRepo, repos })
     // fake-indexeddb's internal scheduling doesn't tolerate vi.useFakeTimers(),
     // so instead of mocking "now" we anchor the weekly-plan reminder to
     // midnight *today* — always already-passed by the time a test runs,
@@ -124,6 +124,28 @@ describe('createWebScheduler.catchUp', () => {
     const all = await notificationsRepo.list()
     expect(all.find((n) => n.type === 'evening-streak')).toBeUndefined()
   })
+
+  it('suppresses the morning nudge once a real qualifying activity was recorded today', async () => {
+    vi.mocked(permission.getNotificationPermission).mockReturnValue('granted')
+    vi.mocked(deliver.showOsNotification).mockResolvedValue(true)
+    await settingsRepo.update({
+      reminders: { ...REMINDERS_OFF, morningNudge: { enabled: true, time: '00:00' } },
+    })
+    const repos = createRepositories(db)
+    await repos.transactions.create({
+      type: 'income',
+      amountMinorUnits: 1000,
+      currency: 'ETB',
+      date: new Date().toISOString().slice(0, 10),
+      categoryId: 'cat-1',
+      tags: [],
+    })
+
+    await scheduler.catchUp()
+
+    const all = await notificationsRepo.list()
+    expect(all.find((n) => n.type === 'morning-nudge')).toBeUndefined()
+  })
 })
 
 describe('createWebScheduler.sendTest', () => {
@@ -136,7 +158,7 @@ describe('createWebScheduler.sendTest', () => {
     const settingsRepo = createSettingsRepo(db)
     notificationsRepo = createNotificationsRepo(db)
     const repos = createRepositories(db)
-    scheduler = createWebScheduler({ db, settingsRepo, notificationsRepo, tasksRepo: repos.tasks })
+    scheduler = createWebScheduler({ db, settingsRepo, notificationsRepo, repos })
   })
 
   afterEach(async () => {
