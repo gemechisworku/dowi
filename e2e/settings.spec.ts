@@ -81,6 +81,45 @@ async function addExpense(page: Page, digits: string[], category: string) {
   await expect(page.getByRole('dialog')).not.toBeVisible()
 }
 
+test.describe('Settings — Profile', () => {
+  test('setting a name persists across a reload and personalizes the Home greeting', async ({
+    page,
+  }) => {
+    await page.goto('/settings')
+    await page.getByLabel('Your name').fill('Selam')
+    await expect(page.getByLabel('Your name')).toHaveValue('Selam')
+
+    await page.reload()
+    await expect(page.getByLabel('Your name')).toHaveValue('Selam')
+
+    await page.goto('/')
+    await expect(
+      page.getByRole('heading', { name: /^Good (morning|afternoon|evening), Selam/ }),
+    ).toBeVisible()
+    // Already set from Settings — the soft first-run prompt shouldn't
+    // also appear once a name already exists.
+    await expect(page.getByText('What should we call you?')).toHaveCount(0)
+  })
+
+  test('clearing the name back out removes the personalization', async ({ page }) => {
+    await importFixture(page, fullFixture({ settings: { displayName: 'Selam' } }))
+    await page.goto('/settings')
+    await expect(page.getByLabel('Your name')).toHaveValue('Selam')
+
+    await page.getByLabel('Your name').fill('')
+    // The input's own DOM value is already "" the instant fill() runs,
+    // regardless of whether onChange's unawaited settingsRepo.update() has
+    // actually committed to IndexedDB yet — so it can't be used to detect
+    // that write finishing. A goto()/reload() genuinely can race ahead of
+    // it (an IndexedDB transaction can be aborted by the page unloading
+    // before it commits), so this waits out that specific async gap
+    // instead of asserting on something that's already true either way.
+    await page.waitForTimeout(200)
+    await page.reload()
+    await expect(page.getByLabel('Your name')).toHaveValue('')
+  })
+})
+
 test.describe('Settings — Appearance', () => {
   test('theme takes effect immediately and persists across a reload', async ({ page }) => {
     await page.goto('/settings')

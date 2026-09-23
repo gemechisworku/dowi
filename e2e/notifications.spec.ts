@@ -1,4 +1,9 @@
 import { test, expect } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import AxeBuilder from '@axe-core/playwright'
 
 /**
  * Covers M7 (Notifications & reminders) end to end against real IndexedDB:
@@ -18,6 +23,53 @@ import { test, expect } from '@playwright/test'
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const TODAY_NAME = WEEKDAY_NAMES[new Date().getDay()]
+
+function notificationsFixture(notifications: unknown[]) {
+  const now = new Date().toISOString()
+  return {
+    formatVersion: 1,
+    exportedAt: now,
+    transactions: [],
+    categories: [],
+    sources: [],
+    accounts: [],
+    rates: [],
+    notes: [],
+    noteCollections: [],
+    tasks: [],
+    taskCollections: [],
+    notifications,
+    settings: {
+      id: 'settings',
+      baseCurrency: 'ETB',
+      weekStartsOn: 1,
+      fyStartMonth: 1,
+      theme: 'system',
+      textSize: 'm',
+      density: 'comfortable',
+      hideAmounts: false,
+      reminders: {
+        weeklyPlan: { enabled: false, day: 1, time: '08:00' },
+        weeklyReview: { enabled: false, day: 6, time: '18:00' },
+        taskDue: { enabled: false, offsets: [0, 1440] },
+        dailyAgenda: { enabled: false, time: '07:30' },
+        backupNudge: { enabled: false, intervalDays: 30 },
+        morningNudge: { enabled: false, time: '09:00' },
+        eveningStreak: { enabled: false, time: '21:00' },
+        quietHours: { enabled: false, start: '22:00', end: '07:00' },
+      },
+    },
+    meta: [{ key: 'seededAt', value: now }],
+  }
+}
+
+async function importFixture(page: Page, fixture: unknown) {
+  const fixturePath = join(tmpdir(), `dowi-notifications-fixture-${test.info().testId}.json`)
+  writeFileSync(fixturePath, JSON.stringify(fixture))
+  await page.goto('/debug/data')
+  await page.getByLabel('Import JSON').setInputFiles(fixturePath)
+  await expect(page.getByText(/Imported \d+ categories and more/)).toBeVisible({ timeout: 15_000 })
+}
 
 test.describe('Settings — permission state', () => {
   test('shows the denied state honestly and does not re-prompt when a reminder is toggled', async ({
@@ -64,7 +116,7 @@ test.describe('Settings — permission state', () => {
 })
 
 test.describe('Reminder catch-up and inbox', () => {
-  test('a due reminder is caught up on open, appears in the inbox, and its deep link works — even without OS permission', async ({
+  test('a due reminder is caught up on open, appears in the inbox, and opens a detail page whose action button deep-links — even without OS permission', async ({
     page,
   }) => {
     await page.goto('/settings')
@@ -85,6 +137,10 @@ test.describe('Reminder catch-up and inbox', () => {
     await expect(row).toBeVisible()
 
     await row.click()
+    await expect(page).toHaveURL(/\/notifications\/.+/)
+    await expect(page.getByRole('heading', { name: 'Plan your week' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Plan your week' }).click()
     await expect(page).toHaveURL(/\/tasks\/plan$/)
   })
 
@@ -129,5 +185,100 @@ test.describe('Reminder catch-up and inbox', () => {
       await page.getByRole('button', { name: 'Clear all' }).last().click()
     }
     await expect(page.getByText('No notifications yet')).toBeVisible()
+  })
+})
+
+test.describe('Notification detail page', () => {
+  test('shows the evening-summary breakdown and marks the notification read', async ({ page }) => {
+    const scheduledFor = new Date().toISOString()
+    await importFixture(
+      page,
+      notificationsFixture([
+        {
+          id: 'n-summary',
+          type: 'evening-summary',
+          title: 'Nice work today 🎉',
+          body: 'Today: 2 transactions (net -ETB 20.00). Keep it up tomorrow!',
+          scheduledFor,
+          deepLink: '/',
+          read: false,
+          createdAt: scheduledFor,
+          data: { txCount: 2, netMinorUnits: -2000, currency: 'ETB', tasksDone: 1, notesAdded: 0 },
+        },
+      ]),
+    )
+
+    await page.goto('/notifications')
+    await expect(page.getByLabel(/Notifications, 1 unread/)).toBeVisible()
+    await page.getByText('Nice work today 🎉').click()
+
+    await expect(page).toHaveURL(/\/notifications\/n-summary$/)
+    await expect(page.getByRole('heading', { name: 'Nice work today 🎉' })).toBeVisible()
+    await expect(page.getByText('Transactions today')).toBeVisible()
+    await expect(page.getByText('2', { exact: true })).toBeVisible()
+    await expect(page.getByText('-ETB 20.00', { exact: true })).toBeVisible()
+    await expect(page.getByText('Tasks done')).toBeVisible()
+    await expect(page.getByText('Notes added')).not.toBeVisible()
+    await expect(page.getByRole('button', { name: 'Open Dowi' })).toBeVisible()
+
+    // Marked read as a side effect of opening the detail page.
+    await page.goto('/notifications')
+    await expect(page.getByLabel(/Notifications, \d+ unread/)).not.toBeVisible()
+  })
+
+  test('shows the current-streak breakdown for an evening-streak reminder', async ({ page }) => {
+    const scheduledFor = new Date().toISOString()
+    await importFixture(
+      page,
+      notificationsFixture([
+        {
+          id: 'n-streak',
+          type: 'evening-streak',
+          title: "Don't lose your streak 🔥",
+          body: "You're on a 12-day streak — don't let it end tonight.",
+          scheduledFor,
+          deepLink: '/',
+          read: false,
+          createdAt: scheduledFor,
+          data: { currentStreak: 12 },
+        },
+      ]),
+    )
+
+    await page.goto('/notifications/n-streak')
+    await expect(page.getByText('Current streak')).toBeVisible()
+    await expect(page.getByText('12 days')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Log something' })).toBeVisible()
+  })
+
+  test('shows a not-found state for a cleared/unknown notification id', async ({ page }) => {
+    await page.goto('/notifications/does-not-exist')
+    await expect(page.getByText('Notification not found')).toBeVisible()
+  })
+
+  test('has zero automatically-detectable accessibility violations', async ({ page }) => {
+    const scheduledFor = new Date().toISOString()
+    await importFixture(
+      page,
+      notificationsFixture([
+        {
+          id: 'n-summary',
+          type: 'evening-summary',
+          title: 'Nice work today 🎉',
+          body: 'Today: 2 transactions (net -ETB 20.00). Keep it up tomorrow!',
+          scheduledFor,
+          deepLink: '/',
+          read: false,
+          createdAt: scheduledFor,
+          data: { txCount: 2, netMinorUnits: -2000, currency: 'ETB', tasksDone: 1, notesAdded: 0 },
+        },
+      ]),
+    )
+
+    await page.goto('/notifications/n-summary')
+    await expect(page.getByRole('heading', { name: 'Nice work today 🎉' })).toBeVisible()
+
+    const results = await new AxeBuilder({ page }).analyze()
+    expect(results.violations).toEqual([])
   })
 })

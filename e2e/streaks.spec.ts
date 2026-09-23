@@ -184,6 +184,73 @@ test.describe('Daily streak celebration', () => {
   })
 })
 
+test.describe('Daily streak reward overlay', () => {
+  test('shows once after a qualifying action, is dismissible, and does not reappear on reload the same day', async ({
+    page,
+  }) => {
+    await importFixture(
+      page,
+      streakFixture({
+        currentStreak: 3,
+        longestStreak: 3,
+        lastActiveDate: isoDaysAgo(1),
+        lastCelebratedStreak: 0,
+      }),
+    )
+
+    await addExpense(page)
+
+    const overlay = page.getByRole('button', { name: '4-day streak — dismiss' })
+    await expect(overlay).toBeVisible()
+    await expect(overlay).toContainText('4-day streak')
+
+    await overlay.click()
+    await expect(overlay).not.toBeVisible()
+
+    await page.reload()
+    await expect(page.getByRole('button', { name: /-day streak — dismiss/ })).not.toBeVisible()
+  })
+
+  test('defers to the bigger milestone celebration on a 7-day day — no double reward UI', async ({
+    page,
+  }) => {
+    await importFixture(
+      page,
+      streakFixture({
+        currentStreak: 6,
+        longestStreak: 6,
+        lastActiveDate: isoDaysAgo(1),
+        lastCelebratedStreak: 0,
+      }),
+    )
+
+    await addExpense(page)
+
+    await expect(page.getByRole('alertdialog', { name: '7-day streak! 🔥' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /-day streak — dismiss/ })).not.toBeVisible()
+  })
+
+  test('has zero automatically-detectable accessibility violations while open', async ({
+    page,
+  }) => {
+    await importFixture(
+      page,
+      streakFixture({
+        currentStreak: 3,
+        longestStreak: 3,
+        lastActiveDate: isoDaysAgo(1),
+        lastCelebratedStreak: 0,
+      }),
+    )
+
+    await addExpense(page)
+    await expect(page.getByRole('button', { name: '4-day streak — dismiss' })).toBeVisible()
+
+    const results = await new AxeBuilder({ page }).analyze()
+    expect(results.violations).toEqual([])
+  })
+})
+
 test.describe('Home — usage week', () => {
   test('shows week 1 on the day the app is first used', async ({ page }) => {
     await importFixture(

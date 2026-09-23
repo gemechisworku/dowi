@@ -23,6 +23,8 @@ import { readHomePeriod, writeHomePeriod, type HomePeriod } from './homePrefs'
 import { getBannerKind, isBannerDismissed, dismissBannerForToday } from './homeBanner'
 import { isTourDismissed, dismissTour } from './homeTour'
 import { GettingStartedTour } from './GettingStartedTour'
+import { isProfilePromptDismissed, dismissProfilePrompt } from './profilePromptDismissal'
+import { HomeProfilePrompt } from './HomeProfilePrompt'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -57,10 +59,9 @@ const QUICK_ACTIONS = [
   { icon: '✅', label: 'Task', href: '/tasks/new' },
 ] as const
 
-function greetingFor(hour: number): string {
-  if (hour < 12) return 'Good morning'
-  if (hour < 18) return 'Good afternoon'
-  return 'Good evening'
+function greetingFor(hour: number, displayName?: string): string {
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  return displayName ? `${greeting}, ${displayName}` : greeting
 }
 
 function noteSnippet(text: string, max = 90): string {
@@ -81,6 +82,7 @@ function noteSnippet(text: string, max = 90): string {
 export function HomePage() {
   const { db, repos, settingsRepo } = useDatabase()
   const navigate = useNavigate()
+  const [profilePromptDismissed, setProfilePromptDismissed] = useState(isProfilePromptDismissed)
 
   const settings = useLiveQuery(
     () => settingsRepo.get(),
@@ -121,6 +123,17 @@ export function HomePage() {
   function handleDismissTour() {
     dismissTour()
     setTourDismissed(true)
+  }
+
+  async function handleSaveDisplayName(name: string) {
+    await settingsRepo.update({ displayName: name })
+    dismissProfilePrompt()
+    setProfilePromptDismissed(true)
+  }
+
+  function handleSkipProfilePrompt() {
+    dismissProfilePrompt()
+    setProfilePromptDismissed(true)
   }
 
   async function handleToggleComplete(task: Task, done: boolean) {
@@ -179,7 +192,7 @@ export function HomePage() {
     <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
       <header>
         <h1 className="text-xl font-bold tracking-tight">
-          {greetingFor(now.getHours())} <span aria-hidden="true">👋</span>
+          {greetingFor(now.getHours(), settings.displayName)} <span aria-hidden="true">👋</span>
         </h1>
         <p className="mt-0.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
           {DATE_FORMATTER.format(now)} · Week {usageWeek} · {fyLabel}
@@ -195,6 +208,10 @@ export function HomePage() {
         </div>
       ) : (
         <>
+          {!settings.displayName && !profilePromptDismissed && (
+            <HomeProfilePrompt onSave={handleSaveDisplayName} onSkip={handleSkipProfilePrompt} />
+          )}
+
           {/* Brief entry point into the guided tour — shown only while there's
               no data at all yet, never as a replacement for the real dashboard
               below (which already renders correctly at all-zero values). */}
@@ -289,12 +306,23 @@ export function HomePage() {
                     Expense
                   </p>
                   <p className="text-sm font-bold">
-                    <MoneyText
-                      amountMinorUnits={report.expense.totalMinorUnits}
-                      currency={baseCurrency}
-                      approximate={report.expense.wasConverted}
-                      color="#ffffff"
-                    />
+                    {/* Bare red text has poor contrast directly on the blue
+                        gradient (fails WCAG AA at any saturation that still
+                        reads as "red" rather than near-white) — the
+                        `--color-expense` / `--color-expense-soft` pairing
+                        already used by Badge's "expense" tone is contrast-
+                        vetted independent of whatever it's placed on. */}
+                    <span
+                      className="inline-flex rounded-md px-1.5 py-0.5"
+                      style={{ background: 'var(--color-expense-soft)' }}
+                    >
+                      <MoneyText
+                        amountMinorUnits={report.expense.totalMinorUnits}
+                        currency={baseCurrency}
+                        approximate={report.expense.wasConverted}
+                        color="var(--color-expense)"
+                      />
+                    </span>
                   </p>
                   <div
                     className="mt-1.5 h-1.5 overflow-hidden rounded-full"

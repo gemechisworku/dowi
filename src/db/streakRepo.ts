@@ -19,6 +19,8 @@ export interface StreakState {
   lastActiveDate: string | null
   /** The highest `currentStreak` a celebration has already been shown for, so a 7/14/21-day milestone only celebrates once. */
   lastCelebratedStreak: number
+  /** The last "YYYY-MM-DD" the lightweight daily reward overlay was shown for, so it only appears once per day. */
+  lastDailyBadgeShownDate?: string | null
 }
 
 export const DEFAULT_STREAK_STATE: StreakState = {
@@ -26,6 +28,7 @@ export const DEFAULT_STREAK_STATE: StreakState = {
   longestStreak: 0,
   lastActiveDate: null,
   lastCelebratedStreak: 0,
+  lastDailyBadgeShownDate: null,
 }
 
 function parseStreakValue(value: string | undefined): StreakState {
@@ -37,6 +40,7 @@ function parseStreakValue(value: string | undefined): StreakState {
       longestStreak: parsed.longestStreak ?? 0,
       lastActiveDate: parsed.lastActiveDate ?? null,
       lastCelebratedStreak: parsed.lastCelebratedStreak ?? 0,
+      lastDailyBadgeShownDate: parsed.lastDailyBadgeShownDate ?? null,
     }
   } catch {
     return DEFAULT_STREAK_STATE
@@ -79,6 +83,23 @@ export function isNewMilestone(state: StreakState): boolean {
   )
 }
 
+/**
+ * True when the lightweight daily reward overlay (StreakDailyOverlay) should
+ * show: the user has been active *today* and hasn't seen today's badge yet.
+ * Deliberately independent of the exact moment the streak incremented —
+ * "shown when they open the app" is satisfied by showing it on any open
+ * that day, not just the one immediately after the qualifying action.
+ * Milestone days defer entirely to the bigger `StreakCelebrationOverlay` —
+ * no double celebration on the same day.
+ */
+export function shouldShowDailyOverlay(state: StreakState, today: string): boolean {
+  return (
+    state.lastActiveDate === today &&
+    state.lastDailyBadgeShownDate !== today &&
+    !isNewMilestone(state)
+  )
+}
+
 export function createStreakRepo(db: DowiDatabase) {
   return {
     async get(): Promise<StreakState> {
@@ -99,6 +120,14 @@ export function createStreakRepo(db: DowiDatabase) {
     async markCelebrated(streakValue: number): Promise<StreakState> {
       const current = await this.get()
       const next: StreakState = { ...current, lastCelebratedStreak: streakValue }
+      await db.meta.put({ key: STREAK_META_KEY, value: JSON.stringify(next) })
+      return next
+    },
+
+    /** Marks today's daily reward overlay as shown, so `shouldShowDailyOverlay` stops reporting it for the rest of the day. */
+    async markDailyBadgeShown(today: string = todayString()): Promise<StreakState> {
+      const current = await this.get()
+      const next: StreakState = { ...current, lastDailyBadgeShownDate: today }
       await db.meta.put({ key: STREAK_META_KEY, value: JSON.stringify(next) })
       return next
     },

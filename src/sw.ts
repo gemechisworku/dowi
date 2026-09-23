@@ -110,7 +110,7 @@ async function runReminderCatchUp(): Promise<void> {
       db,
       settingsRepo: createSettingsRepo(db),
       notificationsRepo: createNotificationsRepo(db),
-      tasksRepo: createRepositories(db).tasks,
+      repos: createRepositories(db),
     })
     await scheduler.catchUp()
   } catch {

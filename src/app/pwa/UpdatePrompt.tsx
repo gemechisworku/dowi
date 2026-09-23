@@ -1,44 +1,33 @@
-import { useEffect } from 'react'
-import { useRegisterSW } from 'virtual:pwa-register/react'
-import { useSnackbar } from '@/components/ui/useSnackbar'
+import { Dialog } from '@/components/ui/Dialog'
+import { Button } from '@/components/ui/Button'
+import { useAppUpdate } from './useAppUpdate'
 
 /**
- * PRD §6.3: "Update flow: SW detects new version → non-blocking 'Update
- * available' snackbar → reload applies it." Renders nothing itself — a
- * non-visual component that registers the service worker (this is now the
- * app's one and only registration path; see vite.config.ts's
- * `injectRegister: false`) and surfaces `needRefresh` as a snackbar.
- *
- * Reloading is the user's call, never automatic: `updateServiceWorker(true)`
- * only runs from the snackbar's own "Reload" action, which messages the
- * waiting worker to skip waiting (src/sw.ts's own message listener) and
- * reloads once it takes control — nothing here forces that on its own.
+ * PRD §6.3 (updated): SW detects new version → a blocking prompt (not just a
+ * dismiss-and-forget snackbar) so a new build is something the user
+ * consciously accepts or defers, not something they can miss entirely.
+ * State comes from `AppUpdateProvider` (mounted once in App.tsx), which owns
+ * the actual service worker registration — see AppUpdateContext.tsx for why
+ * this component doesn't call `useRegisterSW()` itself.
  */
 export function UpdatePrompt() {
-  const { show } = useSnackbar()
-  const {
-    needRefresh: [needRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegisterError(error) {
-      // Best-effort — a failed registration just means this session runs
-      // without offline/notification support, not a broken app.
-      console.error('Service worker registration failed', error)
-    },
-  })
+  const { needRefresh, dismiss, updateApp } = useAppUpdate()
 
-  useEffect(() => {
-    if (!needRefresh) return
-    show({
-      message: 'Update available',
-      action: { label: 'Reload', onClick: () => void updateServiceWorker(true) },
-      // Longer than the default 5s undo window — this isn't urgent to act
-      // on immediately, and missing it costs nothing (the update just
-      // waits for the next natural reload).
-      duration: 15_000,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [needRefresh])
-
-  return null
+  return (
+    <Dialog
+      open={needRefresh}
+      onClose={dismiss}
+      title="Update available"
+      actions={
+        <>
+          <Button variant="secondary" onClick={dismiss}>
+            Later
+          </Button>
+          <Button onClick={updateApp}>Update app</Button>
+        </>
+      }
+    >
+      A new version of Dowi is ready. Update now to get the latest fixes and features.
+    </Dialog>
+  )
 }

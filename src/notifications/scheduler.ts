@@ -13,6 +13,8 @@ import type { Repositories } from '@/db/repositories'
 import { SEEDED_META_KEY } from '@/db/seed'
 import { createStreakRepo } from '@/db/streakRepo'
 import { computeDueReminders, isWithinQuietHours } from '@/lib/reminders'
+import { computeDailySummary } from '@/lib/dailySummary'
+import { todayString } from '@/lib/period'
 import { showOsNotification } from './deliver'
 import {
   getNotificationPermission,
@@ -42,26 +44,36 @@ export interface WebSchedulerDeps {
   db: DowiDatabase
   settingsRepo: SettingsRepo
   notificationsRepo: NotificationsRepo
-  tasksRepo: Repositories['tasks']
+  repos: Pick<Repositories, 'tasks' | 'transactions' | 'notes'>
 }
 
 export function createWebScheduler({
   db,
   settingsRepo,
   notificationsRepo,
-  tasksRepo,
+  repos,
 }: WebSchedulerDeps): ReminderScheduler {
   return {
     async catchUp() {
-      const [settings, tasks, existing, installedMeta, streak] = await Promise.all([
-        settingsRepo.get(),
-        tasksRepo.list(),
-        notificationsRepo.list(),
-        db.meta.get(SEEDED_META_KEY),
-        createStreakRepo(db).get(),
-      ])
+      const [settings, tasks, transactions, notes, existing, installedMeta, streak] =
+        await Promise.all([
+          settingsRepo.get(),
+          repos.tasks.list(),
+          repos.transactions.list(),
+          repos.notes.list(),
+          notificationsRepo.list(),
+          db.meta.get(SEEDED_META_KEY),
+          createStreakRepo(db).get(),
+        ])
       const now = new Date()
       const installedAt = installedMeta?.value ?? now.toISOString()
+      const dailySummary = computeDailySummary(
+        transactions,
+        tasks,
+        notes,
+        todayString(),
+        settings.baseCurrency,
+      )
       const due = computeDueReminders({
         settings,
         tasks,
@@ -69,6 +81,8 @@ export function createWebScheduler({
         existing,
         installedAt,
         streakLastActiveDate: streak.lastActiveDate,
+        currentStreak: streak.currentStreak,
+        dailySummary,
       })
       if (due.length === 0) return
 
@@ -82,6 +96,7 @@ export function createWebScheduler({
           body: reminder.body,
           scheduledFor: reminder.scheduledFor,
           deepLink: reminder.deepLink,
+          data: reminder.data,
         })
         if (permission === 'granted' && !quiet) {
           const delivered = await showOsNotification(reminder.title, {

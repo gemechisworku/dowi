@@ -201,6 +201,44 @@ describe('computeDueReminders — morning nudge', () => {
       new Date('2026-09-21T09:00:00').toISOString(),
     )
   })
+
+  it('is suppressed once a qualifying action already happened today', () => {
+    const settings = baseSettings({ morningNudge: { enabled: true, time: '09:00' } })
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T09:30:00'),
+      existing: [],
+      installedAt: INSTALLED_AT,
+      streakLastActiveDate: '2026-09-21',
+    })
+    expect(due.find((r) => r.type === 'morning-nudge')).toBeUndefined()
+  })
+
+  it('does not bunch together with the evening reminder when opened once late in the day after skipping a day', () => {
+    // Opened at 21:05 having last used the app two days ago: yesterday's
+    // occurrences are outside all catch-up windows either way, but today's
+    // morning nudge and today's evening streak reminder are both
+    // legitimately due by 21:05 — that's expected same-day behaviour, not
+    // the bug (see reminders.ts's module doc / scheduler.ts for the real
+    // fix, which is server-driven delivery at each reminder's own time).
+    const settings = baseSettings({
+      morningNudge: { enabled: true, time: '09:00' },
+      eveningStreak: { enabled: true, time: '21:00' },
+    })
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T21:05:00'),
+      existing: [],
+      installedAt: INSTALLED_AT,
+      streakLastActiveDate: '2026-09-19',
+    })
+    expect(due.find((r) => r.type === 'morning-nudge')?.scheduledFor).toBe(
+      new Date('2026-09-21T09:00:00').toISOString(),
+    )
+    expect(due.find((r) => r.type === 'evening-streak')).toBeDefined()
+  })
 })
 
 describe('computeDueReminders — evening streak', () => {
@@ -265,6 +303,89 @@ describe('computeDueReminders — evening streak', () => {
       streakLastActiveDate: '2026-09-20',
     })
     expect(due.find((r) => r.type === 'evening-streak')).toBeUndefined()
+  })
+
+  it('mentions the current streak count in the streak-at-risk copy when provided', () => {
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T21:30:00'),
+      existing: [],
+      installedAt: INSTALLED_AT,
+      streakLastActiveDate: '2026-09-20',
+      currentStreak: 12,
+    })
+    const reminder = due.find((r) => r.type === 'evening-streak')
+    expect(reminder?.body).toContain('12-day streak')
+    expect(reminder?.data).toEqual({ currentStreak: 12 })
+  })
+})
+
+describe('computeDueReminders — evening summary (already logged today)', () => {
+  const settings = baseSettings({ eveningStreak: { enabled: true, time: '21:00' } })
+  const summary = {
+    txCount: 2,
+    netMinorUnits: -500,
+    currency: 'ETB',
+    tasksDone: 1,
+    notesAdded: 0,
+  }
+
+  it('raises an evening-summary reminder instead, once something qualifying happened today', () => {
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T21:30:00'),
+      existing: [],
+      installedAt: INSTALLED_AT,
+      streakLastActiveDate: '2026-09-21',
+      dailySummary: summary,
+    })
+    expect(due.find((r) => r.type === 'evening-streak')).toBeUndefined()
+    const reminder = due.find((r) => r.type === 'evening-summary')
+    expect(reminder).toBeDefined()
+    expect(reminder?.data).toMatchObject(summary)
+    expect(reminder?.body).toContain('2 transactions')
+    expect(reminder?.body).toContain('1 task')
+  })
+
+  it('is skipped (not evening-streak either) when no dailySummary was supplied', () => {
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T21:30:00'),
+      existing: [],
+      installedAt: INSTALLED_AT,
+      streakLastActiveDate: '2026-09-21',
+    })
+    expect(due.find((r) => r.type === 'evening-streak')).toBeUndefined()
+    expect(due.find((r) => r.type === 'evening-summary')).toBeUndefined()
+  })
+
+  it('does not double-fire once already recorded in the notifications inbox', () => {
+    const scheduledFor = new Date('2026-09-21T21:00:00').toISOString()
+    const existing: AppNotification[] = [
+      {
+        id: 'n1',
+        type: 'evening-summary',
+        title: '',
+        body: '',
+        scheduledFor,
+        deepLink: '/',
+        read: false,
+        createdAt: scheduledFor,
+      },
+    ]
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T21:30:00'),
+      existing,
+      installedAt: INSTALLED_AT,
+      streakLastActiveDate: '2026-09-21',
+      dailySummary: summary,
+    })
+    expect(due.find((r) => r.type === 'evening-summary')).toBeUndefined()
   })
 })
 
