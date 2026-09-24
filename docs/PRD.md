@@ -507,7 +507,7 @@ commit. Full step-by-step verification for each lives in `docs/TESTING.md`.
 
 ## 9. Deferred to v1.1+
 
-Attachments/receipt photos on transactions · recurring transactions · budgets and
+Attachments/receipt photos on transactions · budgets and
 spending limits · recurring tasks · task drag-reorder across days · note
 version history · markdown import/export for notes · optional online FX refresh ·
 widgets/home-screen shortcuts beyond manifest shortcuts · iOS support ·
