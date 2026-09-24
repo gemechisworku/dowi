@@ -674,6 +674,139 @@ bug. Cosmetic and convenience items go on the v1.1 list.
 
 ---
 
+## §M12 — Recurring transactions & Reports overhaul
+
+### Recurring transactions
+
+> Recurring income/expense templates (PRD §9), added to Money. Each template
+> chooses auto-record or remind-and-confirm independently; editing a template
+> only affects future occurrences. Generation is idempotent — the catch-up
+> scheduler can run repeatedly without ever double-creating an occurrence.
+
+**Automated (in place)**
+
+- `recurrence.test.ts` — `occurrenceAt`'s month-end clamping (31st into Feb of
+  leap/non-leap years, into every 30-day month), the no-permanent-drift case
+  (each occurrence recomputed fresh from the original anchor, not chained from
+  a previous clamp), a yearly Feb-29 anchor clamping independently each
+  non-leap year, and `every-N` week/month/year intervals. `computeDueRecurring`
+  covers: multi-interval auto-record backfill in one batch; idempotency when a
+  transaction already exists for an occurrence (state still advances past it,
+  but it isn't re-created); the remind path emitting only the single earliest
+  outstanding occurrence (never a backlog) and its own notification dedup;
+  `paused` exclusion (via the caller pre-filtering templates) and `endDate`
+  exclusion once occurrences fall past it; the `maxBackfill` safety cap.
+- `recurringRepo.test.ts` (`fake-indexeddb`) — CRUD, soft delete/restore, and
+  `confirmOccurrence` correctly advancing `occurrenceIndex`/`nextDueDate`
+  (re-clamped, same math as `occurrenceAt`)/`lastGeneratedDate`.
+- `scheduler.test.ts` — `catchUp()` exercises both recurring paths end to end:
+  an auto-record template creates the real transaction and advances template
+  state; a remind template writes a `recurring-due` inbox entry (and attempts
+  OS delivery under the same permission/quiet-hours rules as every other
+  reminder) without touching template state.
+
+**Manual (real phone, PWA installed)**
+
+1. Money → Recurring → add a monthly item anchored on the 31st (e.g. "Rent",
+   auto-record) → confirm it's due next on Jan 31, and that editing nothing
+   yet, its `Next:` label reads correctly across a Feb/Mar boundary once a
+   month passes (or fast-forward by editing `startDate` back and reopening the
+   app to trigger catch-up).
+2. Add a weekly auto-record item → reopen the app (or trigger catch-up) →
+   confirm the transaction appears in Money → Transactions with no
+   confirmation step, tagged back to the recurring item.
+3. Add a remind-and-confirm item due today → confirm a `recurring-due`
+   notification arrives; tapping it opens `/money/recurring/confirm`
+   pre-filled from the template, defaulting the date to the scheduled due
+   date (not today) but still editable; saving records the transaction and
+   advances the template so the same occurrence doesn't reappear.
+4. Edit a template's amount/category → confirm past transactions it already
+   generated are unchanged, only future occurrences use the new values.
+5. Delete a recurring item (swipe or the sheet's Delete button) → confirm the
+   undo snackbar restores it, and that its past transactions were never
+   touched either way.
+
+### Reports overhaul
+
+> Chart readability fix (horizontal scroll + intrinsic width instead of a
+> stretched fixed-width viewBox) plus period-aware chart selection, new
+> Quarter/6-months periods aligned to `fyStartMonth`, and a category-over-time
+> comparison chart.
+
+**Automated (in place)**
+
+- `period.test.ts` — `getQuarterRange`/`getHalfYearRange`/`getQuarterLabel`/
+  `getHalfYearLabel`/`shiftPeriod`/`getRangeForPeriod` across multiple
+  `fyStartMonth` values (1 and 7), proving the new periods' boundaries align to
+  the financial-year start rather than fixed calendar quarters.
+- `periodLabel.test.ts` — `getPeriodLabel` for the two new periods, and the new
+  `getShortPeriodLabel` used by the category-trend chart's x-axis.
+- `aggregate.test.ts` — `buildCategoryTrend`: values align oldest-to-newest
+  with `periodLabels`; a period with no spend in a category is zero-filled,
+  not omitted; only the top categories by total-across-window get their own
+  series and everything else folds into one "Other" series (and "Other" is
+  omitted entirely when there's nothing to fold); only transactions of the
+  requested income/expense type are included.
+- `LineChart.test.tsx` — accessible label, multiple series render one polyline
+  each plus a legend, a single series renders no legend, labels truncate in
+  the SVG while the full value stays in the `<title>` and the `ChartDataTable`,
+  and an empty series renders without error.
+- `aggregate.test.ts` — the day bucketing excludes income entirely (only
+  expense categories appear); week buckets are labeled by weekday initial in
+  the order the configured week start produces (checked for both a
+  Monday-start and a Sunday-start week); recurring-generated transactions
+  (`recurringId` set) are excluded from headline totals, sub-periods, every
+  breakdown, `excludedCurrencies`, and the previous-period comparison, while
+  still appearing in the raw `transactions` list; `recurringBreakdown` sums a
+  weekly item's several occurrences within a monthly-filtered range into one
+  entry, passes a monthly item's single occurrence through unchanged, keys
+  different recurring items separately, and omits an item with no occurrence
+  in range.
+- `groupTransactions.test.ts` — day subtotals exclude recurring-generated
+  transactions (while still listing them) — the Transactions-list
+  counterpart of the same fix; `groupRecurring` sums occurrences of the same
+  recurring item together (per currency), keeps different items separate,
+  and ignores ordinary (non-recurring) transactions.
+
+**Manual (real phone, PWA installed)**
+
+1. Reports → Day: shows expense-by-category only (no income categories mixed
+   in), titled "Expense by category." Add several categories with long names
+   and confirm labels truncate (not clip/overlap) and the chart scrolls
+   horizontally to reveal them all rather than squeezing everything into the
+   screen width.
+2. Reports → Week: confirm there's no income-vs-expense chart, and instead a
+   line chart shows expense change day-by-day across the week, x-axis
+   labeled by weekday initial (M/T/W/…) starting from your configured
+   week-start day. Change Settings → Week starts on and confirm the label
+   order shifts to match.
+3. Reports → Month / Quarter / 6 Months / Year: confirm both the
+   income-vs-expense chart and an expense-trend line chart (over weeks for
+   Month, months for Quarter/6 Months/Year) are shown.
+4. Change Settings → Financial year start month, then confirm Quarter/6
+   Months boundaries in Reports shift to align with it (e.g. FY starting in
+   July puts Q1 at Jul–Sep, not Jan–Mar).
+5. Scroll to "… by category over time" below "Where it went" → confirm it
+   shows each category's trend across several periods, colors match the
+   donut chart above it for the same categories, and toggling the
+   income/expense switch on "Where it went" also updates this chart.
+6. Add a monthly auto-record recurring expense and a weekly auto-record
+   recurring expense, then trigger catch-up so both generate a transaction.
+   On Reports (Month view): confirm neither shows up in the Income/Expense
+   stat tiles, the income-vs-expense chart, "Where it went," or the
+   category-trend chart — instead both appear in a new "Recurring" card, the
+   monthly item showing its single occurrence and the weekly item showing
+   the sum of every occurrence that fell in the month. Switch to Week view
+   and confirm the weekly item's single occurrence shows there instead.
+7. On Money → Transactions (This month filter): confirm the same two
+   recurring items appear in their own "Recurring" card above the day list
+   (not inside any day's group), the day subtotals below no longer include
+   them, and tapping a recurring row expands it to the individual
+   occurrence(s) — each still tappable/editable/swipeable like any other
+   transaction.
+
+---
+
 ## Bug-report template
 
 ```

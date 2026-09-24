@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router'
 import { useDatabase } from '@/app/db/useDatabase'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { todayString, shiftPeriod, type Period } from '@/lib/period'
-import { buildReport, isFuturePeriod, type BreakdownEntry } from './aggregate'
+import { buildReport, buildCategoryTrend, isFuturePeriod, type BreakdownEntry } from './aggregate'
 import { getPeriodLabel } from './periodLabel'
 import { buildRateLookup } from './rateLookup'
 import { transactionsToCsv, downloadCsv } from './csv'
 import { buildShareSummary } from './summary'
+import { CATEGORY_COLORS, MAX_CATEGORY_SLICES } from './chartColors'
+import { formatIntervalLabel } from '@/lib/recurrence'
 import { useSnackbar } from '@/components/ui/useSnackbar'
 import { MoneySubNav } from '../MoneySubNav'
 import { Card } from '@/components/ui/Card'
@@ -26,16 +28,18 @@ import { ListItem } from '@/components/ui/ListItem'
 import { GroupedBarChart } from '@/components/charts/GroupedBarChart'
 import { BarChart } from '@/components/charts/BarChart'
 import { DonutChart } from '@/components/charts/DonutChart'
+import { LineChart } from '@/components/charts/LineChart'
 import type { TransactionType } from '@/db/types'
 
-const DONUT_COLORS = [
-  'var(--color-expense)',
-  'var(--blue-500)',
-  'var(--color-income)',
-  'var(--color-warning)',
-  'var(--blue-700)',
-]
-const MAX_DONUT_SLICES = DONUT_COLORS.length
+/** How many trailing periods the category-trend chart compares — favors readability over cramming too many points onto one chart. */
+const WINDOW_SIZE_BY_PERIOD: Record<Period, number> = {
+  day: 7,
+  week: 6,
+  month: 6,
+  quarter: 4,
+  halfYear: 4,
+  year: 3,
+}
 
 /**
  * The top N-1 categories get their own slice; everything past that is
@@ -47,12 +51,12 @@ function buildDonutSlices(
   breakdown: BreakdownEntry[],
   categoryById: Map<string, { name: string }>,
 ) {
-  const top = breakdown.slice(0, MAX_DONUT_SLICES - 1)
-  const rest = breakdown.slice(MAX_DONUT_SLICES - 1)
+  const top = breakdown.slice(0, MAX_CATEGORY_SLICES - 1)
+  const rest = breakdown.slice(MAX_CATEGORY_SLICES - 1)
   const slices = top.map((entry, i) => ({
     label: entry.key ? (categoryById.get(entry.key)?.name ?? 'Uncategorised') : 'Uncategorised',
     value: entry.amountMinorUnits,
-    color: DONUT_COLORS[i]!,
+    color: CATEGORY_COLORS[i]!,
   }))
   if (rest.length > 0) {
     slices.push({
@@ -74,6 +78,7 @@ export function ReportsPage() {
   const sources = useLiveQuery(() => repos.sources.list(), [repos], EMPTY_ARRAY)
   const accounts = useLiveQuery(() => repos.accounts.list(), [repos], EMPTY_ARRAY)
   const rates = useLiveQuery(() => repos.rates.list(), [repos], EMPTY_ARRAY)
+  const recurringTemplates = useLiveQuery(() => repos.recurring.list(), [repos], EMPTY_ARRAY)
 
   const [period, setPeriod] = useState<Period>('month')
   const [anchorDate, setAnchorDate] = useState(todayString())
@@ -82,6 +87,10 @@ export function ReportsPage() {
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
   const sourceById = useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources])
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts])
+  const recurringById = useMemo(
+    () => new Map(recurringTemplates.map((r) => [r.id, r])),
+    [recurringTemplates],
+  )
 
   const weekStartsOn = settings?.weekStartsOn ?? 1
   const fyStartMonth = settings?.fyStartMonth ?? 1
@@ -98,6 +107,28 @@ export function ReportsPage() {
         getRate,
       }),
     [transactions, period, anchorDate, weekStartsOn, fyStartMonth, baseCurrency, getRate],
+  )
+
+  const categoryTrend = useMemo(
+    () =>
+      buildCategoryTrend(
+        transactions,
+        period,
+        anchorDate,
+        breakdownType,
+        WINDOW_SIZE_BY_PERIOD[period],
+        { weekStartsOn, fyStartMonth, baseCurrency, getRate },
+      ),
+    [
+      transactions,
+      period,
+      anchorDate,
+      breakdownType,
+      weekStartsOn,
+      fyStartMonth,
+      baseCurrency,
+      getRate,
+    ],
   )
 
   const label = getPeriodLabel(period, report, fyStartMonth)
@@ -211,29 +242,94 @@ export function ReportsPage() {
         )}
       </Card>
 
-      <Card>
-        <SectionHeader title="Income vs expense" />
-        {report.subPeriods.length === 0 ? (
-          <EmptyState icon="📊" title="No data for this period" />
-        ) : period === 'day' ? (
-          <BarChart
-            title="Expense by category"
-            data={report.subPeriods.map((b) => ({
-              label: nameFor(categoryById, b.label, 'Other'),
-              value: b.incomeMinorUnits + b.expenseMinorUnits,
-            }))}
-          />
-        ) : (
-          <GroupedBarChart
-            title="Income vs expense"
-            data={report.subPeriods.map((b) => ({
-              label: b.label,
-              income: b.incomeMinorUnits,
-              expense: b.expenseMinorUnits,
-            }))}
-          />
-        )}
-      </Card>
+      {report.recurringBreakdown.length > 0 && (
+        <Card>
+          <SectionHeader title="Recurring" />
+          <p className="mb-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            Not included in the totals above — shown separately since each repeats on its own
+            schedule.
+          </p>
+          {report.recurringBreakdown.map((entry) => {
+            const template = recurringById.get(entry.recurringId)
+            const category = template ? categoryById.get(template.categoryId) : undefined
+            return (
+              <ListItem
+                key={entry.recurringId}
+                leading={<CategoryIcon icon={category?.icon ?? '🔁'} color={category?.color} />}
+                title={template?.name ?? 'Deleted recurring item'}
+                subtitle={
+                  template
+                    ? `${formatIntervalLabel(template.interval)}${entry.count > 1 ? ` · ${entry.count} occurrences this period` : ''}`
+                    : `${entry.count} occurrence${entry.count === 1 ? '' : 's'} this period`
+                }
+                trailing={
+                  <MoneyText
+                    amountMinorUnits={entry.amountMinorUnits}
+                    currency={baseCurrency}
+                    sign={entry.type}
+                    showSign
+                  />
+                }
+              />
+            )
+          })}
+        </Card>
+      )}
+
+      {period === 'day' ? (
+        <Card>
+          <SectionHeader title="Expense by category" />
+          {report.subPeriods.length === 0 ? (
+            <EmptyState icon="📊" title="No data for this period" />
+          ) : (
+            <BarChart
+              title="Expense by category"
+              data={report.subPeriods.map((b) => ({
+                label: nameFor(categoryById, b.label, 'Other'),
+                value: b.expenseMinorUnits,
+              }))}
+            />
+          )}
+        </Card>
+      ) : (
+        <>
+          {period !== 'week' && (
+            <Card>
+              <SectionHeader title="Income vs expense" />
+              {report.subPeriods.length === 0 ? (
+                <EmptyState icon="📊" title="No data for this period" />
+              ) : (
+                <GroupedBarChart
+                  title="Income vs expense"
+                  data={report.subPeriods.map((b) => ({
+                    label: b.label,
+                    income: b.incomeMinorUnits,
+                    expense: b.expenseMinorUnits,
+                  }))}
+                />
+              )}
+            </Card>
+          )}
+          <Card>
+            <SectionHeader title="Expense trend" />
+            {report.subPeriods.length === 0 ? (
+              <EmptyState icon="📈" title="No data for this period" />
+            ) : (
+              <LineChart
+                title="Expense trend"
+                labels={report.subPeriods.map((b) => b.label)}
+                series={[
+                  {
+                    label: 'Expense',
+                    color: 'var(--color-expense)',
+                    values: report.subPeriods.map((b) => b.expenseMinorUnits),
+                  },
+                ]}
+              />
+            )}
+          </Card>
+        </>
+      )}
 
       <Card>
         <SectionHeader
@@ -284,6 +380,28 @@ export function ReportsPage() {
             />
           )
         })}
+      </Card>
+
+      <Card>
+        <SectionHeader
+          title={`${breakdownType === 'income' ? 'Income' : 'Expense'} by category over time`}
+        />
+        {categoryTrend.series.every((s) => s.values.every((v) => v === 0)) ? (
+          <EmptyState icon="📈" title={`No ${breakdownType} in this range`} />
+        ) : (
+          <LineChart
+            title={`${breakdownType} by category over time`}
+            labels={categoryTrend.periodLabels}
+            series={categoryTrend.series.map((s, i) => ({
+              label:
+                s.categoryId === 'other'
+                  ? 'Other'
+                  : (categoryById.get(s.categoryId)?.name ?? 'Uncategorised'),
+              color: s.categoryId === 'other' ? 'var(--color-text-muted)' : CATEGORY_COLORS[i]!,
+              values: s.values,
+            }))}
+          />
+        )}
       </Card>
 
       {report.sourceBreakdown.length > 0 && (

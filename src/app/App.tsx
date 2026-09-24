@@ -12,6 +12,8 @@ import { HomePage } from '@/routes/home/HomePage'
 import { MoneyPage } from '@/routes/money/MoneyPage'
 import { NewTransactionPage } from '@/routes/money/NewTransactionPage'
 import { ReportsPage } from '@/routes/money/reports/ReportsPage'
+import { RecurringPage } from '@/routes/money/RecurringPage'
+import { RecurringConfirmPage } from '@/routes/money/RecurringConfirmPage'
 import { CategoriesPage } from '@/routes/money/CategoriesPage'
 import { SourcesPage } from '@/routes/money/SourcesPage'
 import { AccountsPage } from '@/routes/money/AccountsPage'
@@ -48,6 +50,8 @@ export function App() {
                   <Route path="money" element={<ReportsPage />} />
                   <Route path="money/new" element={<NewTransactionPage />} />
                   <Route path="money/transactions" element={<MoneyPage />} />
+                  <Route path="money/recurring" element={<RecurringPage />} />
+                  <Route path="money/recurring/confirm" element={<RecurringConfirmPage />} />
                   <Route path="money/categories" element={<CategoriesPage />} />
                   <Route path="money/sources" element={<SourcesPage />} />
                   <Route path="money/accounts" element={<AccountsPage />} />

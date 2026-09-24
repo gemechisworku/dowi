@@ -7,6 +7,7 @@ import type {
   MetaEntry,
   Note,
   NoteCollection,
+  RecurringTransaction,
   Settings,
   Source,
   Task,
@@ -32,6 +33,7 @@ export class DowiDatabase extends Dexie {
   notifications!: Table<AppNotification, string>
   settings!: Table<Settings, string>
   meta!: Table<MetaEntry, string>
+  recurringTransactions!: Table<RecurringTransaction, string>
 
   constructor(name = 'dowi') {
     super(name)
@@ -48,6 +50,14 @@ export class DowiDatabase extends Dexie {
       notifications: '&id, scheduledFor, read',
       settings: '&id',
       meta: '&key',
+    })
+
+    // Additive: a new `recurringId` index on transactions (always undefined
+    // on pre-existing rows, so no `.upgrade()` migration is needed) plus the
+    // new recurringTransactions table (PRD §9 recurring transactions).
+    this.version(2).stores({
+      transactions: '&id, date, type, categoryId, [type+date], currency, deletedAt, recurringId',
+      recurringTransactions: '&id, nextDueDate, deletedAt, paused',
     })
   }
 }

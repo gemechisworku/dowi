@@ -50,6 +50,12 @@ const COPY: Record<NotificationType, NotificationTypeCopy> = {
     explanation: "Here's a recap of what you got done today.",
     actionLabel: 'Open Dowi',
   },
+  'recurring-due': {
+    icon: '🔁',
+    explanation:
+      'A recurring payment is due. Review the details and confirm to record it — nothing is added until you do.',
+    actionLabel: 'Confirm & record',
+  },
 }
 
 export function getNotificationTypeCopy(type: NotificationType): NotificationTypeCopy {

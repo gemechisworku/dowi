@@ -1213,6 +1213,121 @@ evaluated.
 
 ---
 
+## M12 — Recurring transactions & Reports overhaul
+
+### Recurring transactions
+
+**Deliverable:** recurring income/expense templates (rent, subscriptions, salary,
+...), brought forward from PRD §9's deferred list. Each template independently
+chooses **auto-record** (silently logged on its due date) or **remind-and-confirm**
+(a `recurring-due` notification → the user confirms/edits before it's recorded).
+Editing a template only ever affects future occurrences — past recorded
+transactions are untouched, and there's no per-occurrence edit/skip. Generation is
+idempotent: the catch-up scheduler can run repeatedly the same day without ever
+double-creating an occurrence.
+
+- [x] Data model: `RecurringTransaction` (`src/db/types.ts`) — name, type, amount,
+      category/source/account, an interval (`{unit: week|month|year, every: N}`),
+      `startDate`/optional `endDate`, `autoRecord`, and occurrence-tracking fields
+      (`occurrenceIndex`, cached `nextDueDate`, `lastGeneratedDate`); `Transaction`
+      gains `recurringId` (the idempotency key). Dexie schema bumped to `version(2)`
+      (additive — a new `recurringTransactions` table plus a `recurringId` index on
+      `transactions`, no `.upgrade()` needed) in `src/db/db.ts`.
+- [x] Pure recurrence math (`src/lib/recurrence.ts`, dependency-free like
+      `reminders.ts`): `occurrenceAt()` computes every month/year occurrence fresh
+      from the original anchor date (never chained from a previous clamped
+      occurrence, so a rent anchored on the 31st never permanently drifts to the
+      28th); `computeDueRecurring()` decides, from the current templates +
+      already-recorded transactions + existing notifications, which occurrences to
+      auto-record (backfilling every missed one, deduped against existing
+      transactions by `recurringId`+date) versus remind on (only the single
+      earliest outstanding occurrence, deduped against existing notifications, so a
+      never-confirmed occurrence keeps reappearing rather than silently vanishing
+      or piling up a backlog).
+- [x] `src/db/recurringRepo.ts` — CRUD/soft-delete via the shared
+      `createSoftDeleteRepo` factory plus `confirmOccurrence()`, which advances
+      `occurrenceIndex`/`nextDueDate`/`lastGeneratedDate` by exactly one occurrence;
+      wired into `createRepositories()`.
+- [x] Scheduler integration (`src/notifications/scheduler.ts`): `catchUp()` now
+      also runs `computeDueRecurring`, creates real transactions for every due
+      auto-record occurrence, and raises `recurring-due` notifications (with OS
+      delivery, quiet-hours-respecting, exactly like every other reminder type) for
+      remind-and-confirm templates.
+- [x] UI: `/money/recurring` (list, FAB → create/edit sheet, swipe-to-delete with
+      undo — `RecurringPage`/`RecurringSheet`) and `/money/recurring/confirm`
+      (reached from a notification tap — `RecurringConfirmPage`, chromeless like
+      `/money/new`), added to `MoneySubNav`. `TransactionSheet` gained
+      `recurringTemplate`/`recurringDueDate` props so the confirm flow reuses the
+      exact same add/edit form, pre-filled from the template and defaulting the
+      date to the scheduled due date rather than today.
+
+### Reports overhaul
+
+**Deliverable:** fixed a real readability bug on the Reports page (long category
+names and many-bar charts clipped or overlapped, since every chart stretched a
+fixed-width SVG viewBox to fill its container) and made the chart set match what's
+actually meaningful at each period granularity, plus added Quarter/6-months periods
+and a category-over-time comparison.
+
+- [x] Chart width fix (`src/components/charts/chartLayout.ts`,
+      `ChartScrollContainer.tsx`): `BarChart`/`GroupedBarChart` now size their SVG
+      to an intrinsic pixel width (`computeChartWidth`, ~48px per bar/group) instead
+      of stretching a fixed 100-unit viewBox via `preserveAspectRatio="none"`, wrap
+      in a horizontally-scrolling container, and truncate long labels (with the
+      full value still in a `<title>` and in the existing `ChartDataTable` a11y
+      table) instead of letting them overlap or clip.
+- [x] New `LineChart` component (`src/components/charts/LineChart.tsx`) — shared by
+      the new expense-trend and category-trend charts below; multi-series, one
+      shared y-scale, same scroll/truncation treatment as the bar charts.
+- [x] New periods — Quarter and 6 Months (`src/lib/period.ts`'s `Period` type),
+      boundary-aligned to the existing `fyStartMonth` setting (the same one already
+      used for the Year period), not fixed calendar quarters.
+- [x] Period-aware chart selection on `ReportsPage.tsx`: Day keeps its
+      expense-by-category bar chart; Week drops the income-vs-expense comparison
+      (not meaningful at that granularity) and instead shows a day-by-day expense
+      `LineChart`; Month/Quarter/6-months/Year keep the income-vs-expense
+      `GroupedBarChart` and additionally get an expense-trend `LineChart` across
+      their sub-periods (weeks within a month, months within a quarter/half-year/
+      year).
+- [x] Category-over-time comparison (`buildCategoryTrend` in
+      `src/routes/money/reports/aggregate.ts`): a new "by category over time" chart
+      showing each category's spend across several consecutive periods, so
+      categories can be compared against each other over time, not just against a
+      single period's total — reuses the existing income/expense toggle, ranks
+      categories by total-across-window, and folds everything past the top few into
+      one "Other" series (colors shared with the donut chart via the new
+      `chartColors.ts`, so the same category always reads as the same color).
+- [x] Day polish: the day chart no longer mixes income into what's meant to
+      be an expense-by-category breakdown (`buildSubPeriods`' day branch now
+      filters to `type === 'expense'` before bucketing, matching
+      `ReportData.subPeriods`' own doc comment, which already claimed this
+      but the code didn't); section header renamed from the now-inaccurate
+      "Income vs expense" to "Expense by category".
+- [x] Week x-axis labels are weekday initials (M/T/W/…) instead of raw
+      "YYYY-MM-DD" strings, in the order the configured week-start day
+      produces (`buildSubPeriods`' week branch).
+- [x] Recurring transactions get their own section, excluded from every
+      regular total: `buildReport` now splits in-range transactions into
+      recurring (`Transaction.recurringId` set) and non-recurring, and only
+      the non-recurring subset feeds `income`/`expense`/`netMinorUnits`/
+      `netDeltaPct`/`subPeriods`/`categoryBreakdown`/`sourceBreakdown`/
+      `accountBreakdown`/`excludedCurrencies` (and, transitively, `buildCategoryTrend`
+      and Home's own use of `buildReport`). A new `recurringBreakdown` field
+      sums each recurring item's occurrences that fell in range — so a
+      monthly item viewed at month granularity shows its one occurrence,
+      while a weekly item viewed at month granularity shows the sum of every
+      week's occurrence that month — rendered as its own "Recurring" card on
+      Reports. The Transactions list (`MoneyPage.tsx`) gets the same
+      treatment: day subtotals (`groupByMonthAndDay`) exclude recurring rows,
+      and a parallel "Recurring" card (`groupRecurring`) lists them summed
+      per item, expandable to the individual occurrences for editing. CSV
+      export and "view transactions" still include recurring rows — only the
+      aggregated totals/charts exclude them, not the raw data.
+
+**Test guide:** TESTING.md §M12
+
+---
+
 ## Dependency order
 
 ```

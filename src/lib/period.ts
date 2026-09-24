@@ -10,7 +10,7 @@
  * arithmetic, then formats straight back to a plain date string.
  */
 
-export type Period = 'day' | 'week' | 'month' | 'year'
+export type Period = 'day' | 'week' | 'month' | 'quarter' | 'halfYear' | 'year'
 
 export interface DateRange {
   /** Inclusive, "YYYY-MM-DD". */
@@ -82,6 +82,63 @@ export function getFinancialYearLabel(range: DateRange, fyStartMonth: number): s
   return `FY ${startYear}/${String(endYear).slice(-2)}`
 }
 
+/** How many whole calendar months `date` falls after the start of its financial year (0-based). */
+function monthsIntoFy(date: string, fyStartMonth: number): number {
+  const fy = getFinancialYearRange(date, fyStartMonth)
+  const fyStart = parseDateString(fy.start)
+  const d = parseDateString(date)
+  return (d.getFullYear() - fyStart.getFullYear()) * 12 + (d.getMonth() - fyStart.getMonth())
+}
+
+/**
+ * The `blockMonths`-wide, FY-start-aligned block containing `date` — e.g.
+ * with `blockMonths = 3` this is the quarter (Q1..Q4) of the financial year
+ * that starts at `fyStartMonth`, not a fixed calendar quarter.
+ */
+function getFyBlockRange(date: string, fyStartMonth: number, blockMonths: number): DateRange {
+  const fy = getFinancialYearRange(date, fyStartMonth)
+  const fyStart = parseDateString(fy.start)
+  const blockIndex = Math.floor(monthsIntoFy(date, fyStartMonth) / blockMonths)
+  const blockStart = new Date(
+    fyStart.getFullYear(),
+    fyStart.getMonth() + blockIndex * blockMonths,
+    1,
+  )
+  const blockEnd = new Date(blockStart.getFullYear(), blockStart.getMonth() + blockMonths, 0)
+  return { start: toDateString(blockStart), end: toDateString(blockEnd) }
+}
+
+/** The financial-year-aligned quarter containing `date` (blocks of 3 months, starting at `fyStartMonth`). */
+export function getQuarterRange(date: string, fyStartMonth: number): DateRange {
+  return getFyBlockRange(date, fyStartMonth, 3)
+}
+
+/** The financial-year-aligned half-year containing `date` (blocks of 6 months, starting at `fyStartMonth`). */
+export function getHalfYearRange(date: string, fyStartMonth: number): DateRange {
+  return getFyBlockRange(date, fyStartMonth, 6)
+}
+
+function getFyBlockLabel(
+  range: DateRange,
+  fyStartMonth: number,
+  blockMonths: number,
+  prefix: string,
+): string {
+  const fy = getFinancialYearRange(range.start, fyStartMonth)
+  const blockIndex = Math.floor(monthsIntoFy(range.start, fyStartMonth) / blockMonths)
+  return `${prefix}${blockIndex + 1} ${getFinancialYearLabel(fy, fyStartMonth)}`
+}
+
+/** A human label for a quarter range, e.g. "Q1 FY 2026" — relative to the FY it falls in. */
+export function getQuarterLabel(range: DateRange, fyStartMonth: number): string {
+  return getFyBlockLabel(range, fyStartMonth, 3, 'Q')
+}
+
+/** A human label for a half-year range, e.g. "H1 FY 2026" — relative to the FY it falls in. */
+export function getHalfYearLabel(range: DateRange, fyStartMonth: number): string {
+  return getFyBlockLabel(range, fyStartMonth, 6, 'H')
+}
+
 export function getRangeForPeriod(
   period: Period,
   date: string,
@@ -94,6 +151,10 @@ export function getRangeForPeriod(
       return getWeekRange(date, opts.weekStartsOn)
     case 'month':
       return getMonthRange(date)
+    case 'quarter':
+      return getQuarterRange(date, opts.fyStartMonth)
+    case 'halfYear':
+      return getHalfYearRange(date, opts.fyStartMonth)
     case 'year':
       return getFinancialYearRange(date, opts.fyStartMonth)
   }
@@ -111,6 +172,12 @@ export function shiftPeriod(period: Period, date: string, count: number): string
       break
     case 'month':
       d.setMonth(d.getMonth() + count)
+      break
+    case 'quarter':
+      d.setMonth(d.getMonth() + count * 3)
+      break
+    case 'halfYear':
+      d.setMonth(d.getMonth() + count * 6)
       break
     case 'year':
       d.setFullYear(d.getFullYear() + count)

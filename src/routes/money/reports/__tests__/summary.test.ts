@@ -21,6 +21,7 @@ function report(overrides: Partial<ReportData> = {}): ReportData {
     sourceBreakdown: [],
     accountBreakdown: [],
     excludedCurrencies: {},
+    recurringBreakdown: [],
     ...overrides,
   }
 }

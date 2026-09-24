@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getPeriodLabel } from '../periodLabel'
+import { getQuarterRange, getHalfYearRange } from '@/lib/period'
+import { getPeriodLabel, getShortPeriodLabel } from '../periodLabel'
 
 describe('getPeriodLabel', () => {
   it('formats a day', () => {
@@ -23,6 +24,48 @@ describe('getPeriodLabel', () => {
     )
     expect(getPeriodLabel('year', { range: { start: '2026-07-01', end: '2027-06-30' } }, 7)).toBe(
       'FY 2026/27',
+    )
+  })
+
+  it('formats a quarter using the quarter label convention', () => {
+    const range = getQuarterRange('2026-09-19', 1)
+    expect(getPeriodLabel('quarter', { range }, 1)).toBe('Q3 FY 2026')
+  })
+
+  it('formats a half-year using the half-year label convention', () => {
+    const range = getHalfYearRange('2026-09-19', 1)
+    expect(getPeriodLabel('halfYear', { range }, 1)).toBe('H2 FY 2026')
+  })
+})
+
+describe('getShortPeriodLabel', () => {
+  it('formats a day as a short date', () => {
+    expect(getShortPeriodLabel('day', { start: '2026-09-19', end: '2026-09-19' }, 1)).toBe('Sep 19')
+  })
+
+  it('formats a week as a short range', () => {
+    expect(getShortPeriodLabel('week', { start: '2026-09-14', end: '2026-09-20' }, 1)).toBe(
+      'Sep 14 – Sep 20',
+    )
+  })
+
+  it('formats a month as a short month name', () => {
+    expect(getShortPeriodLabel('month', { start: '2026-09-01', end: '2026-09-30' }, 1)).toBe('Sep')
+  })
+
+  it('formats a quarter as just "Qn"', () => {
+    const range = getQuarterRange('2026-09-19', 1)
+    expect(getShortPeriodLabel('quarter', range, 1)).toBe('Q3')
+  })
+
+  it('formats a half-year as just "Hn"', () => {
+    const range = getHalfYearRange('2026-09-19', 1)
+    expect(getShortPeriodLabel('halfYear', range, 1)).toBe('H2')
+  })
+
+  it('formats a year as the full FY label', () => {
+    expect(getShortPeriodLabel('year', { start: '2026-01-01', end: '2026-12-31' }, 1)).toBe(
+      'FY 2026',
     )
   })
 })
