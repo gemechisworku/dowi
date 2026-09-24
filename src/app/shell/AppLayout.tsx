@@ -12,7 +12,11 @@ import { BottomNav } from './BottomNav'
 // `/money/new` and `/tasks/new` (M8) are the same idea for a create sheet
 // reached directly by URL — Home's quick actions and the PWA manifest
 // shortcuts — rather than via each list page's own local `addOpen` state.
-const CHROMELESS_PREFIXES = ['/money/new', '/notes/new', '/tasks/new']
+// `/money/recurring/confirm` is the same treatment for confirming a
+// recurring occurrence from a notification tap — note it's deliberately the
+// longer, more specific path (not `/money/recurring`), so the recurring
+// templates list page itself keeps its normal chrome.
+const CHROMELESS_PREFIXES = ['/money/new', '/money/recurring/confirm', '/notes/new', '/tasks/new']
 
 // Everything else under /notes/ (collections, trash) is an ordinary
 // list/CRUD screen and keeps the chrome + NotesSubNav, same as Tasks'

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useDatabase } from '@/app/db/useDatabase'
-import type { Transaction, TransactionType } from '@/db/types'
+import type { RecurringTransaction, Transaction, TransactionType } from '@/db/types'
 import { parseAmountToMinorUnits, minorUnitExponent } from '@/lib/money'
 import { todayString } from '@/lib/period'
 import { Sheet } from '@/components/ui/Sheet'
@@ -26,6 +26,10 @@ export interface TransactionSheetProps {
   transaction?: Transaction
   /** Pre-selects income/expense when creating (e.g. from a quick-action). */
   initialType?: TransactionType
+  /** Present when confirming a recurring occurrence — prefills every field below (only used when `transaction` is absent). */
+  recurringTemplate?: RecurringTransaction
+  /** Which occurrence of `recurringTemplate` is being confirmed — used only to advance the template's state after save, and to default the transaction's date to the scheduled due date rather than today. */
+  recurringDueDate?: string
 }
 
 /**
@@ -39,7 +43,13 @@ export interface TransactionSheetProps {
  * time the same instance is reopened (the pattern React's own docs prefer:
  * "resetting state when a prop changes" via key/remount, not useEffect).
  */
-export function TransactionSheet({ onClose, transaction, initialType }: TransactionSheetProps) {
+export function TransactionSheet({
+  onClose,
+  transaction,
+  initialType,
+  recurringTemplate,
+  recurringDueDate,
+}: TransactionSheetProps) {
   const { repos, settingsRepo } = useDatabase()
   const settings = useLiveQuery(() => settingsRepo.get(), [settingsRepo])
   const categories = useLiveQuery(() => repos.categories.list(), [repos], EMPTY_ARRAY)
@@ -48,19 +58,32 @@ export function TransactionSheet({ onClose, transaction, initialType }: Transact
   const { show } = useSnackbar()
 
   const isEdit = Boolean(transaction)
-  const [type, setType] = useState<TransactionType>(transaction?.type ?? initialType ?? 'expense')
-  const [amount, setAmount] = useState(() =>
-    transaction
-      ? (transaction.amountMinorUnits / 10 ** minorUnitExponent(transaction.currency)).toString()
-      : '',
+  const [type, setType] = useState<TransactionType>(
+    transaction?.type ?? recurringTemplate?.type ?? initialType ?? 'expense',
   )
-  const [currency, setCurrency] = useState(transaction?.currency ?? 'ETB')
-  const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? '')
-  const [date, setDate] = useState(transaction?.date ?? todayString())
-  const [accountId, setAccountId] = useState(transaction?.accountId ?? '')
-  const [sourceId, setSourceId] = useState(transaction?.sourceId ?? '')
-  const [note, setNote] = useState(transaction?.note ?? '')
-  const [tagsInput, setTagsInput] = useState(transaction?.tags.join(', ') ?? '')
+  const [amount, setAmount] = useState(() => {
+    const source = transaction ?? recurringTemplate
+    return source
+      ? (source.amountMinorUnits / 10 ** minorUnitExponent(source.currency)).toString()
+      : ''
+  })
+  const [currency, setCurrency] = useState(
+    transaction?.currency ?? recurringTemplate?.currency ?? 'ETB',
+  )
+  const [categoryId, setCategoryId] = useState(
+    transaction?.categoryId ?? recurringTemplate?.categoryId ?? '',
+  )
+  const [date, setDate] = useState(transaction?.date ?? recurringDueDate ?? todayString())
+  const [accountId, setAccountId] = useState(
+    transaction?.accountId ?? recurringTemplate?.accountId ?? '',
+  )
+  const [sourceId, setSourceId] = useState(
+    transaction?.sourceId ?? recurringTemplate?.sourceId ?? '',
+  )
+  const [note, setNote] = useState(transaction?.note ?? recurringTemplate?.note ?? '')
+  const [tagsInput, setTagsInput] = useState(
+    transaction?.tags.join(', ') ?? recurringTemplate?.tags.join(', ') ?? '',
+  )
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -111,6 +134,7 @@ export function TransactionSheet({ onClose, transaction, initialType }: Transact
       sourceId: type === 'income' ? sourceId || undefined : undefined,
       note: note.trim() || undefined,
       tags,
+      ...(recurringTemplate && !transaction ? { recurringId: recurringTemplate.id } : {}),
     }
 
     if (transaction) {
@@ -118,6 +142,9 @@ export function TransactionSheet({ onClose, transaction, initialType }: Transact
       show({ message: 'Transaction updated' })
     } else {
       await repos.transactions.create(payload)
+      if (recurringTemplate) {
+        await repos.recurring.confirmOccurrence(recurringTemplate.id, recurringDueDate as string)
+      }
       show({ message: type === 'income' ? 'Income added' : 'Expense added' })
     }
     onClose()

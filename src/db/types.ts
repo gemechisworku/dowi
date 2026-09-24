@@ -26,6 +26,52 @@ export interface Transaction extends BaseEntity {
   accountId?: string
   note?: string
   tags: string[]
+  /** Set only when this was generated from a RecurringTransaction template — also the idempotency key that stops the catch-up scheduler from double-generating an occurrence. */
+  recurringId?: string
+}
+
+export type RecurrenceUnit = 'week' | 'month' | 'year'
+
+export interface RecurrenceInterval {
+  unit: RecurrenceUnit
+  /** How many units between occurrences, e.g. {unit:'week', every:2} = bi-weekly. Always >= 1. */
+  every: number
+}
+
+/**
+ * A recurring income/expense template (rent, subscriptions, ...). Each
+ * occurrence is computed on demand from `startDate` + `interval` +
+ * `occurrenceIndex` (see `occurrenceAt` in `src/lib/recurrence.ts`) rather
+ * than stored per-occurrence — editing the template only ever affects
+ * future occurrences, since nothing about a past, already-recorded
+ * Transaction refers back to this beyond its own `recurringId`.
+ */
+export interface RecurringTransaction extends BaseEntity {
+  /** Distinct from the category — lets multiple recurring items share one category (e.g. "Netflix" and "Spotify" both under Subscriptions). */
+  name: string
+  type: TransactionType
+  amountMinorUnits: number
+  currency: string
+  categoryId: string
+  sourceId?: string
+  accountId?: string
+  note?: string
+  tags: string[]
+  interval: RecurrenceInterval
+  /** Local calendar date, "YYYY-MM-DD" — the fixed anchor every occurrence is computed from. */
+  startDate: string
+  /** Inclusive, "YYYY-MM-DD" — omitted means the recurrence runs indefinitely. */
+  endDate?: string
+  /** true = silently create the transaction on the due date; false = notify and let the user confirm/edit first. */
+  autoRecord: boolean
+  /** How many occurrences have been generated/confirmed so far — the index fed into occurrenceAt() to find the next due date. */
+  occurrenceIndex: number
+  /** = occurrenceAt(startDate, interval, occurrenceIndex), cached so Dexie can sort/index on it cheaply without recomputing per row. */
+  nextDueDate: string
+  /** The due date of the most recently generated/confirmed occurrence, if any. */
+  lastGeneratedDate?: string
+  /** Pauses generation/reminders without deleting the template. */
+  paused: boolean
 }
 
 export interface Category extends BaseEntity {
@@ -111,6 +157,7 @@ export type NotificationType =
   | 'morning-nudge'
   | 'evening-streak'
   | 'evening-summary'
+  | 'recurring-due'
 
 /**
  * Extra, type-specific detail rendered on the notification detail page
@@ -130,6 +177,8 @@ export interface NotificationDetailData {
   notesAdded?: number
   /** task-due: which task this reminder is about. */
   taskId?: string
+  /** recurring-due: which RecurringTransaction template this reminder is about. */
+  recurringId?: string
 }
 
 export interface AppNotification {

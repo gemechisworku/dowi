@@ -1,6 +1,7 @@
 import type { DowiDatabase } from './db'
 import { createSoftDeleteRepo } from './softDeleteRepo'
 import { createStreakRepo } from './streakRepo'
+import { createRecurringRepo } from './recurringRepo'
 import type {
   Account,
   Category,
@@ -46,6 +47,7 @@ export function createRepositories(db: DowiDatabase) {
     db.transactions,
   )
   const rates = createSoftDeleteRepo<ExchangeRate, CreateInput<ExchangeRate>>(db.rates)
+  const recurring = createRecurringRepo(db)
 
   // Streak tracking (PRD-adjacent, added post-M9): every real income/expense,
   // note or task counts as "used the app today" — deliberately not
@@ -134,6 +136,7 @@ export function createRepositories(db: DowiDatabase) {
     tasks,
     transactions,
     rates: { ...rates, getRateForCurrency },
+    recurring,
     streak,
   }
 }
