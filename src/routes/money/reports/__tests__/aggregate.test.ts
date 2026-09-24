@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildReport, isFuturePeriod, type ReportOptions } from '../aggregate'
+import { buildReport, buildCategoryTrend, isFuturePeriod, type ReportOptions } from '../aggregate'
+import { MAX_CATEGORY_SLICES } from '../chartColors'
 import type { Transaction } from '@/db/types'
 
 let counter = 0
@@ -225,6 +226,101 @@ describe('buildReport — mixed currency', () => {
   })
 })
 
+describe('buildReport — recurring transactions', () => {
+  it('excludes recurring-generated transactions from the headline income/expense totals', () => {
+    const transactions = [
+      tx({ type: 'expense', amountMinorUnits: 10000 }), // ordinary
+      tx({ type: 'expense', amountMinorUnits: 99999, recurringId: 'rent' }), // recurring — must not count
+    ]
+    const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
+    expect(report.expense.totalMinorUnits).toBe(10000)
+    expect(report.netMinorUnits).toBe(-10000)
+  })
+
+  it('excludes recurring-generated transactions from sub-period buckets, category/source/account breakdowns, and excludedCurrencies', () => {
+    const transactions = [
+      tx({
+        type: 'expense',
+        date: '2026-09-10',
+        categoryId: 'food',
+        sourceId: undefined,
+        accountId: 'bank',
+        currency: 'USD', // unconvertible with baseOpts — would otherwise show up in excludedCurrencies
+        amountMinorUnits: 5000,
+        recurringId: 'rent',
+      }),
+    ]
+    const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
+    expect(report.subPeriods.every((b) => b.expenseMinorUnits === 0)).toBe(true)
+    expect(report.categoryBreakdown.expense).toEqual([])
+    expect(report.accountBreakdown).toEqual([])
+    expect(report.excludedCurrencies).toEqual({})
+  })
+
+  it('still includes recurring-generated transactions in the raw `transactions` list (for CSV/view-transactions)', () => {
+    const transactions = [tx({ type: 'expense', amountMinorUnits: 5000, recurringId: 'rent' })]
+    const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
+    expect(report.transactions).toHaveLength(1)
+  })
+
+  it('excludes recurring transactions from the previous-period comparison too', () => {
+    const transactions = [
+      tx({ type: 'income', date: '2026-09-10', amountMinorUnits: 20000 }), // this month, net +20000
+      tx({ type: 'income', date: '2026-08-10', amountMinorUnits: 10000 }), // last month, net +10000
+      tx({
+        type: 'income',
+        date: '2026-08-10',
+        amountMinorUnits: 999999,
+        recurringId: 'salary',
+      }), // recurring, must not inflate last month's net
+    ]
+    const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
+    expect(report.netDeltaPct).toBe(100) // still doubled, not diluted by the recurring income
+  })
+
+  it('sums a weekly recurring item across every occurrence within a monthly-filtered range', () => {
+    const transactions = [
+      tx({ date: '2026-09-01', amountMinorUnits: 1000, recurringId: 'weekly-rent' }),
+      tx({ date: '2026-09-08', amountMinorUnits: 1000, recurringId: 'weekly-rent' }),
+      tx({ date: '2026-09-15', amountMinorUnits: 1000, recurringId: 'weekly-rent' }),
+      tx({ date: '2026-09-22', amountMinorUnits: 1000, recurringId: 'weekly-rent' }),
+    ]
+    const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
+    expect(report.recurringBreakdown).toEqual([
+      { recurringId: 'weekly-rent', type: 'expense', amountMinorUnits: 4000, count: 4 },
+    ])
+  })
+
+  it('passes a monthly recurring item through as its single occurrence, keyed separately per item', () => {
+    const transactions = [
+      tx({ date: '2026-09-01', amountMinorUnits: 50000, type: 'expense', recurringId: 'rent' }),
+      tx({ date: '2026-09-05', amountMinorUnits: 8000, type: 'income', recurringId: 'salary' }),
+    ]
+    const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
+    const byId = new Map(report.recurringBreakdown.map((e) => [e.recurringId, e]))
+    expect(byId.get('rent')).toEqual({
+      recurringId: 'rent',
+      type: 'expense',
+      amountMinorUnits: 50000,
+      count: 1,
+    })
+    expect(byId.get('salary')).toEqual({
+      recurringId: 'salary',
+      type: 'income',
+      amountMinorUnits: 8000,
+      count: 1,
+    })
+  })
+
+  it('omits a recurring item from the breakdown entirely when it has no occurrence in range', () => {
+    const transactions = [
+      tx({ date: '2026-08-15', amountMinorUnits: 50000, recurringId: 'rent' }), // last month, out of range
+    ]
+    const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
+    expect(report.recurringBreakdown).toEqual([])
+  })
+})
+
 describe('buildReport — empty period', () => {
   it('returns zeroed totals and empty breakdowns, not an error', () => {
     const report = buildReport([], 'month', '2026-09-15', baseOpts)
@@ -263,6 +359,28 @@ describe('buildReport — sub-period buckets', () => {
     expect(report.subPeriods.map((b) => b.label).sort()).toEqual(['food', 'transport'])
   })
 
+  it('excludes income from the day bucketing — only expense categories appear', () => {
+    const transactions = [
+      tx({ date: '2026-09-15', categoryId: 'food', type: 'expense', amountMinorUnits: 1000 }),
+      tx({ date: '2026-09-15', categoryId: 'salary', type: 'income', amountMinorUnits: 500000 }),
+    ]
+    const report = buildReport(transactions, 'day', '2026-09-15', baseOpts)
+    expect(report.subPeriods.map((b) => b.label)).toEqual(['food'])
+    expect(report.subPeriods[0]?.expenseMinorUnits).toBe(1000)
+    expect(report.subPeriods[0]?.incomeMinorUnits).toBe(0)
+  })
+
+  it('labels a week bucket by weekday initial, in week-start order', () => {
+    // 2026-09-14 is a Monday; with weekStartsOn=1 the week runs Mon..Sun.
+    const report = buildReport([], 'week', '2026-09-16', { ...baseOpts, weekStartsOn: 1 })
+    expect(report.subPeriods.map((b) => b.label)).toEqual(['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+  })
+
+  it('shifts the week-bucket label order to match a Sunday week start', () => {
+    const report = buildReport([], 'week', '2026-09-16', { ...baseOpts, weekStartsOn: 0 })
+    expect(report.subPeriods.map((b) => b.label)).toEqual(['S', 'M', 'T', 'W', 'T', 'F', 'S'])
+  })
+
   it('sums correctly across sub-period buckets for a month', () => {
     const transactions = [
       tx({ type: 'expense', date: '2026-09-01', amountMinorUnits: 1000 }),
@@ -289,6 +407,93 @@ describe('buildReport — sub-period buckets', () => {
 describe('isFuturePeriod', () => {
   it('is false for the current month', () => {
     expect(isFuturePeriod('month', '2026-09-15', baseOpts)).toBe(false)
+  })
+})
+
+describe('buildCategoryTrend', () => {
+  it('returns one label and one aligned value per series per window period, oldest first', () => {
+    const transactions = [
+      tx({ date: '2026-07-15', categoryId: 'food', amountMinorUnits: 1000 }),
+      tx({ date: '2026-08-15', categoryId: 'food', amountMinorUnits: 2000 }),
+      tx({ date: '2026-09-15', categoryId: 'food', amountMinorUnits: 3000 }),
+    ]
+    const trend = buildCategoryTrend(transactions, 'month', '2026-09-15', 'expense', 3, baseOpts)
+    expect(trend.periodLabels).toHaveLength(3)
+    const food = trend.series.find((s) => s.categoryId === 'food')
+    expect(food?.values).toEqual([1000, 2000, 3000]) // Jul, Aug, Sep — oldest to newest
+  })
+
+  it('zero-fills a period where a category had no spend, rather than omitting the point', () => {
+    const transactions = [
+      tx({ date: '2026-07-15', categoryId: 'food', amountMinorUnits: 1000 }),
+      // no food transaction in August
+      tx({ date: '2026-09-15', categoryId: 'food', amountMinorUnits: 3000 }),
+    ]
+    const trend = buildCategoryTrend(transactions, 'month', '2026-09-15', 'expense', 3, baseOpts)
+    const food = trend.series.find((s) => s.categoryId === 'food')
+    expect(food?.values).toEqual([1000, 0, 3000])
+  })
+
+  it('keeps only the top categories by total-across-window and folds the rest into "other"', () => {
+    // MAX_CATEGORY_SLICES - 1 categories get their own series; everything
+    // past that is summed into one 'other' series, per category.
+    const categoryCount = MAX_CATEGORY_SLICES + 2
+    const transactions = Array.from({ length: categoryCount }, (_, i) =>
+      tx({
+        date: '2026-09-15',
+        categoryId: `cat-${i}`,
+        // Descending amounts so ranking is unambiguous: cat-0 is biggest.
+        amountMinorUnits: (categoryCount - i) * 1000,
+      }),
+    )
+    const trend = buildCategoryTrend(transactions, 'month', '2026-09-15', 'expense', 1, baseOpts)
+    expect(trend.series).toHaveLength(MAX_CATEGORY_SLICES) // top (N-1) + one 'other'
+    const seriesIds = trend.series.map((s) => s.categoryId)
+    for (let i = 0; i < MAX_CATEGORY_SLICES - 1; i++) {
+      expect(seriesIds).toContain(`cat-${i}`)
+    }
+    expect(seriesIds).toContain('other')
+
+    const other = trend.series.find((s) => s.categoryId === 'other')
+    const expectedOtherTotal = Array.from({ length: categoryCount }, (_, i) => i)
+      .filter((i) => i >= MAX_CATEGORY_SLICES - 1)
+      .reduce((sum, i) => sum + (categoryCount - i) * 1000, 0)
+    expect(other?.values).toEqual([expectedOtherTotal])
+  })
+
+  it('omits the "other" series entirely when there are no extra categories to fold in', () => {
+    const transactions = [
+      tx({ date: '2026-09-15', categoryId: 'food', amountMinorUnits: 1000 }),
+      tx({ date: '2026-09-15', categoryId: 'transport', amountMinorUnits: 2000 }),
+    ]
+    const trend = buildCategoryTrend(transactions, 'month', '2026-09-15', 'expense', 1, baseOpts)
+    expect(trend.series.map((s) => s.categoryId).sort()).toEqual(['food', 'transport'])
+  })
+
+  it('only includes transactions of the requested type', () => {
+    const transactions = [
+      tx({ type: 'expense', date: '2026-09-15', categoryId: 'food', amountMinorUnits: 1000 }),
+      tx({ type: 'income', date: '2026-09-15', categoryId: 'salary', amountMinorUnits: 500000 }),
+    ]
+    const expenseTrend = buildCategoryTrend(
+      transactions,
+      'month',
+      '2026-09-15',
+      'expense',
+      1,
+      baseOpts,
+    )
+    expect(expenseTrend.series.map((s) => s.categoryId)).toEqual(['food'])
+
+    const incomeTrend = buildCategoryTrend(
+      transactions,
+      'month',
+      '2026-09-15',
+      'income',
+      1,
+      baseOpts,
+    )
+    expect(incomeTrend.series.map((s) => s.categoryId)).toEqual(['salary'])
   })
 })
 

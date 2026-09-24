@@ -4,7 +4,8 @@ import { useDatabase } from '@/app/db/useDatabase'
 import type { Settings, Transaction } from '@/db/types'
 import { DEFAULT_SETTINGS } from '@/db/settingsRepo'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
-import { groupByMonthAndDay } from './groupTransactions'
+import { formatIntervalLabel } from '@/lib/recurrence'
+import { groupByMonthAndDay, groupRecurring } from './groupTransactions'
 import { useTransactionFilters } from './useTransactionFilters'
 import { TRANSACTION_PRESETS, presetDateRange } from './transactionPresets'
 import { TransactionFilterSheet, type FilterFormValue } from './TransactionFilterSheet'
@@ -35,6 +36,7 @@ export function MoneyPage() {
   const categories = useLiveQuery(() => repos.categories.list(), [repos], EMPTY_ARRAY)
   const accounts = useLiveQuery(() => repos.accounts.list(), [repos], EMPTY_ARRAY)
   const sources = useLiveQuery(() => repos.sources.list(), [repos], EMPTY_ARRAY)
+  const recurringTemplates = useLiveQuery(() => repos.recurring.list(), [repos], EMPTY_ARRAY)
 
   // Preset chips (Today/This week/This month/All) resolve their date bounds
   // fresh every render rather than freezing them into the URL — only
@@ -53,19 +55,31 @@ export function MoneyPage() {
   )
   const sorted = useMemo(() => [...filtered].sort((a, b) => (a.date < b.date ? 1 : -1)), [filtered])
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  // Recurring-generated transactions get their own summarized section below
+  // instead of being mixed into the day-by-day list/pagination — same
+  // reasoning as Reports' headline totals excluding them.
+  const nonRecurring = useMemo(() => sorted.filter((t) => !t.recurringId), [sorted])
+  const recurringOnly = useMemo(() => sorted.filter((t) => t.recurringId), [sorted])
+  const recurringGroups = useMemo(() => groupRecurring(recurringOnly), [recurringOnly])
+
+  const totalPages = Math.max(1, Math.ceil(nonRecurring.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
-  const visible = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const visible = nonRecurring.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const groups = useMemo(() => groupByMonthAndDay(visible), [visible])
 
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<Transaction | undefined>(undefined)
+  const [expandedRecurringId, setExpandedRecurringId] = useState<string | null>(null)
   const { show } = useSnackbar()
 
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts])
   const sourceById = useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources])
+  const recurringById = useMemo(
+    () => new Map(recurringTemplates.map((r) => [r.id, r])),
+    [recurringTemplates],
+  )
 
   function openEdit(tx: Transaction) {
     setEditing(tx)
@@ -77,6 +91,32 @@ export function MoneyPage() {
       message: 'Transaction deleted',
       action: { label: 'Undo', onClick: () => repos.transactions.restore(tx.id) },
     })
+  }
+
+  // Shared by the day-grouped list and an expanded recurring group below —
+  // same row, same swipe-to-delete/tap-to-edit behavior, wherever it appears.
+  function renderTransactionRow(tx: Transaction) {
+    const category = categoryById.get(tx.categoryId)
+    return (
+      <SwipeableRow key={tx.id} onSwipeLeft={() => void handleQuickDelete(tx)}>
+        <ListItem
+          onClick={() => openEdit(tx)}
+          leading={<CategoryIcon icon={category?.icon ?? '📦'} color={category?.color} />}
+          title={tx.note || category?.name || (tx.type === 'income' ? 'Income' : 'Expense')}
+          subtitle={[category?.name, accountById.get(tx.accountId ?? '')?.name]
+            .filter(Boolean)
+            .join(' · ')}
+          trailing={
+            <MoneyText
+              amountMinorUnits={tx.amountMinorUnits}
+              currency={tx.currency}
+              sign={tx.type}
+              showSign
+            />
+          }
+        />
+      </SwipeableRow>
+    )
   }
 
   const filterChips: { key: keyof FilterFormValue; label: string }[] = []
@@ -154,8 +194,68 @@ export function MoneyPage() {
         </div>
       )}
 
+      {recurringGroups.length > 0 && (
+        <div className="px-4">
+          <Card className="mb-4">
+            <div
+              className="mb-1 text-xs font-bold uppercase tracking-wide"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              Recurring
+            </div>
+            <p className="mb-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              Not included in the daily totals below — each repeats on its own schedule, so it's
+              summed here instead.
+            </p>
+            {recurringGroups.map((group) => {
+              const template = recurringById.get(group.recurringId)
+              const category = template ? categoryById.get(template.categoryId) : undefined
+              const expanded = expandedRecurringId === group.recurringId
+              return (
+                <div key={group.recurringId}>
+                  <ListItem
+                    onClick={() => setExpandedRecurringId(expanded ? null : group.recurringId)}
+                    leading={<CategoryIcon icon={category?.icon ?? '🔁'} color={category?.color} />}
+                    title={template?.name ?? 'Deleted recurring item'}
+                    subtitle={[
+                      template ? formatIntervalLabel(template.interval) : null,
+                      group.transactions.length > 1
+                        ? `${group.transactions.length} occurrences`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                    trailing={
+                      <span className="flex flex-col items-end gap-0.5">
+                        {Object.entries(group.subtotals).map(([currency, amount]) => (
+                          <MoneyText
+                            key={currency}
+                            amountMinorUnits={amount}
+                            currency={currency}
+                            sign={group.type}
+                            showSign
+                          />
+                        ))}
+                      </span>
+                    }
+                  />
+                  {expanded && (
+                    <div
+                      className="ml-4 border-l pl-2"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      {group.transactions.map(renderTransactionRow)}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </Card>
+        </div>
+      )}
+
       <div className="px-4">
-        {groups.length === 0 ? (
+        {groups.length === 0 && recurringGroups.length === 0 ? (
           <EmptyState
             icon="💸"
             title={activeCount > 0 ? 'No transactions match these filters' : 'No transactions yet'}
@@ -189,35 +289,7 @@ export function MoneyPage() {
                       ))}
                     </span>
                   </div>
-                  {day.transactions.map((tx) => {
-                    const category = categoryById.get(tx.categoryId)
-                    return (
-                      <SwipeableRow key={tx.id} onSwipeLeft={() => void handleQuickDelete(tx)}>
-                        <ListItem
-                          onClick={() => openEdit(tx)}
-                          leading={
-                            <CategoryIcon icon={category?.icon ?? '📦'} color={category?.color} />
-                          }
-                          title={
-                            tx.note ||
-                            category?.name ||
-                            (tx.type === 'income' ? 'Income' : 'Expense')
-                          }
-                          subtitle={[category?.name, accountById.get(tx.accountId ?? '')?.name]
-                            .filter(Boolean)
-                            .join(' · ')}
-                          trailing={
-                            <MoneyText
-                              amountMinorUnits={tx.amountMinorUnits}
-                              currency={tx.currency}
-                              sign={tx.type}
-                              showSign
-                            />
-                          }
-                        />
-                      </SwipeableRow>
-                    )
-                  })}
+                  {day.transactions.map(renderTransactionRow)}
                 </Card>
               ))}
             </div>
