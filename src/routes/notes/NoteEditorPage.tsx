@@ -340,7 +340,7 @@ export function NoteEditorPage() {
           visual design. */}
       <h1 className="sr-only">{isNewRoute ? 'New note' : 'Edit note'}</h1>
       <div
-        className="flex shrink-0 items-center gap-2 px-3 pb-2 pt-[max(10px,env(safe-area-inset-top))]"
+        className="flex shrink-0 items-center gap-2 px-4 pb-2.5 pt-[max(12px,env(safe-area-inset-top))]"
         style={{ background: 'var(--color-bg)' }}
       >
         <IconButton aria-label="Back to Notes" icon="‹" onClick={() => navigate('/notes')} />
@@ -373,24 +373,26 @@ export function NoteEditorPage() {
         />
       </div>
 
-      <div className="flex shrink-0 flex-col gap-2.5 px-4 pb-3">
+      <div className="flex shrink-0 flex-col gap-3 px-4 pb-4 pt-4">
         <Input
           value={title}
           onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="Title"
           aria-label="Title"
           autoFocus={isNewRoute}
+          className="rounded-[var(--radius-md)] transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
           style={{
             background: 'transparent',
             border: 'none',
             height: 'auto',
-            padding: 0,
+            padding: '6px 8px',
+            margin: '-6px -8px',
             fontSize: 'var(--text-xl)',
             fontWeight: 700,
           }}
         />
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Select
             aria-label="Collection"
             value={collectionId}
@@ -399,7 +401,7 @@ export function NoteEditorPage() {
             options={collections.map((c) => ({ value: c.id, label: c.name }))}
             style={{ height: 36, width: 'auto' }}
           />
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {COLOR_OPTIONS.map((opt) => (
               <button
                 key={opt.label}
@@ -417,7 +419,7 @@ export function NoteEditorPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           {tags.map((tag) => (
             <button
               key={tag}
@@ -442,8 +444,8 @@ export function NoteEditorPage() {
             onBlur={addTag}
             placeholder="Add tag"
             aria-label="Add tag"
-            className="min-w-[80px] flex-1 border-none bg-transparent text-xs outline-none"
-            style={{ color: 'var(--color-text)' }}
+            className="min-w-[80px] flex-1 rounded-[var(--radius-sm)] border-none bg-transparent text-xs transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+            style={{ color: 'var(--color-text)', padding: '4px 6px', margin: '-4px -6px' }}
           />
         </div>
       </div>

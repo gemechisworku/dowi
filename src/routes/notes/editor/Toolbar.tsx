@@ -122,116 +122,122 @@ export function Toolbar({ editor }: ToolbarProps) {
       <div
         role="toolbar"
         aria-label="Formatting"
-        className="flex items-center gap-1 overflow-x-auto px-2 py-2 pb-[max(8px,env(safe-area-inset-bottom))]"
-        style={{ scrollbarWidth: 'none' }}
+        className="flex flex-col gap-1.5 px-2.5 py-2.5 pb-[max(10px,env(safe-area-inset-bottom))]"
       >
-        <ToolbarButton
-          label="Heading 1"
-          active={state.h1}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        >
-          H1
-        </ToolbarButton>
-        <ToolbarButton
-          label="Heading 2"
-          active={state.h2}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        >
-          H2
-        </ToolbarButton>
-        <ToolbarButton
-          label="Heading 3"
-          active={state.h3}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        >
-          H3
-        </ToolbarButton>
-        <ToolbarButton
-          label="Bold"
-          active={state.bold}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-        >
-          <strong>B</strong>
-        </ToolbarButton>
-        <ToolbarButton
-          label="Italic"
-          active={state.italic}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-        >
-          <em>I</em>
-        </ToolbarButton>
-        <ToolbarButton
-          label="Underline"
-          active={state.underline}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-        >
-          <span style={{ textDecoration: 'underline' }}>U</span>
-        </ToolbarButton>
-        <ToolbarButton
-          label="Strikethrough"
-          active={state.strike}
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-        >
-          <span style={{ textDecoration: 'line-through' }}>S</span>
-        </ToolbarButton>
-        <ToolbarButton
-          label="Highlight"
-          active={state.highlight || highlightOpen}
-          onClick={() => setHighlightOpen((open) => !open)}
-        >
-          ⬛
-        </ToolbarButton>
-        <ToolbarButton
-          label="Bullet list"
-          active={state.bulletList}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-        >
-          •—
-        </ToolbarButton>
-        <ToolbarButton
-          label="Numbered list"
-          active={state.orderedList}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        >
-          1.
-        </ToolbarButton>
-        <ToolbarButton
-          label="Checklist"
-          active={state.taskList}
-          onClick={() => editor.chain().focus().toggleTaskList().run()}
-        >
-          ☑
-        </ToolbarButton>
-        <ToolbarButton
-          label="Quote"
-          active={state.blockquote}
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        >
-          ❝
-        </ToolbarButton>
-        <ToolbarButton
-          label="Inline code"
-          active={state.code}
-          onClick={() => editor.chain().focus().toggleCode().run()}
-        >
-          {'</>'}
-        </ToolbarButton>
-        <ToolbarButton
-          label="Code block"
-          active={state.codeBlock}
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        >
-          {'{ }'}
-        </ToolbarButton>
-        <ToolbarButton
-          label="Divider"
-          onClick={() => editor.chain().focus().setHorizontalRule().run()}
-        >
-          ―
-        </ToolbarButton>
-        <ToolbarButton label="Link" active={state.link} onClick={toggleLink}>
-          🔗
-        </ToolbarButton>
+        {/* Row 1: text style + inline marks */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ToolbarButton
+            label="Heading 1"
+            active={state.h1}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          >
+            H1
+          </ToolbarButton>
+          <ToolbarButton
+            label="Heading 2"
+            active={state.h2}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          >
+            H2
+          </ToolbarButton>
+          <ToolbarButton
+            label="Heading 3"
+            active={state.h3}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          >
+            H3
+          </ToolbarButton>
+          <ToolbarButton
+            label="Bold"
+            active={state.bold}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
+            <strong>B</strong>
+          </ToolbarButton>
+          <ToolbarButton
+            label="Italic"
+            active={state.italic}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
+            <em>I</em>
+          </ToolbarButton>
+          <ToolbarButton
+            label="Underline"
+            active={state.underline}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+          >
+            <span style={{ textDecoration: 'underline' }}>U</span>
+          </ToolbarButton>
+          <ToolbarButton
+            label="Strikethrough"
+            active={state.strike}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+          >
+            <span style={{ textDecoration: 'line-through' }}>S</span>
+          </ToolbarButton>
+          <ToolbarButton
+            label="Highlight"
+            active={state.highlight || highlightOpen}
+            onClick={() => setHighlightOpen((open) => !open)}
+          >
+            ⬛
+          </ToolbarButton>
+        </div>
+
+        {/* Row 2: block structure + insertions */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ToolbarButton
+            label="Bullet list"
+            active={state.bulletList}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
+            •—
+          </ToolbarButton>
+          <ToolbarButton
+            label="Numbered list"
+            active={state.orderedList}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          >
+            1.
+          </ToolbarButton>
+          <ToolbarButton
+            label="Checklist"
+            active={state.taskList}
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+          >
+            ☑
+          </ToolbarButton>
+          <ToolbarButton
+            label="Quote"
+            active={state.blockquote}
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          >
+            ❝
+          </ToolbarButton>
+          <ToolbarButton
+            label="Inline code"
+            active={state.code}
+            onClick={() => editor.chain().focus().toggleCode().run()}
+          >
+            {'</>'}
+          </ToolbarButton>
+          <ToolbarButton
+            label="Code block"
+            active={state.codeBlock}
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          >
+            {'{ }'}
+          </ToolbarButton>
+          <ToolbarButton
+            label="Divider"
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          >
+            ―
+          </ToolbarButton>
+          <ToolbarButton label="Link" active={state.link} onClick={toggleLink}>
+            🔗
+          </ToolbarButton>
+        </div>
       </div>
     </div>
   )
