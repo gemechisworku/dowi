@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { useDatabase } from '@/app/db/useDatabase'
 import { createWebScheduler } from '@/notifications/scheduler'
+import { syncPushRules } from '@/notifications/pushSubscription'
 
 const PERIODIC_SYNC_TAG = 'dowi-reminders-catchup'
 
@@ -33,7 +34,12 @@ export function useNotificationRuntime(): void {
     ranCatchUp.current = true
     void scheduler.catchUp()
     void registerPeriodicSync()
-  }, [scheduler])
+    // Keeps the push server's copy of "when to wake this device" current
+    // even if it drifted (browser data cleared, or missed an earlier sync
+    // point) — cheap no-op when nothing's actually changed, see
+    // syncPushRules' own dedup against the last-synced payload.
+    void syncPushRules({ db, settingsRepo, repos })
+  }, [scheduler, db, settingsRepo, repos])
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return

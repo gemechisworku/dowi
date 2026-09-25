@@ -4,6 +4,7 @@ import { useDatabase } from '@/app/db/useDatabase'
 import type { ReminderConfig, Settings } from '@/db/types'
 import { DEFAULT_SETTINGS } from '@/db/settingsRepo'
 import { createWebScheduler } from '@/notifications/scheduler'
+import { syncPushRules } from '@/notifications/pushSubscription'
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -118,6 +119,9 @@ export function SettingsPage() {
     // otherwise only ever runs once per mount (useNotificationRuntime.ts).
     // Re-running it here means a change takes effect in this same session.
     void scheduler.catchUp()
+    // Keeps the push server's rules current so it wakes this device at the
+    // newly-configured time even while the app stays closed.
+    void syncPushRules({ db, settingsRepo, repos })
   }
 
   /** Shared by Appearance/Money — a plain pass-through to settingsRepo.update, since neither section needs anything more than "write this patch". */

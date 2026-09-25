@@ -67,6 +67,89 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
   )
 })
 
+/**
+ * Injected at build time from the VAPID_PUBLIC_KEY env var (vite.config.ts
+ * `define`) — same value the client bundle gets (src/vite-env.d.ts),
+ * needed here only to re-subscribe if the push subscription itself
+ * expires (rare, but the browser can rotate it — see
+ * `pushsubscriptionchange` below).
+ */
+declare const __VAPID_PUBLIC_KEY__: string
+
+self.addEventListener('push', (event: PushEvent) => {
+  // The push payload is deliberately empty (see api/_lib/webPush.ts) — its
+  // only job is to wake this handler, which decides everything (content,
+  // whether anything's even still due) the exact same way an ordinary
+  // catch-up-on-open does, against local IndexedDB. If nothing turns out
+  // to be due (e.g. the server's timing tolerance and the client's own
+  // catch-up window disagree at the margin), no notification is shown for
+  // this push — an accepted, rare trade-off against ever showing a
+  // spurious "nothing new" notification (see src/notifications/pushRules.ts).
+  event.waitUntil(runReminderCatchUp())
+})
+
+self.addEventListener('pushsubscriptionchange', (event: Event) => {
+  const changeEvent = event as Event & {
+    oldSubscription?: PushSubscription
+    newSubscription?: PushSubscription
+    waitUntil(promise: Promise<unknown>): void
+  }
+  changeEvent.waitUntil(resubscribeAndSync())
+})
+
+async function resubscribeAndSync(): Promise<void> {
+  if (!__VAPID_PUBLIC_KEY__) return
+  try {
+    const subscription = await self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(__VAPID_PUBLIC_KEY__),
+    })
+    const [
+      { createDatabase },
+      { createSettingsRepo },
+      { createRepositories },
+      { buildSyncedReminderRules },
+      { getOrCreatePushDeviceId },
+    ] = await Promise.all([
+      import('./db/db'),
+      import('./db/settingsRepo'),
+      import('./db/repositories'),
+      import('./notifications/pushRules'),
+      import('./db/pushDeviceId'),
+    ])
+    const db = createDatabase()
+    const repos = createRepositories(db)
+    const [settings, tasks, deviceId] = await Promise.all([
+      createSettingsRepo(db).get(),
+      repos.tasks.list(),
+      getOrCreatePushDeviceId(db),
+    ])
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId,
+        subscription: subscription.toJSON(),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        rules: buildSyncedReminderRules(settings, tasks),
+      }),
+    })
+  } catch {
+    // Best-effort — worst case this device stops getting woken by push
+    // until it's next opened, which re-subscribes via the ordinary
+    // catch-up-on-open path (useNotificationRuntime.ts).
+  }
+}
+
+function urlBase64ToUint8Array(base64Url: string): Uint8Array<ArrayBuffer> {
+  const padding = '='.repeat((4 - (base64Url.length % 4)) % 4)
+  const base64 = (base64Url + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(base64)
+  const bytes = new Uint8Array(new ArrayBuffer(raw.length))
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i)
+  return bytes
+}
+
 const REMINDERS_SYNC_TAG = 'dowi-reminders-catchup'
 
 interface PeriodicSyncEvent extends ExtendableEvent {
