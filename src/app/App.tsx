@@ -5,6 +5,7 @@ import { DatabaseProvider } from './db/DatabaseProvider'
 import { ApplyAppearance } from './settings/ApplyAppearance'
 import { AppUpdateProvider } from './pwa/AppUpdateProvider'
 import { UpdatePrompt } from './pwa/UpdatePrompt'
+import { InstallPrompt } from './pwa/InstallPrompt'
 import { StreakCelebrationOverlay } from './streaks/StreakCelebrationOverlay'
 import { StreakDailyOverlay } from './streaks/StreakDailyOverlay'
 import { SnackbarProvider } from '@/components/ui/SnackbarProvider'
@@ -39,6 +40,7 @@ export function App() {
       <SnackbarProvider>
         <AppUpdateProvider>
           <UpdatePrompt />
+          <InstallPrompt />
           <DatabaseProvider>
             <ApplyAppearance />
             <StreakCelebrationOverlay />
