@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react'
-import { NavLink, useLocation } from 'react-router'
+import { SectionTabs } from '@/components/ui/SectionTabs'
 
 const ITEMS = [
   { to: '/money', label: 'Reports' },
@@ -23,37 +22,5 @@ const ITEMS = [
  * on. Scrolling it into view on every navigation is what makes that true.
  */
 export function MoneySubNav() {
-  const { pathname } = useLocation()
-  const activeRef = useRef<HTMLAnchorElement>(null)
-
-  useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: 'nearest', inline: 'center' })
-  }, [pathname])
-
-  return (
-    <nav
-      aria-label="Money sections"
-      className="flex gap-1.5 overflow-x-auto pb-1"
-      style={{ scrollbarWidth: 'none' }}
-    >
-      {ITEMS.map((item) => {
-        const isActive = item.to === pathname
-        return (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end
-            ref={isActive ? activeRef : undefined}
-            className="shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors"
-            style={{
-              background: isActive ? 'var(--color-primary)' : 'var(--color-surface-2)',
-              color: isActive ? 'var(--color-primary-fg)' : 'var(--color-text-muted)',
-            }}
-          >
-            {item.label}
-          </NavLink>
-        )
-      })}
-    </nav>
-  )
+  return <SectionTabs label="Money sections" items={ITEMS} />
 }

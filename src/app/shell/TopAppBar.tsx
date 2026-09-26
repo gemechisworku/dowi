@@ -3,6 +3,7 @@ import { useTheme } from '@/app/theme/useTheme'
 import type { ThemePreference } from '@/app/theme/ThemeContext'
 import { useDatabase } from '@/app/db/useDatabase'
 import { cn } from '@/lib/cn'
+import { BRAND_GRADIENT, BRAND_SHADOW, BRAND_FG } from '@/styles/brandSurface'
 
 const THEME_CYCLE: Record<ThemePreference, ThemePreference> = {
   system: 'light',
@@ -49,14 +50,17 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
     void settingsRepo.update({ theme: nextPreference })
   }
 
-  // Option E "Bold Brand Header" (chosen from the 5-option comparison): a
-  // solid --color-primary band, rounded only at the bottom, carries the app
-  // bar on every screen. Icon buttons are ghost circles tinted with the
-  // page's own foreground colour rather than surface cards with a shadow —
-  // there's no card to elevate off of when the header IS the coloured
-  // surface. The badge dot's ring is set to match this header's own
-  // background (not --color-surface) so it still reads as a ring cut into
-  // the bar instead of a mismatched white halo.
+  // Option E "Bold Brand Header" (chosen from the 5-option comparison): the
+  // same fixed brand surface as Home's hero card (BRAND_GRADIENT), rounded
+  // only at the bottom, carries the app bar on every screen. Fixed rather
+  // than --color-primary/-fg (which flip to a pale blue-on-near-black in
+  // dark mode) so the bar always reads as the same brand surface as the
+  // hero card in both themes, never a lighter dark-mode variant. Icon
+  // buttons are ghost circles tinted with the page's own foreground colour
+  // rather than surface cards with a shadow — there's no card to elevate
+  // off of when the header IS the coloured surface. The badge dot's ring
+  // uses --blue-700 (a stop inside the gradient) so it still reads as a
+  // ring cut into the bar instead of a mismatched white halo.
   const iconButtonClass =
     'flex h-9 w-9 items-center justify-center rounded-full text-base transition-colors active:scale-95'
   const iconButtonStyle = { background: 'rgba(255, 255, 255, 0.18)' }
@@ -65,10 +69,10 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
     <header
       className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 pt-[max(10px,env(safe-area-inset-top))] pb-3"
       style={{
-        background: 'var(--color-primary)',
-        color: 'var(--color-primary-fg)',
+        background: BRAND_GRADIENT,
+        color: BRAND_FG,
         borderRadius: '0 0 24px 24px',
-        boxShadow: '0 10px 24px rgba(37, 99, 235, 0.28)',
+        boxShadow: BRAND_SHADOW,
       }}
     >
       <div className="flex min-w-0 items-center gap-2">
@@ -123,7 +127,7 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
               className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
               style={{
                 background: 'var(--color-expense)',
-                border: '2px solid var(--color-primary)',
+                border: '2px solid var(--blue-700)',
               }}
             />
           )}

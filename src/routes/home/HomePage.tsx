@@ -37,6 +37,7 @@ import { PeriodSelector } from '@/components/domain/PeriodSelector'
 import { MoneyText } from '@/components/domain/MoneyText'
 import { TaskCheckbox } from '@/components/domain/TaskCheckbox'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { BRAND_GRADIENT, BRAND_SHADOW, BRAND_FG } from '@/styles/brandSurface'
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
@@ -241,9 +242,9 @@ export function HomePage() {
               buttons never nest inside another button (axe no-focusable-content). */}
           <Card
             style={{
-              background: 'linear-gradient(150deg, var(--blue-600), var(--blue-700) 60%, #1e3a8a)',
-              boxShadow: '0 10px 24px rgba(37, 99, 235, 0.28)',
-              color: '#ffffff',
+              background: BRAND_GRADIENT,
+              boxShadow: BRAND_SHADOW,
+              color: BRAND_FG,
             }}
           >
             <div className="flex items-center justify-between gap-3">
