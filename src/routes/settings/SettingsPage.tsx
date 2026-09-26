@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useDatabase } from '@/app/db/useDatabase'
 import type { ReminderConfig, Settings } from '@/db/types'
 import { DEFAULT_SETTINGS } from '@/db/settingsRepo'
 import { createWebScheduler } from '@/notifications/scheduler'
+import { syncPushRules } from '@/notifications/pushSubscription'
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -86,8 +87,41 @@ export function SettingsPage() {
   const [pendingEnable, setPendingEnable] = useState<ReminderKey | null>(null)
   const [sendingTest, setSendingTest] = useState(false)
 
+  // The badge above otherwise only reflects permission changes this page
+  // itself triggered (via the explainer/test-notification flows) — if the
+  // user flips it from the browser/OS's own settings UI while this page is
+  // open, `permission` was previously a one-time snapshot that never
+  // noticed. Not all browsers support querying this permission name (e.g.
+  // Safari), so a rejected query just leaves the snapshot as-is.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.permissions) return
+    let status: PermissionStatus | null = null
+    function handleChange() {
+      setPermission(getNotificationPermission())
+    }
+    navigator.permissions
+      .query({ name: 'notifications' as PermissionName })
+      .then((result) => {
+        status = result
+        status.addEventListener('change', handleChange)
+      })
+      .catch(() => {
+        // Permissions API doesn't support querying "notifications" here —
+        // fall back to the initial snapshot, same as before this effect.
+      })
+    return () => status?.removeEventListener('change', handleChange)
+  }, [])
+
   async function patchReminders(patch: Partial<ReminderConfig>) {
     await settingsRepo.update({ reminders: { ...settings.reminders, ...patch } })
+    // Without this, a reminder toggled on (or retimed) only starts being
+    // considered again the next time the app is fully relaunched — catchUp()
+    // otherwise only ever runs once per mount (useNotificationRuntime.ts).
+    // Re-running it here means a change takes effect in this same session.
+    void scheduler.catchUp()
+    // Keeps the push server's rules current so it wakes this device at the
+    // newly-configured time even while the app stays closed.
+    void syncPushRules({ db, settingsRepo, repos })
   }
 
   /** Shared by Appearance/Money — a plain pass-through to settingsRepo.update, since neither section needs anything more than "write this patch". */

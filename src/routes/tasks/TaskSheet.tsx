@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useDatabase } from '@/app/db/useDatabase'
+import { syncPushRules } from '@/notifications/pushSubscription'
 import type { Subtask, Task, TaskPriority } from '@/db/types'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
@@ -42,7 +43,7 @@ const REMINDER_OPTIONS: { minutes: number; label: string }[] = [
  * own JSON shape as a single paragraph node when that day comes.
  */
 export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps) {
-  const { repos } = useDatabase()
+  const { db, repos, settingsRepo } = useDatabase()
   const collections = useLiveQuery(() => repos.taskCollections.list(), [repos], EMPTY_ARRAY)
   const { show } = useSnackbar()
 
@@ -90,12 +91,16 @@ export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps
       await repos.tasks.create({ ...payload, status: 'todo' })
       show({ message: 'Task added' })
     }
+    // A new/changed due date or reminder offsets shifts when the push
+    // server should next wake this device for this task.
+    void syncPushRules({ db, settingsRepo, repos })
     onClose()
   }
 
   async function handleDelete() {
     if (!task) return
     await repos.tasks.remove(task.id)
+    void syncPushRules({ db, settingsRepo, repos })
     setConfirmDelete(false)
     onClose()
     show({

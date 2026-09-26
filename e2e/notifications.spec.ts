@@ -123,10 +123,11 @@ test.describe('Reminder catch-up and inbox', () => {
     await page.getByLabel('Weekly plan day').selectOption({ label: TODAY_NAME })
     await page.getByLabel('Weekly plan time').fill('00:00')
 
-    // A fresh mount re-runs catch-up against the settings just saved. The
-    // inbox entry is written unconditionally (PRD §5.7's reliability
-    // backstop) regardless of whether OS delivery itself succeeds.
-    await page.reload()
+    // Every reminder-settings change re-runs catch-up immediately (no
+    // reload needed — see SettingsPage.tsx's patchReminders) against the
+    // settings just saved. The inbox entry is written unconditionally (PRD
+    // §5.7's reliability backstop) regardless of whether OS delivery
+    // itself succeeds.
     await expect(page.getByLabel(/Notifications, \d+ unread/)).toBeVisible()
 
     await page.goto('/notifications')
@@ -148,7 +149,6 @@ test.describe('Reminder catch-up and inbox', () => {
     await page.goto('/settings')
     await page.getByLabel('Weekly review day').selectOption({ label: TODAY_NAME })
     await page.getByLabel('Weekly review time').fill('00:00')
-    await page.reload()
 
     await page.goto('/notifications')
     await expect(page.getByText('Review your week').first()).toBeVisible()

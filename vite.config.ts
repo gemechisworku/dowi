@@ -18,6 +18,12 @@ export default defineConfig({
   // rather than importing package.json — see the comment above.
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    // Public by design (a VAPID public key is meant to ship to clients) —
+    // set on Vercel so both this client bundle and the API routes
+    // (api/_lib/webPush.ts, reading the same-named server env var) agree on
+    // it. Empty string when unset (local dev without push configured) —
+    // src/notifications/pushSubscription.ts treats that as "push disabled".
+    __VAPID_PUBLIC_KEY__: JSON.stringify(process.env.VAPID_PUBLIC_KEY ?? ''),
   },
   plugins: [
     react(),
