@@ -8,7 +8,7 @@
  */
 
 import { get } from '@vercel/global-config'
-import type { PushDevices } from './types'
+import type { PushDevices } from './types.js'
 
 const DEVICES_KEY = 'pushDevices'
 const MAX_DEVICES = 5

@@ -1,5 +1,5 @@
 import webpush, { WebPushError } from 'web-push'
-import type { PushSubscriptionJson } from './types'
+import type { PushSubscriptionJson } from './types.js'
 
 let configured = false
 

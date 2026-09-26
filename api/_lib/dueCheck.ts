@@ -10,7 +10,7 @@
  * are expressed in the device's own local calendar.
  */
 
-import type { PushDeviceEntry, SyncedReminderRules } from './types'
+import type { PushDeviceEntry, SyncedReminderRules } from './types.js'
 
 export interface LocalNow {
   /** "YYYY-MM-DD" in the device's timezone. */

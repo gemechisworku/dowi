@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getPushDevices, writePushDevices } from '../_lib/edgeConfig'
+import { getPushDevices, writePushDevices } from '../_lib/edgeConfig.js'
 import type {
   PushDeviceEntry,
   PushDevices,
   PushSubscriptionJson,
   SyncedReminderRules,
-} from '../_lib/types'
+} from '../_lib/types.js'
 
 /**
  * Called by the app itself (src/notifications/pushSubscription.ts) whenever

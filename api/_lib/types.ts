@@ -1,6 +1,32 @@
-import type { SyncedReminderRules } from '@/notifications/pushRules'
+/**
+ * Deliberately duplicated from src/notifications/pushRules.ts's own
+ * `SyncedReminderRules`/`SyncedDailyRule`/`SyncedWeeklyRule` rather than
+ * imported: Vercel's own build step type-checks api/**\/*.ts under strict
+ * Node ESM resolution (package.json's `"type": "module"`), which doesn't
+ * reliably follow this repo's `@/*` path alias the way our local tsconfig
+ * does — this file has to stand on its own. The shape is small and stable;
+ * keep the two in sync if it ever changes.
+ */
+export interface SyncedDailyRule {
+  enabled: boolean
+  time: string
+}
 
-export type { SyncedReminderRules }
+export interface SyncedWeeklyRule {
+  enabled: boolean
+  day: number
+  time: string
+}
+
+export interface SyncedReminderRules {
+  morningNudge: SyncedDailyRule
+  eveningStreak: SyncedDailyRule
+  dailyAgenda: SyncedDailyRule
+  weeklyPlan: SyncedWeeklyRule
+  weeklyReview: SyncedWeeklyRule
+  quietHours: { enabled: boolean; start: string; end: string }
+  taskDueAt: string[]
+}
 
 export interface PushSubscriptionJson {
   endpoint: string

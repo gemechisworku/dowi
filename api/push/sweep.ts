@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getPushDevices, writePushDevices } from '../_lib/edgeConfig'
-import { isDeviceDueNow } from '../_lib/dueCheck'
-import { sendWakePush } from '../_lib/webPush'
-import { isAuthorizedCronRequest } from '../_lib/auth'
-import type { PushDeviceEntry, PushDevices } from '../_lib/types'
+import { getPushDevices, writePushDevices } from '../_lib/edgeConfig.js'
+import { isDeviceDueNow } from '../_lib/dueCheck.js'
+import { sendWakePush } from '../_lib/webPush.js'
+import { isAuthorizedCronRequest } from '../_lib/auth.js'
+import type { PushDeviceEntry, PushDevices } from '../_lib/types.js'
 
 const TASK_DUE_HISTORY_MS = 14 * 24 * 60 * 60 * 1000
 

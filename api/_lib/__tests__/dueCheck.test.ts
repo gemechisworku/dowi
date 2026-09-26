@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getLocalNow, isDeviceDueNow, isTimeDueNow } from '../dueCheck'
-import type { PushDeviceEntry, SyncedReminderRules } from '../types'
+import { getLocalNow, isDeviceDueNow, isTimeDueNow } from '../dueCheck.js'
+import type { PushDeviceEntry, SyncedReminderRules } from '../types.js'
 
 const RULES_OFF: SyncedReminderRules = {
   morningNudge: { enabled: false, time: '09:00' },

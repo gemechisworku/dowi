@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import * as edgeConfig from '../../_lib/edgeConfig'
-import handler from '../subscribe'
-import type { PushDevices, SyncedReminderRules } from '../../_lib/types'
+import * as edgeConfig from '../../_lib/edgeConfig.js'
+import handler from '../subscribe.js'
+import type { PushDevices, SyncedReminderRules } from '../../_lib/types.js'
 
-vi.mock('../../_lib/edgeConfig')
+vi.mock('../../_lib/edgeConfig.js')
 
 const RULES_OFF: SyncedReminderRules = {
   morningNudge: { enabled: false, time: '09:00' },
