@@ -227,17 +227,17 @@ describe('buildReport — mixed currency', () => {
 })
 
 describe('buildReport — recurring transactions', () => {
-  it('excludes recurring-generated transactions from the headline income/expense totals', () => {
+  it('includes recurring-generated transactions in the headline income/expense totals', () => {
     const transactions = [
       tx({ type: 'expense', amountMinorUnits: 10000 }), // ordinary
-      tx({ type: 'expense', amountMinorUnits: 99999, recurringId: 'rent' }), // recurring — must not count
+      tx({ type: 'expense', amountMinorUnits: 99999, recurringId: 'rent' }), // recurring — counts same as any other expense
     ]
     const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
-    expect(report.expense.totalMinorUnits).toBe(10000)
-    expect(report.netMinorUnits).toBe(-10000)
+    expect(report.expense.totalMinorUnits).toBe(109999)
+    expect(report.netMinorUnits).toBe(-109999)
   })
 
-  it('excludes recurring-generated transactions from sub-period buckets, category/source/account breakdowns, and excludedCurrencies', () => {
+  it('includes recurring-generated transactions in sub-period buckets, category/source/account breakdowns, and excludedCurrencies', () => {
     const transactions = [
       tx({
         type: 'expense',
@@ -245,16 +245,14 @@ describe('buildReport — recurring transactions', () => {
         categoryId: 'food',
         sourceId: undefined,
         accountId: 'bank',
-        currency: 'USD', // unconvertible with baseOpts — would otherwise show up in excludedCurrencies
+        currency: 'USD', // unconvertible with baseOpts — surfaces in excludedCurrencies same as any other transaction
         amountMinorUnits: 5000,
         recurringId: 'rent',
       }),
     ]
     const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
-    expect(report.subPeriods.every((b) => b.expenseMinorUnits === 0)).toBe(true)
-    expect(report.categoryBreakdown.expense).toEqual([])
-    expect(report.accountBreakdown).toEqual([])
-    expect(report.excludedCurrencies).toEqual({})
+    expect(report.subPeriods.some((b) => b.expenseMinorUnits > 0)).toBe(false) // unconvertible, so excluded from the sum itself — not because it's recurring
+    expect(report.excludedCurrencies).toEqual({ USD: 1 })
   })
 
   it('still includes recurring-generated transactions in the raw `transactions` list (for CSV/view-transactions)', () => {
@@ -263,19 +261,19 @@ describe('buildReport — recurring transactions', () => {
     expect(report.transactions).toHaveLength(1)
   })
 
-  it('excludes recurring transactions from the previous-period comparison too', () => {
+  it('includes recurring transactions in the previous-period comparison too', () => {
     const transactions = [
       tx({ type: 'income', date: '2026-09-10', amountMinorUnits: 20000 }), // this month, net +20000
       tx({ type: 'income', date: '2026-08-10', amountMinorUnits: 10000 }), // last month, net +10000
       tx({
         type: 'income',
         date: '2026-08-10',
-        amountMinorUnits: 999999,
+        amountMinorUnits: 10000,
         recurringId: 'salary',
-      }), // recurring, must not inflate last month's net
+      }), // recurring — last month's net is really +20000, same as this month
     ]
     const report = buildReport(transactions, 'month', '2026-09-15', baseOpts)
-    expect(report.netDeltaPct).toBe(100) // still doubled, not diluted by the recurring income
+    expect(report.netDeltaPct).toBe(0) // flat, not "doubled" — the recurring income belongs in last month's total too
   })
 
   it('sums a weekly recurring item across every occurrence within a monthly-filtered range', () => {

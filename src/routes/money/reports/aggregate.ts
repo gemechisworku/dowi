@@ -43,41 +43,42 @@ export interface SubPeriodBucket {
 export interface ReportData {
   period: Period
   range: DateRange
-  /** Transactions actually in range (any currency, including recurring-generated ones), for "view transactions" / CSV export — a raw export, not a total, so nothing is hidden from it. */
+  /** Transactions actually in range (any currency, including recurring-generated ones), for "view transactions" / CSV export. */
   transactions: Transaction[]
   /**
-   * Excludes recurring-generated transactions (`Transaction.recurringId` set)
-   * — a recurring item's occurrences are shown in `recurringBreakdown`
-   * instead, summed according to its own interval rather than folded into
-   * this period's regular income/expense totals. See `recurringBreakdown`.
+   * Includes recurring-generated transactions (`Transaction.recurringId`
+   * set) — a rent/subscription payment is real money in or out for the
+   * period it lands in, same as any other transaction. `recurringBreakdown`
+   * additionally calls out which of this total came from recurring items,
+   * for visibility, but doesn't change what counts toward the total itself.
    */
   income: ConvertedSum
   expense: ConvertedSum
   netMinorUnits: number
-  /** null when there's nothing to compare against (previous period had zero net). Also excludes recurring, for the same reason as `income`/`expense`. */
+  /** null when there's nothing to compare against (previous period had zero net). Includes recurring, same as `income`/`expense`. */
   netDeltaPct: number | null
   /**
-   * For the report's sub-period charts. Excludes recurring-generated
+   * For the report's sub-period charts. Includes recurring-generated
    * transactions, same as `income`/`expense`. For period="day" these are
    * expense categories, not time sub-periods (income is excluded — see
    * `buildSubPeriods`). For period="week" each bucket is one day, labeled by
    * weekday initial.
    */
   subPeriods: SubPeriodBucket[]
-  /** Excludes recurring-generated transactions, same as `income`/`expense`. */
+  /** Includes recurring-generated transactions, same as `income`/`expense`. */
   categoryBreakdown: { income: BreakdownEntry[]; expense: BreakdownEntry[] }
   sourceBreakdown: BreakdownEntry[]
   accountBreakdown: BreakdownEntry[]
-  /** Every currency with at least one excluded (no-rate) transaction in range, and how many. Excludes recurring-generated transactions, same as `income`/`expense`. */
+  /** Every currency with at least one excluded (no-rate) transaction in range, and how many. Includes recurring-generated transactions, same as `income`/`expense`. */
   excludedCurrencies: Record<string, number>
   /**
    * One entry per recurring item with at least one occurrence in range, its
    * amount summed across every occurrence that fell in range — so a
    * monthly item viewed at month granularity shows its single occurrence,
    * while a weekly item viewed at month granularity shows the sum of every
-   * week's occurrence that month. Deliberately excluded from every total
-   * above (see PRD: recurring payments have their own section, not mixed
-   * into daily/weekly/monthly totals).
+   * week's occurrence that month. A breakdown of (part of) the totals
+   * above, for visibility into which recurring items contributed — not a
+   * carve-out from them.
    */
   recurringBreakdown: RecurringBreakdownEntry[]
 }
@@ -280,32 +281,29 @@ export function buildReport(
   const range = getRangeForPeriod(period, anchorDate, opts)
   const inThisRange = filterByRange(transactions, range)
 
-  // Recurring-generated transactions get their own section (`recurringBreakdown`,
-  // summed per item) instead of being folded into the period's regular
-  // totals/charts/breakdowns below — a weekly rent showing up 4-5 times a
-  // month would otherwise inflate "this month's expense" in a way that
-  // doesn't reflect a one-off comparison against other months/categories.
-  const nonRecurring = inThisRange.filter((t) => !t.recurringId)
+  // recurringBreakdown (below) is a breakdown of these totals for
+  // visibility — which recurring items contributed — not a carve-out from
+  // them. A weekly rent occurrence is real money out the same as any other
+  // expense, so it counts toward this period's totals same as everything
+  // else in inThisRange.
   const recurringOnly = inThisRange.filter((t) => t.recurringId)
 
-  const income = sumByType(nonRecurring, 'income', opts)
-  const expense = sumByType(nonRecurring, 'expense', opts)
+  const income = sumByType(inThisRange, 'income', opts)
+  const expense = sumByType(inThisRange, 'expense', opts)
   const netMinorUnits = income.totalMinorUnits - expense.totalMinorUnits
 
   const previousAnchor = shiftPeriod(period, anchorDate, -1)
   const previousRange = getRangeForPeriod(period, previousAnchor, opts)
-  const inPreviousRangeNonRecurring = filterByRange(transactions, previousRange).filter(
-    (t) => !t.recurringId,
-  )
-  const previousIncome = sumByType(inPreviousRangeNonRecurring, 'income', opts)
-  const previousExpense = sumByType(inPreviousRangeNonRecurring, 'expense', opts)
+  const inPreviousRange = filterByRange(transactions, previousRange)
+  const previousIncome = sumByType(inPreviousRange, 'income', opts)
+  const previousExpense = sumByType(inPreviousRange, 'expense', opts)
   const previousNet = previousIncome.totalMinorUnits - previousExpense.totalMinorUnits
 
   const netDeltaPct =
     previousNet === 0 ? null : ((netMinorUnits - previousNet) / Math.abs(previousNet)) * 100
 
-  const expenseTxs = nonRecurring.filter((t) => t.type === 'expense')
-  const incomeTxs = nonRecurring.filter((t) => t.type === 'income')
+  const expenseTxs = inThisRange.filter((t) => t.type === 'expense')
+  const incomeTxs = inThisRange.filter((t) => t.type === 'income')
 
   return {
     period,
@@ -315,7 +313,7 @@ export function buildReport(
     expense,
     netMinorUnits,
     netDeltaPct,
-    subPeriods: buildSubPeriods(nonRecurring, period, range, opts),
+    subPeriods: buildSubPeriods(inThisRange, period, range, opts),
     categoryBreakdown: {
       income: breakdownBy(incomeTxs, (t) => t.categoryId, opts),
       expense: breakdownBy(expenseTxs, (t) => t.categoryId, opts),
@@ -326,7 +324,7 @@ export function buildReport(
       opts,
     ),
     accountBreakdown: breakdownBy(
-      nonRecurring.filter((t) => t.accountId),
+      inThisRange.filter((t) => t.accountId),
       (t) => t.accountId,
       opts,
       (t) => (t.type === 'income' ? 1 : -1),

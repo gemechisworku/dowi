@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 
 /**
  * Covers the M4 reports screen end to end against real IndexedDB, on top of
@@ -128,6 +131,100 @@ test.describe('Reports — headline and breakdowns', () => {
       () => (window as unknown as { __copiedText: string }).__copiedText,
     )
     expect(copied).toContain('Net: ETB 50.00')
+  })
+})
+
+test.describe('Reports — recurring transactions', () => {
+  test("a recurring occurrence counts toward this month's headline expense total and its own Recurring section", async ({
+    page,
+  }) => {
+    const now = new Date().toISOString()
+    const today = now.slice(0, 10)
+    const fixture = {
+      formatVersion: 1,
+      exportedAt: now,
+      categories: [
+        {
+          id: 'cat-subs',
+          createdAt: now,
+          updatedAt: now,
+          name: 'Subscriptions',
+          icon: '💳',
+          color: '#000',
+          type: 'expense',
+        },
+      ],
+      sources: [],
+      accounts: [],
+      rates: [],
+      notes: [],
+      noteCollections: [],
+      tasks: [],
+      taskCollections: [],
+      notifications: [],
+      meta: [],
+      recurringTransactions: [
+        {
+          id: 'rec-netflix',
+          createdAt: now,
+          updatedAt: now,
+          name: 'Netflix',
+          type: 'expense',
+          amountMinorUnits: 1500,
+          currency: 'ETB',
+          categoryId: 'cat-subs',
+          tags: [],
+          interval: { unit: 'month', every: 1 },
+          startDate: today,
+          autoRecord: true,
+          occurrenceIndex: 1,
+          nextDueDate: today,
+          paused: false,
+        },
+      ],
+      transactions: [
+        {
+          id: 'tx-ordinary',
+          createdAt: now,
+          updatedAt: now,
+          type: 'expense',
+          amountMinorUnits: 10000,
+          currency: 'ETB',
+          date: today,
+          categoryId: 'cat-subs',
+          tags: [],
+        },
+        {
+          id: 'tx-netflix-occurrence',
+          createdAt: now,
+          updatedAt: now,
+          type: 'expense',
+          amountMinorUnits: 1500,
+          currency: 'ETB',
+          date: today,
+          categoryId: 'cat-subs',
+          tags: [],
+          recurringId: 'rec-netflix',
+        },
+      ],
+    }
+    const fixturePath = join(tmpdir(), `dowi-recurring-reports-fixture-${test.info().testId}.json`)
+    writeFileSync(fixturePath, JSON.stringify(fixture))
+    await page.goto('/debug/data')
+    await page.getByLabel('Import JSON').setInputFiles(fixturePath)
+    await expect(page.getByText(/Imported \d+ categories and more/)).toBeVisible({
+      timeout: 15_000,
+    })
+
+    await page.goto('/money')
+    // Headline expense = 100 (ordinary) + 15 (Netflix occurrence) = 115, not 100.
+    await expect(page.getByText('ETB 115.00', { exact: true }).first()).toBeVisible()
+
+    await expect(page.getByRole('heading', { name: 'Recurring' })).toBeVisible()
+    await expect(
+      page.getByText('Already counted in the totals above', { exact: false }),
+    ).toBeVisible()
+    await expect(page.getByText('Netflix', { exact: true })).toBeVisible()
   })
 })
 

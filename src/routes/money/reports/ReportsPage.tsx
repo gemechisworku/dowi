@@ -246,8 +246,8 @@ export function ReportsPage() {
         <Card>
           <SectionHeader title="Recurring" />
           <p className="mb-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Not included in the totals above — shown separately since each repeats on its own
-            schedule.
+            Already counted in the totals above — broken out here so you can see how much of it came
+            from recurring items.
           </p>
           {report.recurringBreakdown.map((entry) => {
             const template = recurringById.get(entry.recurringId)
