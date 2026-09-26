@@ -14,6 +14,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSnackbar } from '@/components/ui/useSnackbar'
 import { MoneySubNav } from './MoneySubNav'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 interface NamedEntity extends BaseEntity {
   name: string
@@ -82,17 +83,18 @@ export function NamedEntityManager({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight">{title}</h1>
-        <Button size="sm" onClick={openCreate}>
+    <div className="flex flex-col gap-4 pb-8">
+      <PageHeaderBand>
+        <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">{title}</h1>
+        <Button size="sm" onClick={openCreate} style={{ background: 'var(--color-on-brand-surface-strong)', color: 'var(--blue-700)' }}>
           Add
         </Button>
-      </div>
+        </div>
+        <MoneySubNav />
+      </PageHeaderBand>
 
-      <MoneySubNav />
-
-      <Card>
+      <div className="px-4"><Card>
         {items.length === 0 ? (
           <EmptyState icon={icon} title={emptyLabel} />
         ) : (
@@ -119,7 +121,7 @@ export function NamedEntityManager({
             />
           ))
         )}
-      </Card>
+      </Card></div>
 
       <Sheet
         open={sheetOpen}

@@ -14,6 +14,7 @@ import { SwipeableRow } from '@/components/ui/SwipeableRow'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
 import { MoneyText } from '@/components/domain/MoneyText'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
 
@@ -56,13 +57,10 @@ export function RecurringPage() {
 
   return (
     <div className="relative flex flex-col pb-24">
-      <div className="flex items-center justify-between gap-2 px-4 pt-2">
-        <h1 className="text-xl font-bold tracking-tight">Recurring</h1>
-      </div>
-
-      <div className="px-4 pt-2">
+      <PageHeaderBand>
+        <h1 className="text-2xl font-bold">Recurring</h1>
         <MoneySubNav />
-      </div>
+      </PageHeaderBand>
 
       <div className="px-4 pt-2">
         {sorted.length === 0 ? (

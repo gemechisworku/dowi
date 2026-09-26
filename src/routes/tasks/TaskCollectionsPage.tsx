@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
 import { useSnackbar } from '@/components/ui/useSnackbar'
 import { TasksSubNav } from './TasksSubNav'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 const ICON_OPTIONS = ['📁', '🏠', '💼', '🎯', '🏃', '📚', '🛒', '✈️', '👨‍👩‍👧', '🎉']
 const COLOR_OPTIONS = [
@@ -98,17 +99,18 @@ export function TaskCollectionsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight">Collections</h1>
-        <Button size="sm" onClick={openCreate}>
+    <div className="flex flex-col gap-4 pb-8">
+      <PageHeaderBand>
+        <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Collections</h1>
+        <Button size="sm" onClick={openCreate} style={{ background: 'var(--color-on-brand-surface-strong)', color: 'var(--blue-700)' }}>
           Add
         </Button>
-      </div>
+        </div>
+        <TasksSubNav />
+      </PageHeaderBand>
 
-      <TasksSubNav />
-
-      <Card>
+      <div className="px-4"><Card>
         {collections.length === 0 ? (
           <EmptyState icon="📁" title="No collections yet" />
         ) : (
@@ -137,7 +139,7 @@ export function TaskCollectionsPage() {
             />
           ))
         )}
-      </Card>
+      </Card></div>
 
       <Sheet
         open={sheetOpen}

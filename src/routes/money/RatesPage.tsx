@@ -15,6 +15,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { todayString } from '@/lib/period'
 import { MoneySubNav } from './MoneySubNav'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 /** Exchange-rate table CRUD (PRD §5.3) — one row per (currency, effective date), most recent first. */
 export function RatesPage() {
@@ -55,22 +56,23 @@ export function RatesPage() {
   const isValid = currency.trim().length === 3 && Number.isFinite(rateValue) && rateValue > 0
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight">Exchange rates</h1>
-        <Button size="sm" onClick={openCreate}>
+    <div className="flex flex-col gap-4 pb-8">
+      <PageHeaderBand>
+        <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Exchange rates</h1>
+        <Button size="sm" onClick={openCreate} style={{ background: 'var(--color-on-brand-surface-strong)', color: 'var(--blue-700)' }}>
           Add
         </Button>
-      </div>
+        </div>
+        <MoneySubNav />
+      </PageHeaderBand>
 
-      <MoneySubNav />
-
-      <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+      <p className="px-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>
         Base currency is <strong>{base}</strong>. Reports convert any other currency using the most
         recent rate set on or before the report's date.
       </p>
 
-      <Card>
+      <div className="px-4"><Card>
         {sorted.length === 0 ? (
           <EmptyState
             icon="💱"
@@ -94,7 +96,7 @@ export function RatesPage() {
             />
           ))
         )}
-      </Card>
+      </Card></div>
 
       <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Add exchange rate">
         <div className="flex flex-col gap-4">

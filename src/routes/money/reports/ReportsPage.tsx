@@ -25,6 +25,7 @@ import { StatTile } from '@/components/domain/StatTile'
 import { MoneyText } from '@/components/domain/MoneyText'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
 import { ListItem } from '@/components/ui/ListItem'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 import { GroupedBarChart } from '@/components/charts/GroupedBarChart'
 import { BarChart } from '@/components/charts/BarChart'
 import { DonutChart } from '@/components/charts/DonutChart'
@@ -180,19 +181,22 @@ export function ReportsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
-      <h1 className="text-xl font-bold tracking-tight">Reports</h1>
+    <div className="flex flex-col gap-4 pb-8">
+      <PageHeaderBand>
+        <h1 className="text-2xl font-bold">Reports</h1>
+        <MoneySubNav />
+        <PeriodSelector value={period} onChange={setPeriod} variant="inverse" />
+        <div data-header-control className="rounded-[var(--radius-md)] px-1">
+          <PeriodStepper
+            label={label}
+            onPrevious={() => setAnchorDate((d) => shiftPeriod(period, d, -1))}
+            onNext={() => setAnchorDate((d) => shiftPeriod(period, d, 1))}
+            nextDisabled={nextDisabled}
+          />
+        </div>
+      </PageHeaderBand>
 
-      <MoneySubNav />
-
-      <PeriodSelector value={period} onChange={setPeriod} />
-
-      <PeriodStepper
-        label={label}
-        onPrevious={() => setAnchorDate((d) => shiftPeriod(period, d, -1))}
-        onNext={() => setAnchorDate((d) => shiftPeriod(period, d, 1))}
-        nextDisabled={nextDisabled}
-      />
+      <div className="flex flex-col gap-4 px-4">
 
       <Card>
         <div className="flex gap-4">
@@ -456,6 +460,7 @@ export function ReportsPage() {
             Export CSV
           </Button>
         </div>
+      </div>
       </div>
     </div>
   )

@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 export function NotesPage() {
   const { repos } = useDatabase()
@@ -73,20 +74,15 @@ export function NotesPage() {
 
   return (
     <div className="relative flex flex-col pb-24">
-      <div className="px-4 pt-2">
-        <h1 className="text-xl font-bold tracking-tight">Notes</h1>
-      </div>
-
-      <div className="px-4 pt-2">
+      <PageHeaderBand>
+        <h1 className="text-2xl font-bold">Notes</h1>
         <NotesSubNav />
-      </div>
-
-      <div className="flex flex-col gap-2 px-4 pt-3">
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search notes"
           aria-label="Search notes"
+          data-header-control
         />
         <div className="flex items-center justify-between gap-2">
           <SegmentedControl
@@ -97,6 +93,7 @@ export function NotesPage() {
               { value: 'date', label: 'By date' },
               { value: 'collection', label: 'By collection' },
             ]}
+            variant="inverse"
           />
           <SegmentedControl
             label="Density"
@@ -106,9 +103,10 @@ export function NotesPage() {
               { value: 'list', label: '☰' },
               { value: 'card', label: '▦' },
             ]}
+            variant="inverse"
           />
         </div>
-      </div>
+      </PageHeaderBand>
 
       <div className="px-4 pt-3">
         {groups.length === 0 ? (

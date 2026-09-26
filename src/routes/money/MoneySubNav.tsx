@@ -46,8 +46,8 @@ export function MoneySubNav() {
             ref={isActive ? activeRef : undefined}
             className="shrink-0 whitespace-nowrap rounded-[10px] px-3.5 py-2 text-[13px] font-medium transition-colors"
             style={{
-              background: isActive ? 'var(--color-primary)' : 'transparent',
-              color: isActive ? 'var(--color-primary-fg)' : 'var(--color-text-muted)',
+              background: isActive ? 'var(--color-on-brand-surface-strong)' : 'transparent',
+              color: isActive ? 'var(--blue-700)' : 'var(--color-on-brand-muted)',
             }}
           >
             {item.label}

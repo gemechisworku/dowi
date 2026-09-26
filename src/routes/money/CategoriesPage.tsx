@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
 import { useSnackbar } from '@/components/ui/useSnackbar'
 import { MoneySubNav } from './MoneySubNav'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 const ICON_OPTIONS = [
   '🍽️',
@@ -117,17 +118,16 @@ export function CategoriesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight">Categories</h1>
-        <Button size="sm" onClick={openCreate}>
+    <div className="flex flex-col gap-4 pb-8">
+      <PageHeaderBand>
+        <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Categories</h1>
+        <Button size="sm" onClick={openCreate} style={{ background: 'var(--color-on-brand-surface-strong)', color: 'var(--blue-700)' }}>
           Add
         </Button>
-      </div>
-
-      <MoneySubNav />
-
-      <SegmentedControl
+        </div>
+        <MoneySubNav />
+        <SegmentedControl
         label="Category type"
         value={filterType}
         onChange={setFilterType}
@@ -135,9 +135,11 @@ export function CategoriesPage() {
           { value: 'expense', label: 'Expense' },
           { value: 'income', label: 'Income' },
         ]}
-      />
+        variant="inverse"
+        />
+      </PageHeaderBand>
 
-      <Card>
+      <div className="px-4"><Card>
         {visible.length === 0 ? (
           <EmptyState icon="🏷️" title={`No ${filterType} categories yet`} />
         ) : (
@@ -165,7 +167,7 @@ export function CategoriesPage() {
             />
           ))
         )}
-      </Card>
+      </Card></div>
 
       <Sheet
         open={sheetOpen}

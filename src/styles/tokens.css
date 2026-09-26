@@ -38,6 +38,13 @@
   --color-primary: var(--blue-600);
   --color-primary-fg: #ffffff;
   --color-primary-soft: var(--blue-50);
+  --color-brand-gradient-start: var(--blue-700);
+  --color-brand-gradient-end: var(--blue-500);
+  --color-on-brand: #ffffff;
+  --color-on-brand-muted: rgba(255, 255, 255, 0.76);
+  --color-on-brand-surface: rgba(255, 255, 255, 0.14);
+  --color-on-brand-surface-strong: rgba(255, 255, 255, 0.94);
+  --color-on-brand-border: rgba(255, 255, 255, 0.2);
   --color-bg: #f8f9fb;
   --color-surface: rgba(255, 255, 255, 0.76);
   --color-surface-solid: #ffffff;
@@ -196,6 +203,8 @@
     --color-border-strong: #35415470;
     --color-scrim: rgba(0, 0, 0, 0.6);
     --color-focus-ring: var(--blue-400);
+    --color-brand-gradient-start: var(--blue-700);
+    --color-brand-gradient-end: var(--blue-500);
 
     --color-disabled-bg: #1a212e;
     --color-disabled-fg: #545f70;
@@ -243,6 +252,8 @@
   --color-border-strong: #35415470;
   --color-scrim: rgba(0, 0, 0, 0.6);
   --color-focus-ring: var(--blue-400);
+  --color-brand-gradient-start: var(--blue-700);
+  --color-brand-gradient-end: var(--blue-500);
 
   --color-disabled-bg: #1a212e;
   --color-disabled-fg: #545f70;

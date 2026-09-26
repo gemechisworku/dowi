@@ -50,8 +50,8 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
   }
 
   return (
-    <header className="sticky top-0 z-30 px-4 pt-[max(14px,env(safe-area-inset-top))] pb-3">
-      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border px-3 py-2.5 backdrop-blur-xl" style={{background:'var(--color-surface)',borderColor:'var(--color-border)',boxShadow:'var(--shadow-card)'}}>
+    <header className="dowi-brand-gradient sticky top-0 z-30 px-4 pt-[max(14px,env(safe-area-inset-top))] pb-3">
+      <div className="flex items-center justify-between gap-3 px-1 py-2.5">
       <div className="flex min-w-0 items-center gap-2">
         {showBack && (
           <button
@@ -59,13 +59,13 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
             aria-label="Back"
             onClick={() => navigate(-1)}
             className="flex h-9 w-9 items-center justify-center rounded-[12px]"
-            style={{ background: 'var(--color-surface-2)' }}
+            style={{ background: 'var(--color-on-brand-surface)' }}
           >
             <AppIcon name="arrow-left" className="h-5 w-5" />
           </button>
         )}
-        {!showBack && <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] bg-[var(--color-primary)] font-bold text-[var(--color-primary-fg)]">D</span>}
-        <div className="min-w-0"><p className="truncate text-[15px] font-semibold">{title ?? 'Dowi'}</p>{!title&&<p className="truncate text-[11px] text-[var(--color-text-muted)]">Your day, in one place</p>}</div>
+        {!showBack && <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] bg-[var(--color-on-brand-surface-strong)] font-bold text-[var(--blue-700)]">D</span>}
+        <div className="min-w-0"><p className="truncate text-[15px] font-semibold text-[var(--color-on-brand)]">{title ?? 'Dowi'}</p>{!title&&<p className="truncate text-[11px] text-[var(--color-on-brand-muted)]">Your day, in one place</p>}</div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -73,7 +73,7 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
           type="button"
           aria-label={`Switch to ${THEME_LABEL[nextPreference]} theme (currently ${THEME_LABEL[preference]})`}
           onClick={handleThemeCycle}
-          className="flex h-9 w-9 items-center justify-center rounded-[12px] text-[var(--color-text-muted)]"
+          className="flex h-9 w-9 items-center justify-center rounded-[12px] text-[var(--color-on-brand-muted)]"
         >
           <AppIcon name={THEME_ICON[preference]} className="h-[18px] w-[18px]" />
         </button>
@@ -81,7 +81,7 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
           type="button"
           aria-label="Streaks and badges"
           onClick={() => navigate('/streaks')}
-          className="flex h-9 w-9 items-center justify-center rounded-[12px] text-[var(--color-text-muted)]"
+          className="flex h-9 w-9 items-center justify-center rounded-[12px] text-[var(--color-on-brand-muted)]"
         >
           <AppIcon name="flame" className="h-[18px] w-[18px]" />
         </button>
@@ -93,7 +93,7 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
               : 'Notifications'
           }
           onClick={() => navigate('/notifications')}
-          className="relative flex h-9 w-9 items-center justify-center rounded-[12px] text-[var(--color-text-muted)]"
+          className="relative flex h-9 w-9 items-center justify-center rounded-[12px] text-[var(--color-on-brand-muted)]"
         >
           <AppIcon name="bell" className="h-[18px] w-[18px]" />
           {unreadNotifications > 0 && (
@@ -102,7 +102,7 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
               className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
               style={{
                 background: 'var(--color-expense)',
-                border: '2px solid var(--color-surface)',
+                border: '2px solid var(--color-on-brand)',
               }}
             />
           )}
@@ -111,7 +111,7 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
           type="button"
           aria-label="Settings"
           onClick={() => navigate('/settings')}
-          className="flex h-9 w-9 items-center justify-center rounded-[12px] text-[var(--color-text-muted)]"
+          className="flex h-9 w-9 items-center justify-center rounded-[12px] text-[var(--color-on-brand-muted)]"
         >
           <AppIcon name="settings" className="h-[18px] w-[18px]" />
         </button>

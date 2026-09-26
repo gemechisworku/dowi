@@ -16,6 +16,7 @@ import { ListItem } from '@/components/ui/ListItem'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 /**
  * Plan-the-week screen (PLAN §M6): this week's tasks plus a quick-add
@@ -97,24 +98,24 @@ export function PlanWeekPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
-      <div>
+    <div className="flex flex-col gap-4 pb-8">
+      <PageHeaderBand>
+        <div>
         <Link
           to="/tasks"
           className="text-sm font-semibold"
-          style={{ color: 'var(--color-primary)' }}
+          style={{ color: 'var(--color-on-brand-muted)' }}
         >
           ‹ Tasks
         </Link>
-        <h1 className="mt-1 text-xl font-bold tracking-tight">Plan the week</h1>
-        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+        <h1 className="mt-1 text-2xl font-bold">Plan the week</h1>
+        <p className="text-sm" style={{ color: 'var(--color-on-brand-muted)' }}>
           {formatWeekRangeLabel(thisWeek.range)}
         </p>
       </div>
 
-      <TasksSubNav />
-
-      <div className="flex gap-2">
+        <TasksSubNav />
+        <div className="flex gap-2">
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -127,13 +128,15 @@ export function PlanWeekPage() {
           placeholder="Add straight into this week"
           aria-label="Add a task to this week"
           className="flex-1"
+          data-header-control
         />
-        <Button onClick={() => void handleQuickAdd()} disabled={!draft.trim()}>
+        <Button onClick={() => void handleQuickAdd()} disabled={!draft.trim()} style={{ background: 'var(--color-on-brand-surface-strong)', color: 'var(--blue-700)' }}>
           Add
         </Button>
-      </div>
+        </div>
+      </PageHeaderBand>
 
-      <div>
+      <div className="px-4">
         <SectionHeader title="This week" />
         {thisWeekTasks.length === 0 ? (
           <EmptyState
@@ -147,7 +150,7 @@ export function PlanWeekPage() {
       </div>
 
       {carryForward.length > 0 && (
-        <div>
+        <div className="px-4">
           <SectionHeader
             title={`Carried over from last week (${carryForward.length})`}
             action={

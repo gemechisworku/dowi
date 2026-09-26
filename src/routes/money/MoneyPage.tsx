@@ -22,6 +22,7 @@ import { SwipeableRow } from '@/components/ui/SwipeableRow'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
 import { MoneyText } from '@/components/domain/MoneyText'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 const PAGE_SIZE = 30
 
@@ -166,34 +167,31 @@ export function MoneyPage() {
 
   return (
     <div className="relative flex flex-col pb-24">
-      <div className="flex items-center justify-between gap-2 px-4 pt-2">
-        <h1 className="text-xl font-bold tracking-tight">Transactions</h1>
-        <div className="flex gap-2">
+      <PageHeaderBand>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold">Transactions</h1>
           <IconButton
             aria-label={activeCount > 0 ? `Filters, ${activeCount} active` : 'Filters'}
             icon="🎛️"
             badge={activeCount > 0}
             onClick={() => setFilterSheetOpen(true)}
+            data-header-control
+            style={{ background: 'var(--color-on-brand-surface)', color: 'var(--color-on-brand)' }}
           />
         </div>
-      </div>
-
-      <div className="px-4 pt-2">
         <MoneySubNav />
-      </div>
-
-      <div className="flex flex-wrap gap-2 px-4 pb-2 pt-1">
+        <div className="flex flex-wrap gap-2">
         {TRANSACTION_PRESETS.map((p) => (
-          <Chip key={p.value} selected={preset === p.value} onClick={() => setPreset(p.value)}>
+          <Chip key={p.value} selected={preset === p.value} variant="inverse" onClick={() => setPreset(p.value)}>
             {p.label}
           </Chip>
         ))}
       </div>
 
       {filterChips.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-4 pb-2">
+        <div className="flex flex-wrap gap-2">
           {filterChips.map((chip) => (
-            <Chip key={chip.key} selected onClick={() => removeChip(chip.key)}>
+            <Chip key={chip.key} selected variant="inverse" onClick={() => removeChip(chip.key)}>
               {chip.label} ✕
             </Chip>
           ))}
@@ -201,12 +199,13 @@ export function MoneyPage() {
             type="button"
             onClick={clearAll}
             className="text-xs font-semibold underline"
-            style={{ color: 'var(--color-text-muted)' }}
+            style={{ color: 'var(--color-on-brand-muted)' }}
           >
             Clear all
           </button>
         </div>
       )}
+      </PageHeaderBand>
 
       {recurringGroups.length > 0 && (
         <div className="px-4">

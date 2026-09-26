@@ -25,6 +25,7 @@ import { ChipGroup } from '@/components/ui/ChipGroup'
 import { Chip } from '@/components/ui/Chip'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 type View = 'today' | 'upcoming' | 'all' | 'completed'
 
@@ -100,21 +101,15 @@ export function TasksPage() {
 
   return (
     <div className="relative flex flex-col pb-24">
-      <div className="px-4 pt-2">
-        <h1 className="text-xl font-bold tracking-tight">Tasks</h1>
-      </div>
-
-      <div className="px-4 pt-2">
+      <PageHeaderBand>
+        <h1 className="text-2xl font-bold">Tasks</h1>
         <TasksSubNav />
-      </div>
-
-      <div className="px-4 pt-3">
-        <Card>
+        <div className="rounded-[var(--radius-md)] border p-3" style={{ background: 'var(--color-on-brand-surface)', borderColor: 'var(--color-on-brand-border)' }}>
           <div className="flex items-center justify-between gap-3">
             <div>
               <p
                 className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: 'var(--color-text-muted)' }}
+                 style={{ color: 'var(--color-on-brand-muted)' }}
               >
                 This week
               </p>
@@ -124,23 +119,20 @@ export function TasksPage() {
               <Link
                 to="/tasks/plan"
                 className="rounded-full px-3.5 py-1.5 text-[13px] font-semibold"
-                style={{ background: 'var(--color-surface-2)', color: 'var(--color-text)' }}
+                 style={{ background: 'var(--color-on-brand-surface-strong)', color: 'var(--blue-700)' }}
               >
                 Plan
               </Link>
               <Link
                 to="/tasks/review"
                 className="rounded-full px-3.5 py-1.5 text-[13px] font-semibold"
-                style={{ background: 'var(--color-surface-2)', color: 'var(--color-text)' }}
+                 style={{ background: 'var(--color-on-brand-surface-strong)', color: 'var(--blue-700)' }}
               >
                 Review
               </Link>
             </div>
           </div>
-        </Card>
-      </div>
-
-      <div className="px-4 pt-3">
+        </div>
         <SegmentedControl
           label="View"
           value={view}
@@ -151,26 +143,28 @@ export function TasksPage() {
             { value: 'all', label: 'All' },
             { value: 'completed', label: 'Completed' },
           ]}
+          variant="inverse"
         />
-      </div>
 
       {view === 'all' && (
-        <div className="flex flex-col gap-2 px-4 pt-3">
+        <div className="flex flex-col gap-2">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search tasks"
             aria-label="Search tasks"
+            data-header-control
           />
           {collections.length > 0 && (
             <ChipGroup label="Collection">
-              <Chip selected={collectionFilter === ''} onClick={() => setCollectionFilter('')}>
+              <Chip selected={collectionFilter === ''} variant="inverse" onClick={() => setCollectionFilter('')}>
                 All
               </Chip>
               {collections.map((c) => (
                 <Chip
                   key={c.id}
                   selected={collectionFilter === c.id}
+                  variant="inverse"
                   onClick={() => setCollectionFilter(c.id)}
                 >
                   {c.icon} {c.name}
@@ -180,6 +174,7 @@ export function TasksPage() {
           )}
         </div>
       )}
+      </PageHeaderBand>
 
       <div className="px-4 pt-3">
         {view === 'today' &&

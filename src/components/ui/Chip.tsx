@@ -4,10 +4,11 @@ import { cn } from '@/lib/cn'
 export interface ChipProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   selected?: boolean
   icon?: ReactNode
+  variant?: 'default' | 'inverse'
 }
 
 /** A single selectable pill, e.g. a category in the transaction form. Use ChipGroup for a labelled set. */
-export function Chip({ selected = false, icon, className, children, ...props }: ChipProps) {
+export function Chip({ selected = false, icon, variant = 'default', className, children, ...props }: ChipProps) {
   return (
     <button
       type="button"
@@ -17,8 +18,22 @@ export function Chip({ selected = false, icon, className, children, ...props }: 
         className,
       )}
       style={{
-        background: selected ? 'var(--color-primary)' : 'var(--color-surface-2)',
-        color: selected ? 'var(--color-primary-fg)' : 'var(--color-text)',
+        background:
+          variant === 'inverse'
+            ? selected
+              ? 'var(--color-on-brand-surface-strong)'
+              : 'var(--color-on-brand-surface)'
+            : selected
+              ? 'var(--color-primary)'
+              : 'var(--color-surface-2)',
+        color:
+          variant === 'inverse'
+            ? selected
+              ? 'var(--blue-700)'
+              : 'var(--color-on-brand)'
+            : selected
+              ? 'var(--color-primary-fg)'
+              : 'var(--color-text)',
       }}
       {...props}
     >

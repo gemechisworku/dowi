@@ -14,6 +14,7 @@ import { TextArea } from '@/components/ui/TextArea'
 import { Field } from '@/components/ui/Field'
 import { ProgressBar } from '@/components/domain/ProgressBar'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 const REVIEWS_COLLECTION_NAME = 'Weekly reviews'
 
@@ -125,23 +126,26 @@ export function ReviewWeekPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
-      <div>
+    <div className="flex flex-col gap-4 pb-8">
+      <PageHeaderBand>
+        <div>
         <Link
           to="/tasks"
           className="text-sm font-semibold"
-          style={{ color: 'var(--color-primary)' }}
+          style={{ color: 'var(--color-on-brand-muted)' }}
         >
           ‹ Tasks
         </Link>
-        <h1 className="mt-1 text-xl font-bold tracking-tight">Review the week</h1>
-        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+        <h1 className="mt-1 text-2xl font-bold">Review the week</h1>
+        <p className="text-sm" style={{ color: 'var(--color-on-brand-muted)' }}>
           {formatWeekRangeLabel(thisWeek.range)}
         </p>
       </div>
 
-      <TasksSubNav />
+        <TasksSubNav />
+      </PageHeaderBand>
 
+      <div className="flex flex-col gap-4 px-4">
       {weekTasks.length === 0 ? (
         <EmptyState
           icon="📭"
@@ -217,6 +221,7 @@ export function ReviewWeekPage() {
             onSave={handleSaveReflection}
           />
         )}
+      </div>
       </div>
     </div>
   )

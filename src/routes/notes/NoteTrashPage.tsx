@@ -10,6 +10,7 @@ import { IconButton } from '@/components/ui/IconButton'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSnackbar } from '@/components/ui/useSnackbar'
+import { PageHeaderBand } from '@/components/ui/PageHeaderBand'
 
 const DELETED_FORMATTER = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short' })
 
@@ -40,11 +41,13 @@ export function NoteTrashPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
-      <h1 className="text-xl font-bold tracking-tight">Trash</h1>
+    <div className="flex flex-col gap-4 pb-8">
+      <PageHeaderBand>
+        <h1 className="text-2xl font-bold">Trash</h1>
+        <NotesSubNav />
+      </PageHeaderBand>
 
-      <NotesSubNav />
-
+      <div className="px-4">
       {trashed.length === 0 ? (
         <EmptyState icon="🗑️" title="Trash is empty" />
       ) : (
@@ -78,6 +81,7 @@ export function NoteTrashPage() {
           ))}
         </Card>
       )}
+      </div>
 
       <ConfirmDialog
         open={pendingPurge !== null}
