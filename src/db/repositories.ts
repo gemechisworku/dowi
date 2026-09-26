@@ -1,6 +1,7 @@
 import type { DowiDatabase } from './db'
 import { createSoftDeleteRepo } from './softDeleteRepo'
 import { createStreakRepo } from './streakRepo'
+import { createActivityLogRepo } from './activityLogRepo'
 import { createRecurringRepo } from './recurringRepo'
 import type {
   Account,
@@ -53,12 +54,17 @@ export function createRepositories(db: DowiDatabase) {
   // note or task counts as "used the app today" — deliberately not
   // categories/collections/rates, which are configuration, not usage.
   const streak = createStreakRepo(db)
+  // The streak page's contribution calendar (M13) — same trigger points as
+  // streak, recorded alongside it rather than instead of it (see
+  // activityLogRepo.ts for why it still counts a repeat same-day action).
+  const activityLog = createActivityLogRepo(db)
 
   const notes = {
     ...baseNotes,
     async create(input: CreateInput<Note>): Promise<Note> {
       const record = await baseNotes.create(input)
       await streak.recordQualifyingActivity()
+      await activityLog.record()
       return record
     },
   }
@@ -68,7 +74,14 @@ export function createRepositories(db: DowiDatabase) {
     async create(input: CreateInput<Task>): Promise<Task> {
       const record = await baseTasks.create(input)
       await streak.recordQualifyingActivity()
+      await activityLog.record()
       return record
+    },
+
+    /** A task's subtasks — real child Task rows (Task.parentTaskId), not their own reduced type. */
+    async listByParent(parentTaskId: string): Promise<Task[]> {
+      const all = await baseTasks.list()
+      return all.filter((t) => t.parentTaskId === parentTaskId)
     },
   }
 
@@ -78,6 +91,7 @@ export function createRepositories(db: DowiDatabase) {
     async create(input: CreateInput<Transaction>): Promise<Transaction> {
       const record = await baseTransactions.create(input)
       await streak.recordQualifyingActivity()
+      await activityLog.record()
       return record
     },
 
@@ -138,6 +152,7 @@ export function createRepositories(db: DowiDatabase) {
     rates: { ...rates, getRateForCurrency },
     recurring,
     streak,
+    activityLog,
   }
 }
 

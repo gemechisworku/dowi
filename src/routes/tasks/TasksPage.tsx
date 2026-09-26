@@ -84,6 +84,7 @@ export function TasksPage() {
       <TaskListItem
         key={task.id}
         task={task}
+        allTasks={tasks}
         collection={task.collectionId ? collectionById.get(task.collectionId) : undefined}
         onToggleComplete={(t, done) => void handleToggleComplete(t, done)}
         onOpen={setEditing}

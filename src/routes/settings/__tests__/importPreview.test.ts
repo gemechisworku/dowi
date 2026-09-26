@@ -57,7 +57,6 @@ function makeTask(id: string): Task {
     createdAt: now,
     updatedAt: now,
     title: 'Task',
-    subtasks: [],
     priority: 'none',
     status: 'todo',
     reminderOffsets: [],

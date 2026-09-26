@@ -30,6 +30,7 @@ import { PlanWeekPage } from '@/routes/tasks/PlanWeekPage'
 import { ReviewWeekPage } from '@/routes/tasks/ReviewWeekPage'
 import { NotificationsInboxPage } from '@/routes/notifications/NotificationsInboxPage'
 import { NotificationDetailPage } from '@/routes/notifications/NotificationDetailPage'
+import { StreaksPage } from '@/routes/streaks/StreaksPage'
 import { SettingsPage } from '@/routes/settings/SettingsPage'
 import { KitchenSinkPage } from '@/routes/kitchen-sink/KitchenSinkPage'
 import { DataDebugPage } from '@/routes/debug/DataDebugPage'
@@ -70,6 +71,7 @@ export function App() {
                   <Route path="tasks/review" element={<ReviewWeekPage />} />
                   <Route path="notifications" element={<NotificationsInboxPage />} />
                   <Route path="notifications/:id" element={<NotificationDetailPage />} />
+                  <Route path="streaks" element={<StreaksPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="kitchen-sink" element={<KitchenSinkPage />} />
                   <Route path="debug/data" element={<DataDebugPage />} />

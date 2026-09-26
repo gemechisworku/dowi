@@ -9,6 +9,8 @@ import { isOverdue, subtaskProgress } from './taskViews'
 
 export interface TaskListItemProps {
   task: Task
+  /** The full task list in scope (unfiltered) — used to look up this task's subtasks by parentTaskId. */
+  allTasks: readonly Task[]
   collection?: TaskCollection
   onToggleComplete: (task: Task, done: boolean) => void
   onOpen: (task: Task) => void
@@ -29,13 +31,14 @@ const PRIORITY_LABEL: Record<Exclude<TaskPriority, 'none'>, string> = {
 /** One task row, shared by every Tasks view (Today/Upcoming/All/Completed). */
 export function TaskListItem({
   task,
+  allTasks,
   collection,
   onToggleComplete,
   onOpen,
   onDelete,
 }: TaskListItemProps) {
   const today = todayString()
-  const { done, total } = subtaskProgress(task)
+  const { done, total } = subtaskProgress(task, allTasks)
   const overdue = isOverdue(task, today)
   const dueLabel = formatDueLabel(task, today)
   const isDone = task.status === 'done'

@@ -125,18 +125,21 @@ export interface TaskCollection extends BaseEntity {
 export type TaskPriority = 'none' | 'low' | 'medium' | 'high'
 export type TaskStatus = 'todo' | 'doing' | 'done'
 
-export interface Subtask {
-  id: string
-  title: string
-  done: boolean
-}
-
 export interface Task extends BaseEntity {
   title: string
   /** Tiptap JSON document, same shape as Note.contentJSON. */
   notes?: unknown
   collectionId?: string
-  subtasks: Subtask[]
+  /**
+   * Set on a subtask — a full Task in its own right (same notes/due
+   * date/priority/reminders any task can have), just nested under another
+   * one instead of appearing as its own top-level entry (taskViews.ts's
+   * Today/Upcoming/All/Completed views all exclude it). Was a lightweight
+   * embedded `{id, title, done}[]` array before M13; migrated to standalone
+   * rows in db.ts's version 3 upgrade so subtasks get every field a task has
+   * instead of duplicating a reduced shape.
+   */
+  parentTaskId?: string
   /** ISO 8601 datetime. */
   dueAt?: string
   priority: TaskPriority
@@ -195,6 +198,13 @@ export interface AppNotification {
   deepLink?: string
   createdAt: string
   data?: NotificationDetailData
+  /**
+   * Set when the user clears it from the inbox — hidden from view, but kept
+   * around (not hard-deleted) so this occurrence still counts as "already
+   * raised" and doesn't get recreated as a fresh, unread notification the
+   * next time reminders are recomputed. See notificationsRepo.ts.
+   */
+  clearedAt?: string
 }
 
 export interface ReminderConfig {
@@ -232,4 +242,18 @@ export interface Settings {
 export interface MetaEntry {
   key: string
   value: string
+}
+
+/**
+ * One calendar day's qualifying-activity count (src/db/activityLogRepo.ts) —
+ * the history StreakState itself never kept, needed for the streak page's
+ * contribution calendar. `count` is how many qualifying actions (income/
+ * expense, note, task) happened that day, purely for shading intensity —
+ * never which ones, so this stays as content-free as the streak state it
+ * sits beside.
+ */
+export interface ActivityLogEntry {
+  /** "YYYY-MM-DD", primary key. */
+  date: string
+  count: number
 }

@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import type {
   Account,
+  ActivityLogEntry,
   AppNotification,
   Category,
   ExchangeRate,
@@ -34,6 +35,7 @@ export class DowiDatabase extends Dexie {
   settings!: Table<Settings, string>
   meta!: Table<MetaEntry, string>
   recurringTransactions!: Table<RecurringTransaction, string>
+  activityLog!: Table<ActivityLogEntry, string>
 
   constructor(name = 'dowi') {
     super(name)
@@ -58,6 +60,48 @@ export class DowiDatabase extends Dexie {
     this.version(2).stores({
       transactions: '&id, date, type, categoryId, [type+date], currency, deletedAt, recurringId',
       recurringTransactions: '&id, nextDueDate, deletedAt, paused',
+    })
+
+    // Subtasks become real Task rows (Task.parentTaskId) instead of an
+    // embedded `{id, title, done}[]` array, so a subtask can have every
+    // field a task has (notes, due date, priority, reminders) instead of a
+    // reduced shape. The upgrade splits each existing task's `subtasks`
+    // array into standalone rows and strips the now-unused field.
+    this.version(3)
+      .stores({
+        tasks: '&id, collectionId, dueAt, status, weekKey, deletedAt, parentTaskId',
+      })
+      .upgrade(async (tx) => {
+        const tasksTable = tx.table('tasks')
+        const existing = (await tasksTable.toArray()) as Array<
+          Task & { subtasks?: { id: string; title: string; done: boolean }[] }
+        >
+        const now = new Date().toISOString()
+        for (const parent of existing) {
+          for (const subtask of parent.subtasks ?? []) {
+            await tasksTable.add({
+              id: subtask.id,
+              createdAt: now,
+              updatedAt: now,
+              title: subtask.title,
+              parentTaskId: parent.id,
+              priority: 'none',
+              status: subtask.done ? 'done' : 'todo',
+              completedAt: subtask.done ? now : undefined,
+              reminderOffsets: [],
+            })
+          }
+          delete parent.subtasks
+          await tasksTable.put(parent)
+        }
+      })
+
+    // The streak/badges page (M13) needs actual per-day history to draw a
+    // contribution calendar — StreakState (meta table) only ever kept a
+    // running counter, never which days were active. Purely additive: a
+    // brand-new table, nothing to migrate.
+    this.version(4).stores({
+      activityLog: '&date',
     })
   }
 }

@@ -8,7 +8,6 @@ function task(overrides: Partial<Task>): Task {
   return {
     id: 'task-1',
     title: 'Untitled',
-    subtasks: [],
     priority: 'none',
     status: 'todo',
     reminderOffsets: [],

@@ -36,8 +36,18 @@ export function toggleCompletePatch(done: boolean): Pick<Task, 'status' | 'compl
   }
 }
 
-export function subtaskProgress(task: Task): { done: number; total: number } {
-  return { done: task.subtasks.filter((s) => s.done).length, total: task.subtasks.length }
+/** A task's subtasks are real child Task rows now — `allTasks` is whatever full list the caller already has in scope (e.g. repos.tasks.list()). */
+export function subtaskProgress(
+  task: Task,
+  allTasks: readonly Task[],
+): { done: number; total: number } {
+  const children = allTasks.filter((t) => t.parentTaskId === task.id)
+  return { done: children.filter((t) => t.status === 'done').length, total: children.length }
+}
+
+/** Excludes subtasks (Task.parentTaskId set) — every top-level view (Today/Upcoming/All/Completed) only ever shows top-level tasks; a subtask is only ever seen nested under its parent. */
+function topLevelOnly(tasks: readonly Task[]): Task[] {
+  return tasks.filter((t) => !t.parentTaskId)
 }
 
 function byDueAtAsc(a: Task, b: Task): number {
@@ -51,8 +61,9 @@ function byDueAtAsc(a: Task, b: Task): number {
  * due today, each group sorted by due time — per PRD "Today (overdue first)".
  */
 export function getTodayTasks(tasks: readonly Task[], today: string): Task[] {
-  const overdue = tasks.filter((t) => isOverdue(t, today)).sort(byDueAtAsc)
-  const dueToday = tasks.filter((t) => isDueToday(t, today)).sort(byDueAtAsc)
+  const topLevel = topLevelOnly(tasks)
+  const overdue = topLevel.filter((t) => isOverdue(t, today)).sort(byDueAtAsc)
+  const dueToday = topLevel.filter((t) => isDueToday(t, today)).sort(byDueAtAsc)
   return [...overdue, ...dueToday]
 }
 
@@ -69,7 +80,7 @@ export interface UpcomingGroup {
  */
 export function getUpcomingGroups(tasks: readonly Task[], today: string): UpcomingGroup[] {
   const horizon = shiftPeriod('day', today, UPCOMING_HORIZON_DAYS)
-  const future = tasks.filter((t) => {
+  const future = topLevelOnly(tasks).filter((t) => {
     const d = dueDate(t)
     return t.status !== 'done' && d !== undefined && d > today
   })
@@ -100,7 +111,7 @@ export function getAllTasks(
   tasks: readonly Task[],
   opts: { collectionId?: string; search?: string } = {},
 ): Task[] {
-  return tasks
+  return topLevelOnly(tasks)
     .filter((t) => t.status !== 'done')
     .filter((t) => !opts.collectionId || t.collectionId === opts.collectionId)
     .filter((t) => !opts.search || t.title.toLowerCase().includes(opts.search.trim().toLowerCase()))
@@ -109,12 +120,12 @@ export function getAllTasks(
 
 /** Count of tasks overdue as of `today` — Home's red overdue badge, which counts every overdue task, not just the ones that fit inside its 5-item cap. */
 export function getOverdueCount(tasks: readonly Task[], today: string): number {
-  return tasks.filter((t) => isOverdue(t, today)).length
+  return topLevelOnly(tasks).filter((t) => isOverdue(t, today)).length
 }
 
 /** Completed tasks, most recently completed first — the "Completed" view. */
 export function getCompletedTasks(tasks: readonly Task[]): Task[] {
-  return tasks
+  return topLevelOnly(tasks)
     .filter((t) => t.status === 'done')
     .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
 }

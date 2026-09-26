@@ -102,21 +102,56 @@ test.describe('Tasks — capture and views', () => {
     page,
   }) => {
     await page.goto('/tasks')
-    await page.getByRole('button', { name: 'Add task' }).click()
-    await page.getByRole('textbox', { name: 'Title', exact: true }).fill('Plan the trip')
+    // Subtasks are real child tasks (Task.parentTaskId) now — the parent
+    // has to exist first, so the editor only appears once it's saved.
+    await addTask(page, 'Plan the trip')
+
+    await page.getByRole('radio', { name: 'All' }).click()
+    await page.getByText('Plan the trip').click()
+    await expect(page.getByText('Save this task first to add subtasks')).not.toBeVisible()
+
     await page.getByLabel('New subtask title').fill('Book flights')
     await page.getByLabel('Add subtask').click()
     await page.getByLabel('New subtask title').fill('Book hotel')
     await page.getByLabel('Add subtask').click()
+    await expect(page.getByText('Book flights')).toBeVisible()
+    await expect(page.getByText('Book hotel')).toBeVisible()
     await page.getByRole('button', { name: 'Save', exact: true }).click()
 
-    await page.getByRole('radio', { name: 'All' }).click()
     await expect(page.getByText('0/2 subtasks')).toBeVisible()
 
     await page.getByText('Plan the trip').click()
     await page.getByRole('checkbox', { name: 'Mark "Book flights" done' }).click()
     await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page.getByText('1/2 subtasks')).toBeVisible()
+  })
+
+  test('a subtask opens into the full task editor, with its own notes and due date', async ({
+    page,
+  }) => {
+    await page.goto('/tasks')
+    await addTask(page, 'Plan the trip')
+
+    await page.getByRole('radio', { name: 'All' }).click()
+    await page.getByText('Plan the trip').click()
+    await page.getByLabel('New subtask title').fill('Book flights')
+    await page.getByLabel('Add subtask').click()
+
+    // Only one Sheet is ever mounted (see TaskSheet.tsx) — the parent's own
+    // fields stay in the DOM but hidden while a subtask's are shown, so a
+    // label like "Notes" matches both; `.last()` is always the active one
+    // (the subtask's, when one is open — the DOM order the component renders
+    // them in), and still resolves correctly to the sole match otherwise.
+    await page.getByText('Book flights', { exact: true }).click()
+    await expect(page.getByLabel('Parent task')).toHaveValue('Plan the trip')
+    await page.getByLabel('Notes').last().fill('Window seat if possible')
+    await page.getByLabel('Due date').last().fill('2026-12-01')
+    await page.getByRole('button', { name: 'Save', exact: true }).last().click()
+
+    // Back at the parent sheet — reopen the subtask to confirm it persisted.
+    await page.getByText('Book flights', { exact: true }).click()
+    await expect(page.getByLabel('Notes').last()).toHaveValue('Window seat if possible')
+    await expect(page.getByLabel('Due date').last()).toHaveValue('2026-12-01')
   })
 
   test('searching and filtering by collection narrow the All view', async ({ page }) => {

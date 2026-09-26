@@ -32,6 +32,9 @@ export interface ShowOsNotificationOptions {
   deepLink?: string
 }
 
+/** Same icon as the manifest/home-screen icon (public/icons/icon-192.png) — without this, the OS falls back to a generic bell/no icon instead of Dowi's own. */
+const NOTIFICATION_ICON = '/icons/icon-192.png'
+
 /** Returns whether the OS notification was actually shown. */
 export async function showOsNotification(
   title: string,
@@ -50,7 +53,12 @@ export async function showOsNotification(
       // conflicting global `self: WorkerGlobalScope`).
       const registration = (self as unknown as { registration: ServiceWorkerRegistration })
         .registration
-      await registration.showNotification(title, { body, tag, data: { deepLink } })
+      await registration.showNotification(title, {
+        body,
+        tag,
+        icon: NOTIFICATION_ICON,
+        data: { deepLink },
+      })
       return true
     } catch {
       return false
@@ -60,7 +68,12 @@ export async function showOsNotification(
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return false
   try {
     const registration = await withTimeout(navigator.serviceWorker.ready, READY_TIMEOUT_MS)
-    await registration.showNotification(title, { body, tag, data: { deepLink } })
+    await registration.showNotification(title, {
+      body,
+      tag,
+      icon: NOTIFICATION_ICON,
+      data: { deepLink },
+    })
     return true
   } catch {
     return false

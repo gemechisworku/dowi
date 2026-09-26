@@ -17,6 +17,23 @@
   --blue-700: #1d4ed8;
   --blue-900: #1e3a8a;
 
+  /*
+   * ---- Streak contribution-calendar heatmap (M13) ----
+   * A sequential (one-hue, magnitude) ramp off the same blue used
+   * everywhere else, not a new hue — heat-1..4 read low->high activity.
+   * Light mode: increasingly saturated/dark, the conventional "more
+   * activity = deeper colour" reading against a white surface. Dark mode
+   * inverts that (heat-1 near-surface, heat-4 brightest) — a dark step
+   * would recede into the already-dark surface instead of reading as
+   * "most active", the same reason --color-primary itself flips from
+   * blue-600 to the lighter blue-400 in dark mode.
+   */
+  --heat-0: var(--color-surface-2);
+  --heat-1: var(--blue-100);
+  --heat-2: var(--blue-300);
+  --heat-3: var(--blue-500);
+  --heat-4: var(--blue-700);
+
   /* ---- Semantic surfaces & text (light) ---- */
   --color-primary: var(--blue-600);
   --color-primary-fg: #ffffff;
@@ -195,6 +212,12 @@
     --note-highlight-blue: #1e3a8a;
     --note-highlight-pink: #831843;
 
+    /* Inverted vs. light mode — brightest step reads as "most active" against a dark surface, see the :root comment above. */
+    --heat-1: var(--color-primary-soft);
+    --heat-2: var(--blue-700);
+    --heat-3: var(--blue-500);
+    --heat-4: var(--blue-300);
+
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
     --shadow-elevated: 0 10px 24px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.4);
     --shadow-floating: 0 18px 44px rgba(0, 0, 0, 0.55);
@@ -234,6 +257,11 @@
   --note-highlight-green: #14532d;
   --note-highlight-blue: #1e3a8a;
   --note-highlight-pink: #831843;
+
+  --heat-1: var(--color-primary-soft);
+  --heat-2: var(--blue-700);
+  --heat-3: var(--blue-500);
+  --heat-4: var(--blue-300);
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-elevated: 0 10px 24px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.4);
