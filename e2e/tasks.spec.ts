@@ -143,6 +143,7 @@ test.describe('Tasks — capture and views', () => {
     // (the subtask's, when one is open — the DOM order the component renders
     // them in), and still resolves correctly to the sole match otherwise.
     await page.getByText('Book flights', { exact: true }).click()
+    await expect(page.getByLabel('Parent task')).toHaveValue('Plan the trip')
     await page.getByLabel('Notes').last().fill('Window seat if possible')
     await page.getByLabel('Due date').last().fill('2026-12-01')
     await page.getByRole('button', { name: 'Save', exact: true }).last().click()

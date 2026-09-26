@@ -103,6 +103,36 @@ describe('createWebScheduler.catchUp', () => {
     expect(await notificationsRepo.list()).toHaveLength(1)
   })
 
+  it('does not raise the same occurrence twice when two catchUps race — the real-world case of a push event and periodicsync (or two tabs) firing at once', async () => {
+    vi.mocked(permission.getNotificationPermission).mockReturnValue('granted')
+    vi.mocked(deliver.showOsNotification).mockResolvedValue(true)
+
+    // Deliberately concurrent, not sequential — the dedup-critical read
+    // (what's already been raised) and write (create the new row) has to
+    // be safe from this exact race, not just from two calls that happen
+    // not to overlap.
+    await Promise.all([scheduler.catchUp(), scheduler.catchUp()])
+
+    expect(await notificationsRepo.list()).toHaveLength(1)
+    expect(deliver.showOsNotification).toHaveBeenCalledTimes(1)
+  })
+
+  it('never re-raises an occurrence that was cleared from the inbox — clearing must not look like "never sent"', async () => {
+    vi.mocked(permission.getNotificationPermission).mockReturnValue('granted')
+    vi.mocked(deliver.showOsNotification).mockResolvedValue(true)
+
+    await scheduler.catchUp()
+    const [first] = await notificationsRepo.list()
+    await notificationsRepo.clear(first!.id)
+    expect(await notificationsRepo.list()).toHaveLength(0)
+
+    await scheduler.catchUp()
+
+    expect(await notificationsRepo.list()).toHaveLength(0)
+    expect(await notificationsRepo.listAllEverRaised()).toHaveLength(1)
+    expect(deliver.showOsNotification).toHaveBeenCalledTimes(1)
+  })
+
   it('suppresses the evening streak reminder once a real qualifying activity was recorded today — proves catchUp actually reads the live streak state, not just computeDueReminders in isolation', async () => {
     vi.mocked(permission.getNotificationPermission).mockReturnValue('granted')
     vi.mocked(deliver.showOsNotification).mockResolvedValue(true)

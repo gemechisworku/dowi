@@ -198,6 +198,13 @@ export interface AppNotification {
   deepLink?: string
   createdAt: string
   data?: NotificationDetailData
+  /**
+   * Set when the user clears it from the inbox — hidden from view, but kept
+   * around (not hard-deleted) so this occurrence still counts as "already
+   * raised" and doesn't get recreated as a fresh, unread notification the
+   * next time reminders are recomputed. See notificationsRepo.ts.
+   */
+  clearedAt?: string
 }
 
 export interface ReminderConfig {

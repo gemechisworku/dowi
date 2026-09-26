@@ -159,6 +159,28 @@ test.describe('Reminder catch-up and inbox', () => {
     await expect(page.getByText('No notifications yet')).toBeVisible()
   })
 
+  test('a cleared reminder does not come back as a fresh, unread notification on the next catch-up', async ({
+    page,
+  }) => {
+    await page.goto('/settings')
+    await page.getByLabel('Weekly plan day').selectOption({ label: TODAY_NAME })
+    await page.getByLabel('Weekly plan time').fill('00:00')
+
+    await page.goto('/notifications')
+    await expect(page.getByText('Plan your week').first()).toBeVisible()
+
+    await page.getByRole('button', { name: 'Clear all' }).click()
+    await page.getByRole('button', { name: 'Clear all' }).last().click()
+    await expect(page.getByText('No notifications yet')).toBeVisible()
+
+    // Reloading re-runs catch-up (useNotificationRuntime.ts) exactly like
+    // reopening the app would — the same reminder's occurrence must not
+    // look "never sent" again just because it was cleared from view.
+    await page.reload()
+    await expect(page.getByText('No notifications yet')).toBeVisible()
+    await expect(page.getByLabel(/Notifications, \d+ unread/)).not.toBeVisible()
+  })
+
   test('shows an empty state once every reminder is off and the inbox is cleared', async ({
     page,
   }) => {

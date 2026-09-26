@@ -40,6 +40,8 @@ interface TaskFieldsProps {
   initialCollectionId?: string
   /** A subtask's own fields never get another nested Subtasks section — capped at one level deep. */
   showSubtasksField: boolean
+  /** Set only when these fields are a subtask's own — shows which task it belongs to. */
+  parentTaskTitle?: string
   onOpenSubtask?: (task: Task) => void
   /** Called after a successful save/delete, or Cancel — "leave this form" (close the whole sheet for the top-level task, or return to it for a subtask). */
   onDone: () => void
@@ -55,6 +57,7 @@ function TaskFields({
   task,
   initialCollectionId,
   showSubtasksField,
+  parentTaskTitle,
   onOpenSubtask,
   onDone,
 }: TaskFieldsProps) {
@@ -124,6 +127,12 @@ function TaskFields({
 
   return (
     <div className="flex flex-col gap-4">
+      {parentTaskTitle && (
+        <Field label="Parent task">
+          {({ inputId }) => <Input id={inputId} value={parentTaskTitle} disabled readOnly />}
+        </Field>
+      )}
+
       <Field label="Title" required>
         {({ inputId }) => (
           <Input id={inputId} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
@@ -282,6 +291,7 @@ export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps
           key={openSubtask.id}
           task={openSubtask}
           showSubtasksField={false}
+          parentTaskTitle={task?.title}
           onDone={() => setOpenSubtask(undefined)}
         />
       )}

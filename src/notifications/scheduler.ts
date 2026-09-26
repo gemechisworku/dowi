@@ -7,13 +7,14 @@
  */
 
 import type { DowiDatabase } from '@/db/db'
+import type { AppNotification } from '@/db/types'
 import type { NotificationsRepo } from '@/db/notificationsRepo'
 import type { SettingsRepo } from '@/db/settingsRepo'
 import type { Repositories } from '@/db/repositories'
 import { SEEDED_META_KEY } from '@/db/seed'
 import { createStreakRepo } from '@/db/streakRepo'
-import { computeDueReminders, isWithinQuietHours } from '@/lib/reminders'
-import { computeDueRecurring } from '@/lib/recurrence'
+import { computeDueReminders, isWithinQuietHours, type DueReminder } from '@/lib/reminders'
+import { computeDueRecurring, type RemindDue } from '@/lib/recurrence'
 import { computeDailySummary } from '@/lib/dailySummary'
 import { todayString } from '@/lib/period'
 import { showOsNotification } from './deliver'
@@ -56,128 +57,167 @@ export function createWebScheduler({
 }: WebSchedulerDeps): ReminderScheduler {
   return {
     async catchUp() {
-      const [
-        settings,
-        tasks,
-        transactions,
-        notes,
-        existing,
-        installedMeta,
-        streak,
-        recurringTemplates,
-      ] = await Promise.all([
-        settingsRepo.get(),
-        repos.tasks.list(),
-        repos.transactions.list(),
-        repos.notes.list(),
-        notificationsRepo.list(),
-        db.meta.get(SEEDED_META_KEY),
-        createStreakRepo(db).get(),
-        repos.recurring.list(),
-      ])
       const now = new Date()
-      const installedAt = installedMeta?.value ?? now.toISOString()
-      const dailySummary = computeDailySummary(
-        transactions,
-        tasks,
-        notes,
-        todayString(),
-        settings.baseCurrency,
+
+      // The dedup-critical part — read what's already been raised, decide
+      // what's newly due, and write the new inbox rows — runs inside one
+      // real IndexedDB read-write transaction. That's what actually makes
+      // dedup safe: catchUp() can be triggered from several places close
+      // together (a push event, periodicsync, app open, a settings change),
+      // sometimes from a different execution context entirely (the service
+      // worker vs. the page), so an in-memory "is a catchUp already running"
+      // flag can't help — only the database itself can serialize those.
+      // Wrapping just this part (not showOsNotification below, which isn't
+      // a Dexie operation and would abort the transaction if awaited inside
+      // it) means a second, overlapping catchUp() literally cannot start
+      // its own read until this one's writes have committed, so it always
+      // sees them and correctly skips re-creating the same occurrence.
+      const { toDeliver, toDeliverRecurring, quiet } = await db.transaction(
+        'rw',
+        [
+          db.settings,
+          db.tasks,
+          db.transactions,
+          db.notes,
+          db.notifications,
+          db.meta,
+          db.recurringTransactions,
+        ],
+        async () => {
+          const [
+            settings,
+            tasks,
+            transactions,
+            notes,
+            existing,
+            installedMeta,
+            streak,
+            recurringTemplates,
+          ] = await Promise.all([
+            settingsRepo.get(),
+            repos.tasks.list(),
+            repos.transactions.list(),
+            repos.notes.list(),
+            notificationsRepo.listAllEverRaised(),
+            db.meta.get(SEEDED_META_KEY),
+            createStreakRepo(db).get(),
+            repos.recurring.list(),
+          ])
+          const installedAt = installedMeta?.value ?? now.toISOString()
+          const dailySummary = computeDailySummary(
+            transactions,
+            tasks,
+            notes,
+            todayString(),
+            settings.baseCurrency,
+          )
+          const due = computeDueReminders({
+            settings,
+            tasks,
+            now,
+            existing,
+            installedAt,
+            streakLastActiveDate: streak.lastActiveDate,
+            currentStreak: streak.currentStreak,
+            dailySummary,
+          })
+          const dueRecurring = computeDueRecurring({
+            templates: recurringTemplates.filter((t) => !t.paused),
+            existingTransactions: transactions.map((t) => ({
+              recurringId: t.recurringId,
+              date: t.date,
+            })),
+            existingNotifications: existing,
+            today: todayString(),
+          })
+
+          const toDeliver: { created: AppNotification; reminder: DueReminder }[] = []
+          for (const reminder of due) {
+            const created = await notificationsRepo.create({
+              type: reminder.type,
+              title: reminder.title,
+              body: reminder.body,
+              scheduledFor: reminder.scheduledFor,
+              deepLink: reminder.deepLink,
+              data: reminder.data,
+            })
+            toDeliver.push({ created, reminder })
+          }
+
+          // Recurring transactions (PRD §9): auto-record templates silently
+          // create the real Transaction for every newly-due occurrence and
+          // advance the template's state; remind-and-confirm templates raise
+          // a notification instead and only advance state once the user
+          // actually confirms (see recurringRepo.confirmOccurrence, called
+          // from TransactionSheet's save path).
+          for (const batch of dueRecurring.autoRecord) {
+            for (const date of batch.occurrences) {
+              await repos.transactions.create({
+                type: batch.template.type,
+                amountMinorUnits: batch.template.amountMinorUnits,
+                currency: batch.template.currency,
+                date,
+                categoryId: batch.template.categoryId,
+                sourceId: batch.template.sourceId,
+                accountId: batch.template.accountId,
+                note: batch.template.note,
+                tags: batch.template.tags,
+                recurringId: batch.template.id,
+              })
+            }
+            await repos.recurring.update(batch.template.id, {
+              occurrenceIndex: batch.finalOccurrenceIndex,
+              nextDueDate: batch.finalNextDueDate,
+              lastGeneratedDate: batch.finalLastGeneratedDate,
+            })
+          }
+
+          const toDeliverRecurring: { created: AppNotification; reminder: RemindDue }[] = []
+          for (const reminder of dueRecurring.remind) {
+            const created = await notificationsRepo.create({
+              type: 'recurring-due',
+              title: reminder.title,
+              body: reminder.body,
+              scheduledFor: reminder.scheduledFor,
+              deepLink: reminder.deepLink,
+              data: { recurringId: reminder.template.id },
+            })
+            toDeliverRecurring.push({ created, reminder })
+          }
+
+          return {
+            toDeliver,
+            toDeliverRecurring,
+            quiet: isWithinQuietHours(now, settings.reminders.quietHours),
+          }
+        },
       )
-      const due = computeDueReminders({
-        settings,
-        tasks,
-        now,
-        existing,
-        installedAt,
-        streakLastActiveDate: streak.lastActiveDate,
-        currentStreak: streak.currentStreak,
-        dailySummary,
-      })
-      const dueRecurring = computeDueRecurring({
-        templates: recurringTemplates.filter((t) => !t.paused),
-        existingTransactions: transactions.map((t) => ({
-          recurringId: t.recurringId,
-          date: t.date,
-        })),
-        existingNotifications: existing,
-        today: todayString(),
-      })
-      if (
-        due.length === 0 &&
-        dueRecurring.autoRecord.length === 0 &&
-        dueRecurring.remind.length === 0
-      ) {
-        return
-      }
+
+      if (toDeliver.length === 0 && toDeliverRecurring.length === 0) return
 
       const permission = getNotificationPermission()
-      const quiet = isWithinQuietHours(now, settings.reminders.quietHours)
+      if (permission !== 'granted' || quiet) return
 
-      for (const reminder of due) {
-        const created = await notificationsRepo.create({
-          type: reminder.type,
-          title: reminder.title,
+      // A stable tag per occurrence (not the freshly-created row's own id)
+      // so that even if something upstream ever did manage to raise the
+      // same occurrence twice, the OS still coalesces it into one visible
+      // notification instead of stacking a duplicate.
+      for (const { created, reminder } of toDeliver) {
+        const delivered = await showOsNotification(reminder.title, {
           body: reminder.body,
-          scheduledFor: reminder.scheduledFor,
+          tag: `${reminder.type}:${reminder.scheduledFor}`,
           deepLink: reminder.deepLink,
-          data: reminder.data,
         })
-        if (permission === 'granted' && !quiet) {
-          const delivered = await showOsNotification(reminder.title, {
-            body: reminder.body,
-            tag: created.id,
-            deepLink: reminder.deepLink,
-          })
-          if (delivered) await notificationsRepo.markDelivered(created.id)
-        }
+        if (delivered) await notificationsRepo.markDelivered(created.id)
       }
 
-      // Recurring transactions (PRD §9): auto-record templates silently
-      // create the real Transaction for every newly-due occurrence and
-      // advance the template's state; remind-and-confirm templates raise a
-      // notification instead and only advance state once the user actually
-      // confirms (see recurringRepo.confirmOccurrence, called from
-      // TransactionSheet's save path).
-      for (const batch of dueRecurring.autoRecord) {
-        for (const date of batch.occurrences) {
-          await repos.transactions.create({
-            type: batch.template.type,
-            amountMinorUnits: batch.template.amountMinorUnits,
-            currency: batch.template.currency,
-            date,
-            categoryId: batch.template.categoryId,
-            sourceId: batch.template.sourceId,
-            accountId: batch.template.accountId,
-            note: batch.template.note,
-            tags: batch.template.tags,
-            recurringId: batch.template.id,
-          })
-        }
-        await repos.recurring.update(batch.template.id, {
-          occurrenceIndex: batch.finalOccurrenceIndex,
-          nextDueDate: batch.finalNextDueDate,
-          lastGeneratedDate: batch.finalLastGeneratedDate,
-        })
-      }
-
-      for (const reminder of dueRecurring.remind) {
-        const created = await notificationsRepo.create({
-          type: 'recurring-due',
-          title: reminder.title,
+      for (const { created, reminder } of toDeliverRecurring) {
+        const delivered = await showOsNotification(reminder.title, {
           body: reminder.body,
-          scheduledFor: reminder.scheduledFor,
+          tag: `recurring-due:${reminder.template.id}:${reminder.scheduledFor}`,
           deepLink: reminder.deepLink,
-          data: { recurringId: reminder.template.id },
         })
-        if (permission === 'granted' && !quiet) {
-          const delivered = await showOsNotification(reminder.title, {
-            body: reminder.body,
-            tag: created.id,
-            deepLink: reminder.deepLink,
-          })
-          if (delivered) await notificationsRepo.markDelivered(created.id)
-        }
+        if (delivered) await notificationsRepo.markDelivered(created.id)
       }
     },
 
