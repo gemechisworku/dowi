@@ -125,18 +125,21 @@ export interface TaskCollection extends BaseEntity {
 export type TaskPriority = 'none' | 'low' | 'medium' | 'high'
 export type TaskStatus = 'todo' | 'doing' | 'done'
 
-export interface Subtask {
-  id: string
-  title: string
-  done: boolean
-}
-
 export interface Task extends BaseEntity {
   title: string
   /** Tiptap JSON document, same shape as Note.contentJSON. */
   notes?: unknown
   collectionId?: string
-  subtasks: Subtask[]
+  /**
+   * Set on a subtask — a full Task in its own right (same notes/due
+   * date/priority/reminders any task can have), just nested under another
+   * one instead of appearing as its own top-level entry (taskViews.ts's
+   * Today/Upcoming/All/Completed views all exclude it). Was a lightweight
+   * embedded `{id, title, done}[]` array before M13; migrated to standalone
+   * rows in db.ts's version 3 upgrade so subtasks get every field a task has
+   * instead of duplicating a reduced shape.
+   */
+  parentTaskId?: string
   /** ISO 8601 datetime. */
   dueAt?: string
   priority: TaskPriority

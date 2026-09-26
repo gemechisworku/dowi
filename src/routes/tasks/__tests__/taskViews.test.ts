@@ -19,7 +19,6 @@ function task(overrides: Partial<Task>): Task {
   return {
     id: overrides.id ?? 'task-1',
     title: 'Untitled',
-    subtasks: [],
     priority: 'none',
     status: 'todo',
     reminderOffsets: [],
@@ -72,19 +71,21 @@ describe('isOverdue / isDueToday', () => {
 })
 
 describe('subtaskProgress', () => {
-  it('counts done vs total', () => {
-    const t = task({
-      subtasks: [
-        { id: 's1', title: 'a', done: true },
-        { id: 's2', title: 'b', done: false },
-        { id: 's3', title: 'c', done: true },
-      ],
-    })
-    expect(subtaskProgress(t)).toEqual({ done: 2, total: 3 })
+  it('counts done vs total, from child tasks by parentTaskId', () => {
+    const parent = task({ id: 'parent' })
+    const allTasks = [
+      parent,
+      task({ id: 's1', parentTaskId: 'parent', status: 'done' }),
+      task({ id: 's2', parentTaskId: 'parent', status: 'todo' }),
+      task({ id: 's3', parentTaskId: 'parent', status: 'done' }),
+      task({ id: 'unrelated', parentTaskId: 'someone-else' }),
+    ]
+    expect(subtaskProgress(parent, allTasks)).toEqual({ done: 2, total: 3 })
   })
 
   it('is 0/0 with no subtasks', () => {
-    expect(subtaskProgress(task({}))).toEqual({ done: 0, total: 0 })
+    const parent = task({ id: 'parent' })
+    expect(subtaskProgress(parent, [parent])).toEqual({ done: 0, total: 0 })
   })
 })
 
@@ -110,6 +111,15 @@ describe('getTodayTasks', () => {
     const late = task({ id: 'late', dueAt: '2026-09-21T18:00:00.000Z' })
     const early = task({ id: 'early', dueAt: '2026-09-21T08:00:00.000Z' })
     expect(getTodayTasks([late, early], TODAY).map((t) => t.id)).toEqual(['early', 'late'])
+  })
+
+  it('excludes a subtask even if its own due date would otherwise put it here — it only ever appears nested under its parent', () => {
+    const subtask = task({
+      id: 'subtask',
+      parentTaskId: 'parent',
+      dueAt: '2026-09-19T09:00:00.000Z',
+    })
+    expect(getTodayTasks([subtask], TODAY)).toEqual([])
   })
 })
 
@@ -151,6 +161,15 @@ describe('getUpcomingGroups', () => {
     const groups = getUpcomingGroups([far, nearer], TODAY)
     expect(groups[0]!.tasks.map((t) => t.id)).toEqual(['nearer', 'far'])
   })
+
+  it('excludes subtasks', () => {
+    const subtask = task({
+      id: 'subtask',
+      parentTaskId: 'parent',
+      dueAt: '2026-09-22T09:00:00.000Z',
+    })
+    expect(getUpcomingGroups([subtask], TODAY)).toEqual([])
+  })
 })
 
 describe('getAllTasks', () => {
@@ -183,6 +202,11 @@ describe('getAllTasks', () => {
     })
     expect(result).toEqual([])
   })
+
+  it('excludes subtasks', () => {
+    const subtask = task({ id: 'subtask', parentTaskId: 'parent' })
+    expect(getAllTasks([subtask])).toEqual([])
+  })
 })
 
 describe('getOverdueCount', () => {
@@ -197,6 +221,15 @@ describe('getOverdueCount', () => {
 
   it('is 0 when nothing is overdue', () => {
     expect(getOverdueCount([task({ dueAt: '2026-09-21T09:00:00.000Z' })], TODAY)).toBe(0)
+  })
+
+  it('excludes subtasks', () => {
+    const subtask = task({
+      id: 'subtask',
+      parentTaskId: 'parent',
+      dueAt: '2026-09-19T09:00:00.000Z',
+    })
+    expect(getOverdueCount([subtask], TODAY)).toBe(0)
   })
 })
 
@@ -219,5 +252,15 @@ describe('getCompletedTasks', () => {
     const notDone = task({ id: 'not-done' })
     const result = getCompletedTasks([older, notDone, newer])
     expect(result.map((t) => t.id)).toEqual(['newer', 'older'])
+  })
+
+  it('excludes subtasks', () => {
+    const subtask = task({
+      id: 'subtask',
+      parentTaskId: 'parent',
+      status: 'done',
+      completedAt: '2026-09-20T00:00:00.000Z',
+    })
+    expect(getCompletedTasks([subtask])).toEqual([])
   })
 })

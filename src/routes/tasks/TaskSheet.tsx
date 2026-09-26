@@ -3,7 +3,7 @@ import { EMPTY_ARRAY } from '@/lib/emptyArray'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useDatabase } from '@/app/db/useDatabase'
 import { syncPushRules } from '@/notifications/pushSubscription'
-import type { Subtask, Task, TaskPriority } from '@/db/types'
+import type { Task, TaskPriority } from '@/db/types'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
@@ -34,15 +34,30 @@ const REMINDER_OPTIONS: { minutes: number; label: string }[] = [
   { minutes: 1440, label: '1 day before' },
 ]
 
+interface TaskFieldsProps {
+  /** Present when editing; absent only for the top-level "new task" case (a subtask always edits an existing row). */
+  task?: Task
+  initialCollectionId?: string
+  /** A subtask's own fields never get another nested Subtasks section — capped at one level deep. */
+  showSubtasksField: boolean
+  onOpenSubtask?: (task: Task) => void
+  /** Called after a successful save/delete, or Cancel — "leave this form" (close the whole sheet for the top-level task, or return to it for a subtask). */
+  onDone: () => void
+}
+
 /**
- * The add/edit form for a single task (PLAN §M6), mirroring Money's
- * `TransactionSheet` shape. `notes` is a plain string for now, not the
- * Tiptap JSON `Task.notes` is typed for — M5 hasn't built the editor yet.
- * Stored as-is in that `unknown` field; M5 upgrades it to real rich text
- * without a migration, since a bare string round-trips through Tiptap's
- * own JSON shape as a single paragraph node when that day comes.
+ * The actual title/notes/priority/... fields + Save/Cancel/Delete, shared by
+ * the top-level task being edited and (nested one level) a subtask — see
+ * TaskSheet's own comment for why this only ever renders inside one shared
+ * Sheet rather than each get their own.
  */
-export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps) {
+function TaskFields({
+  task,
+  initialCollectionId,
+  showSubtasksField,
+  onOpenSubtask,
+  onDone,
+}: TaskFieldsProps) {
   const { db, repos, settingsRepo } = useDatabase()
   const collections = useLiveQuery(() => repos.taskCollections.list(), [repos], EMPTY_ARRAY)
   const { show } = useSnackbar()
@@ -55,7 +70,6 @@ export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps
   const [dueDateInput, setDueDateInput] = useState(task?.dueAt?.slice(0, 10) ?? '')
   const [dueTimeInput, setDueTimeInput] = useState(task?.dueAt?.slice(11, 16) ?? '')
   const [reminderOffsets, setReminderOffsets] = useState<number[]>(task?.reminderOffsets ?? [])
-  const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks ?? [])
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -81,7 +95,6 @@ export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps
       priority,
       dueAt,
       reminderOffsets: dueAt ? reminderOffsets : [],
-      subtasks,
     }
 
     if (task) {
@@ -94,7 +107,7 @@ export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps
     // A new/changed due date or reminder offsets shifts when the push
     // server should next wake this device for this task.
     void syncPushRules({ db, settingsRepo, repos })
-    onClose()
+    onDone()
   }
 
   async function handleDelete() {
@@ -102,7 +115,7 @@ export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps
     await repos.tasks.remove(task.id)
     void syncPushRules({ db, settingsRepo, repos })
     setConfirmDelete(false)
-    onClose()
+    onDone()
     show({
       message: 'Task deleted',
       action: { label: 'Undo', onClick: () => repos.tasks.restore(task.id) },
@@ -110,115 +123,114 @@ export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps
   }
 
   return (
-    <Sheet open onClose={onClose} title={isEdit ? 'Edit task' : 'Add task'}>
-      <div className="flex flex-col gap-4">
-        <Field label="Title" required>
-          {({ inputId }) => (
-            <Input
-              id={inputId}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              autoFocus
-            />
-          )}
-        </Field>
+    <div className="flex flex-col gap-4">
+      <Field label="Title" required>
+        {({ inputId }) => (
+          <Input id={inputId} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+        )}
+      </Field>
 
-        <Field label="Notes" hint="Optional">
-          {({ inputId }) => (
-            <TextArea
-              id={inputId}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-          )}
-        </Field>
+      <Field label="Notes" hint="Optional">
+        {({ inputId }) => (
+          <TextArea
+            id={inputId}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+          />
+        )}
+      </Field>
 
-        <Field label="Collection" hint="Optional">
-          {({ inputId }) => (
-            <Select
-              id={inputId}
-              placeholder="Unfiled"
-              value={collectionId}
-              onChange={(e) => setCollectionId(e.target.value)}
-              options={collections.map((c) => ({ value: c.id, label: c.name }))}
-            />
-          )}
-        </Field>
+      <Field label="Collection" hint="Optional">
+        {({ inputId }) => (
+          <Select
+            id={inputId}
+            placeholder="Unfiled"
+            value={collectionId}
+            onChange={(e) => setCollectionId(e.target.value)}
+            options={collections.map((c) => ({ value: c.id, label: c.name }))}
+          />
+        )}
+      </Field>
 
-        <SegmentedControl
-          label="Priority"
-          value={priority}
-          onChange={setPriority}
-          options={[
-            { value: 'none', label: 'None' },
-            { value: 'low', label: 'Low' },
-            { value: 'medium', label: 'Medium' },
-            { value: 'high', label: 'High' },
-          ]}
-        />
+      <SegmentedControl
+        label="Priority"
+        value={priority}
+        onChange={setPriority}
+        options={[
+          { value: 'none', label: 'None' },
+          { value: 'low', label: 'Low' },
+          { value: 'medium', label: 'Medium' },
+          { value: 'high', label: 'High' },
+        ]}
+      />
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <Field label="Due date" hint="Optional">
-              {({ inputId }) => (
-                <DatePicker
-                  id={inputId}
-                  value={dueDateInput}
-                  onChange={(e) => setDueDateInput(e.target.value)}
-                />
-              )}
-            </Field>
-          </div>
-          <div className="flex-1">
-            <Field label="Due time" hint="Optional">
-              {({ inputId }) => (
-                <TimePicker
-                  id={inputId}
-                  value={dueTimeInput}
-                  onChange={(e) => setDueTimeInput(e.target.value)}
-                  disabled={!dueDateInput}
-                />
-              )}
-            </Field>
-          </div>
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <Field label="Due date" hint="Optional">
+            {({ inputId }) => (
+              <DatePicker
+                id={inputId}
+                value={dueDateInput}
+                onChange={(e) => setDueDateInput(e.target.value)}
+              />
+            )}
+          </Field>
         </div>
+        <div className="flex-1">
+          <Field label="Due time" hint="Optional">
+            {({ inputId }) => (
+              <TimePicker
+                id={inputId}
+                value={dueTimeInput}
+                onChange={(e) => setDueTimeInput(e.target.value)}
+                disabled={!dueDateInput}
+              />
+            )}
+          </Field>
+        </div>
+      </div>
 
-        {dueDateInput && (
-          <ChipGroup label="Remind me">
-            {REMINDER_OPTIONS.map((opt) => (
-              <Chip
-                key={opt.minutes}
-                selected={reminderOffsets.includes(opt.minutes)}
-                onClick={() => toggleReminder(opt.minutes)}
-              >
-                {opt.label}
-              </Chip>
-            ))}
-          </ChipGroup>
-        )}
+      {dueDateInput && (
+        <ChipGroup label="Remind me">
+          {REMINDER_OPTIONS.map((opt) => (
+            <Chip
+              key={opt.minutes}
+              selected={reminderOffsets.includes(opt.minutes)}
+              onClick={() => toggleReminder(opt.minutes)}
+            >
+              {opt.label}
+            </Chip>
+          ))}
+        </ChipGroup>
+      )}
 
-        <Field label="Subtasks">
-          {() => <SubtaskEditor subtasks={subtasks} onChange={setSubtasks} />}
+      {showSubtasksField && (
+        <Field label="Subtasks" hint={isEdit ? undefined : 'Save this task first to add subtasks'}>
+          {() =>
+            isEdit && task && onOpenSubtask ? (
+              <SubtaskEditor parentTaskId={task.id} onOpenSubtask={onOpenSubtask} />
+            ) : null
+          }
         </Field>
+      )}
 
-        {error && (
-          <p role="alert" className="text-sm font-medium" style={{ color: 'var(--color-expense)' }}>
-            {error}
-          </p>
-        )}
+      {error && (
+        <p role="alert" className="text-sm font-medium" style={{ color: 'var(--color-expense)' }}>
+          {error}
+        </p>
+      )}
 
-        <div className="flex justify-end gap-2">
-          {isEdit && (
-            <Button variant="danger" onClick={() => setConfirmDelete(true)} className="mr-auto">
-              Delete
-            </Button>
-          )}
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
+      <div className="flex justify-end gap-2">
+        {isEdit && (
+          <Button variant="danger" onClick={() => setConfirmDelete(true)} className="mr-auto">
+            Delete
           </Button>
-          <Button onClick={handleSave}>Save</Button>
-        </div>
+        )}
+        <Button variant="secondary" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button onClick={() => void handleSave()}>Save</Button>
       </div>
 
       <ConfirmDialog
@@ -227,8 +239,52 @@ export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps
         confirmLabel="Delete"
         danger
         onCancel={() => setConfirmDelete(false)}
-        onConfirm={handleDelete}
+        onConfirm={() => void handleDelete()}
       />
+    </div>
+  )
+}
+
+/**
+ * The add/edit form for a single task (PLAN §M6), mirroring Money's
+ * `TransactionSheet` shape. `notes` is a plain string for now, not the
+ * Tiptap JSON `Task.notes` is typed for — M5 hasn't built the editor yet.
+ * Stored as-is in that `unknown` field; M5 upgrades it to real rich text
+ * without a migration, since a bare string round-trips through Tiptap's
+ * own JSON shape as a single paragraph node when that day comes.
+ *
+ * Exactly one `Sheet` is ever mounted here, even while viewing a subtask's
+ * own fields — Sheet owns a browser-history entry and reacts to any
+ * popstate/Escape while open, so two independently mounted Sheets (one
+ * nested "on top" of the other) both end up closing on the same
+ * back-navigation instead of just the topmost one. Opening a subtask
+ * instead swaps *which* fields this one Sheet shows; the top-level task's
+ * own in-progress edits stay mounted (just visually hidden, not torn down)
+ * underneath so nothing typed there is lost while visiting a subtask.
+ */
+export function TaskSheet({ onClose, task, initialCollectionId }: TaskSheetProps) {
+  const isEdit = Boolean(task)
+  const [openSubtask, setOpenSubtask] = useState<Task | undefined>(undefined)
+
+  return (
+    <Sheet open onClose={onClose} title={isEdit ? 'Edit task' : 'Add task'}>
+      <div style={{ display: openSubtask ? 'none' : 'contents' }}>
+        <TaskFields
+          task={task}
+          initialCollectionId={initialCollectionId}
+          showSubtasksField={!task?.parentTaskId}
+          onOpenSubtask={setOpenSubtask}
+          onDone={onClose}
+        />
+      </div>
+      {openSubtask && (
+        <TaskFields
+          key={openSubtask.id}
+          task={openSubtask}
+          showSubtasksField={false}
+          onDone={() => setOpenSubtask(undefined)}
+        />
+      )}
     </Sheet>
   )
 }

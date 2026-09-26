@@ -70,6 +70,12 @@ export function createRepositories(db: DowiDatabase) {
       await streak.recordQualifyingActivity()
       return record
     },
+
+    /** A task's subtasks — real child Task rows (Task.parentTaskId), not their own reduced type. */
+    async listByParent(parentTaskId: string): Promise<Task[]> {
+      const all = await baseTasks.list()
+      return all.filter((t) => t.parentTaskId === parentTaskId)
+    },
   }
 
   const transactions = {

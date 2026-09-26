@@ -110,7 +110,6 @@ function buildFixture(opts: FixtureOptions) {
   const overdueTasks = ['A', 'B', 'C'].map((label, i) => ({
     id: `overdue-${label}`,
     title: `Overdue ${label}`,
-    subtasks: [],
     priority: 'none',
     status: 'todo',
     reminderOffsets: [],
@@ -121,7 +120,6 @@ function buildFixture(opts: FixtureOptions) {
   const dueTodayTasks = ['A', 'B', 'C', 'D'].map((label, i) => ({
     id: `due-today-${label}`,
     title: `Due today ${label}`,
-    subtasks: [],
     priority: 'none',
     status: 'todo',
     reminderOffsets: [],

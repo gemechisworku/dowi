@@ -36,7 +36,6 @@ function baseTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 't1',
     title: 'Test task',
-    subtasks: [],
     priority: 'none',
     status: 'todo',
     reminderOffsets: [],
