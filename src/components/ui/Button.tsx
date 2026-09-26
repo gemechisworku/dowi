@@ -20,7 +20,7 @@ const VARIANT_STYLE: Record<ButtonVariant, { background: string; color: string; 
       border: '1px solid var(--color-border)',
     },
     ghost: { background: 'transparent', color: 'var(--color-primary)' },
-    danger: { background: 'var(--color-danger-solid)', color: '#ffffff' },
+    danger: { background: 'var(--color-danger-solid)', color: 'var(--color-primary-fg)' },
   }
 
 const SIZE_CLASS: Record<ButtonSize, string> = {
@@ -58,7 +58,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={isDisabled}
       aria-busy={loading || undefined}
       className={cn(
-        'inline-flex items-center justify-center rounded-[var(--radius-pill)] font-semibold transition-[opacity,transform] duration-[var(--motion-fast)] active:scale-[0.98]',
+        'inline-flex items-center justify-center rounded-[12px] font-semibold transition-[opacity,transform,box-shadow] duration-[var(--motion-fast)] active:scale-[0.98]',
         'disabled:cursor-not-allowed disabled:active:scale-100',
         SIZE_CLASS[size],
         fullWidth && 'w-full',

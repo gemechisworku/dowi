@@ -1,16 +1,17 @@
 import { NavLink } from 'react-router'
+import { AppIcon, type AppIconName } from '@/components/ui/AppIcon'
 
 interface NavItem {
   to: string
   label: string
-  icon: string
+  icon: AppIconName
 }
 
 const ITEMS: NavItem[] = [
-  { to: '/', label: 'Home', icon: '🏠' },
-  { to: '/money', label: 'Money', icon: '📊' },
-  { to: '/notes', label: 'Notes', icon: '📝' },
-  { to: '/tasks', label: 'Tasks', icon: '✅' },
+  { to: '/', label: 'Home', icon: 'home' },
+  { to: '/money', label: 'Money', icon: 'money' },
+  { to: '/notes', label: 'Notes', icon: 'notes' },
+  { to: '/tasks', label: 'Tasks', icon: 'tasks' },
 ]
 
 /**
@@ -19,31 +20,24 @@ const ITEMS: NavItem[] = [
  */
 export function BottomNav() {
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(14px,env(safe-area-inset-bottom))]">
+    <div className="pointer-events-none fixed bottom-0 left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 px-4 pb-[max(14px,env(safe-area-inset-bottom))]">
       <nav
         aria-label="Primary"
-        className="pointer-events-auto mx-auto flex max-w-md justify-around rounded-[26px] px-1.5 py-2.5"
-        style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)' }}
+        className="pointer-events-auto mx-auto grid grid-cols-4 rounded-[var(--radius-lg)] border p-1.5 backdrop-blur-xl"
+        style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)', borderColor: 'var(--color-border)' }}
       >
         {ITEMS.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.to === '/'}
-            className={({ isActive }) =>
-              [
-                'flex flex-col items-center gap-0.5 rounded-2xl px-4 py-1.5 text-[11px] font-semibold transition-colors',
-                isActive ? 'text-white' : '',
-              ].join(' ')
-            }
+            className="flex h-12 flex-col items-center justify-center gap-1 rounded-[12px] px-1 text-[11px] font-medium transition-colors"
             style={({ isActive }) => ({
-              background: isActive ? 'var(--color-primary)' : 'transparent',
-              color: isActive ? 'var(--color-primary-fg)' : 'var(--color-text-muted)',
+              background: isActive ? 'var(--color-primary-soft)' : 'transparent',
+              color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
             })}
           >
-            <span aria-hidden="true" className="text-lg leading-none">
-              {item.icon}
-            </span>
+            <AppIcon name={item.icon} className="h-[18px] w-[18px]" />
             {item.label}
           </NavLink>
         ))}

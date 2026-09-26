@@ -1,6 +1,6 @@
 /**
  * Design tokens for Dowi.
- * Chosen direction: Option A "Soft Cards" (design/design-options.html).
+ * Chosen direction: Soft Focus + Quiet Editorial.
  * All colour is referenced through semantic tokens — components never use
  * raw hex values, which is what makes light/dark a single switch.
  */
@@ -38,18 +38,19 @@
   --color-primary: var(--blue-600);
   --color-primary-fg: #ffffff;
   --color-primary-soft: var(--blue-50);
-  --color-bg: #f1f3f7;
-  --color-surface: #ffffff;
-  --color-surface-2: #f1f5f9;
-  --color-surface-3: #e9edf3;
-  --color-text: #0f172a;
+  --color-bg: #f8f9fb;
+  --color-surface: rgba(255, 255, 255, 0.76);
+  --color-surface-solid: #ffffff;
+  --color-surface-2: #f3f6fb;
+  --color-surface-3: #e9eef8;
+  --color-text: #172033;
   /* slate-600, not -500: -500 (#64748b) only clears 4.5:1 on white by a
      hair and fails outright against --color-surface-2 (~4.3:1) — this
      passes comfortably (~7.6:1) against every surface it's used on. */
-  --color-text-muted: #475569;
+  --color-text-muted: #667085;
   --color-text-on-primary: #ffffff;
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+  --color-border: rgba(23, 32, 51, 0.08);
+  --color-border-strong: rgba(23, 32, 51, 0.16);
   --color-scrim: rgba(15, 23, 42, 0.45);
   --color-focus-ring: var(--blue-500);
 
@@ -100,9 +101,9 @@
   --note-highlight-pink: #fbcfe8;
 
   /* ---- Elevation ---- */
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 20px rgba(15, 23, 42, 0.06);
-  --shadow-elevated: 0 10px 15px rgba(15, 23, 42, 0.1), 0 4px 6px rgba(15, 23, 42, 0.08);
-  --shadow-floating: 0 18px 44px rgba(15, 23, 42, 0.18);
+  --shadow-card: 0 14px 36px -26px rgba(23, 32, 51, 0.28);
+  --shadow-elevated: 0 18px 42px -18px rgba(23, 32, 51, 0.24);
+  --shadow-floating: 0 20px 48px -16px rgba(23, 32, 51, 0.3);
 
   /* ---- Spacing (4px base) ---- */
   --space-1: 4px;
@@ -115,13 +116,13 @@
 
   /* ---- Radii ---- */
   --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
 
   /* ---- Type scale ---- */
-  --font-sans: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Plus Jakarta Sans', var(--font-sans);
+  --font-sans: Figtree, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: Outfit, var(--font-sans);
 
   --text-xs: 12px;
   --text-sm: 13.5px;
@@ -184,7 +185,8 @@
     --color-primary-fg: #0b0f17;
     --color-primary-soft: #16233a;
     --color-bg: #0b0f17;
-    --color-surface: #131a26;
+    --color-surface: rgba(25, 34, 49, 0.82);
+    --color-surface-solid: #192231;
     --color-surface-2: #1d2634;
     --color-surface-3: #263243;
     --color-text: #e8edf6;
@@ -230,7 +232,8 @@
   --color-primary-fg: #0b0f17;
   --color-primary-soft: #16233a;
   --color-bg: #0b0f17;
-  --color-surface: #131a26;
+  --color-surface: rgba(25, 34, 49, 0.82);
+  --color-surface-solid: #192231;
   --color-surface-2: #1d2634;
   --color-surface-3: #263243;
   --color-text: #e8edf6;

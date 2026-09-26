@@ -6,7 +6,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const baseClass =
-  'h-11 w-full rounded-[var(--radius-md)] px-3.5 text-[15px] outline-none transition-colors placeholder:text-[var(--color-text-muted)] disabled:cursor-not-allowed disabled:opacity-60'
+  'h-11 w-full rounded-[var(--radius-md)] px-3.5 text-[15px] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--color-text-muted)] focus:shadow-[0_0_0_3px_var(--color-primary-soft)] disabled:cursor-not-allowed disabled:opacity-60'
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { invalid, className, style, ...props },

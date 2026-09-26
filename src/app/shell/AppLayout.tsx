@@ -51,12 +51,10 @@ export function AppLayout() {
   }
 
   return (
-    <>
+    <div className="flex min-h-dvh flex-col">
       <TopAppBar unreadNotifications={unread.length} />
-      <main className="flex-1 pb-28">
-        <Outlet />
-      </main>
+      <main className="flex-1 pb-28"><Outlet /></main>
       <BottomNav />
-    </>
+    </div>
   )
 }

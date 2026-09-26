@@ -13,10 +13,11 @@ export type CardProps = HTMLAttributes<HTMLDivElement>
 export function Card({ className, style, ...props }: CardProps) {
   return (
     <div
-      className={cn('rounded-[var(--radius-lg)]', className)}
+      className={cn('rounded-[var(--radius-lg)] border backdrop-blur-xl', className)}
       style={{
         background: 'var(--color-surface)',
         boxShadow: 'var(--shadow-card)',
+        borderColor: 'var(--color-border)',
         padding: 'var(--space-card)',
         ...style,
       }}

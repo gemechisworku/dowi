@@ -235,15 +235,14 @@ export function HomePage() {
             </Card>
           )}
 
-          {/* Hero (Option A "Soft Cards" — design/design-options.html): a single
-              blue-gradient card carries the headline net figure. The toggle sits
+            {/* The focused balance card carries the headline net figure. The toggle sits
               outside the tap-to-open-Reports button below so its own radio
               buttons never nest inside another button (axe no-focusable-content). */}
           <Card
             style={{
-              background: 'linear-gradient(150deg, var(--blue-600), var(--blue-700) 60%, #1e3a8a)',
-              boxShadow: '0 10px 24px rgba(37, 99, 235, 0.28)',
-              color: '#ffffff',
+               background: 'var(--color-primary)',
+               boxShadow: 'var(--shadow-elevated)',
+               color: 'var(--color-primary-fg)',
             }}
           >
             <div className="flex items-center justify-between gap-3">
@@ -273,7 +272,7 @@ export function HomePage() {
                   amountMinorUnits={report.netMinorUnits}
                   currency={baseCurrency}
                   showSign
-                  color="#ffffff"
+                   color="var(--color-primary-fg)"
                 />
               </p>
               <div className="mt-3.5 flex gap-4">
@@ -286,18 +285,18 @@ export function HomePage() {
                       amountMinorUnits={report.income.totalMinorUnits}
                       currency={baseCurrency}
                       approximate={report.income.wasConverted}
-                      color="#ffffff"
+                       color="var(--color-primary-fg)"
                     />
                   </p>
                   <div
                     className="mt-1.5 h-1.5 overflow-hidden rounded-full"
-                    style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+                     style={{ background: 'color-mix(in srgb, var(--color-primary-fg) 25%, transparent)' }}
                     role="img"
                     aria-label={`Income vs expense comparison for ${periodLabel}`}
                   >
                     <div
                       className="h-full rounded-full"
-                      style={{ width: `${incomeBarPct}%`, background: '#ffffff' }}
+                       style={{ width: `${incomeBarPct}%`, background: 'var(--color-primary-fg)' }}
                     />
                   </div>
                 </div>
@@ -326,7 +325,7 @@ export function HomePage() {
                   </p>
                   <div
                     className="mt-1.5 h-1.5 overflow-hidden rounded-full"
-                    style={{ background: 'rgba(255, 255, 255, 0.25)' }}
+                     style={{ background: 'color-mix(in srgb, var(--color-primary-fg) 25%, transparent)' }}
                   >
                     <div
                       className="h-full rounded-full"
@@ -344,11 +343,12 @@ export function HomePage() {
                 key={action.label}
                 type="button"
                 onClick={() => navigate(action.href)}
-                className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2.5 text-center text-[10.5px] font-semibold"
+                 className="flex flex-1 flex-col items-center gap-1 rounded-[var(--radius-md)] border py-3 text-center text-[10.5px] font-semibold backdrop-blur-xl"
                 style={{
                   background: 'var(--color-surface)',
                   boxShadow: 'var(--shadow-card)',
                   color: 'var(--color-text)',
+                   borderColor: 'var(--color-border)',
                 }}
               >
                 <span aria-hidden="true" className="text-[17px]">

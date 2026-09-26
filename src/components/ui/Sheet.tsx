@@ -159,7 +159,7 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-[var(--radius-lg)] pb-[env(safe-area-inset-bottom)]"
+        className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-[24px] border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"
         style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-elevated)' }}
       >
         <div

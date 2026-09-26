@@ -37,7 +37,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('inline-flex rounded-full p-1', className)}
+      className={cn('inline-flex rounded-[12px] p-1', className)}
       style={{ background: TRACK_BACKGROUND[variant] }}
     >
       {options.map((opt) => {
@@ -49,11 +49,11 @@ export function SegmentedControl<T extends string>({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(opt.value)}
-            className="rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors"
+            className="rounded-[9px] px-3.5 py-1.5 text-[13px] font-semibold transition-colors"
             style={
               variant === 'inverse'
                 ? {
-                    background: selected ? '#ffffff' : 'transparent',
+                    background: selected ? 'var(--color-surface-solid)' : 'transparent',
                     color: selected ? 'var(--blue-700)' : 'rgba(255, 255, 255, 0.85)',
                   }
                 : {

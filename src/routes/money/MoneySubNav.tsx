@@ -33,7 +33,7 @@ export function MoneySubNav() {
   return (
     <nav
       aria-label="Money sections"
-      className="flex gap-1.5 overflow-x-auto pb-1"
+      className="flex gap-1 overflow-x-auto pb-1"
       style={{ scrollbarWidth: 'none' }}
     >
       {ITEMS.map((item) => {
@@ -44,9 +44,9 @@ export function MoneySubNav() {
             to={item.to}
             end
             ref={isActive ? activeRef : undefined}
-            className="shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors"
+            className="shrink-0 whitespace-nowrap rounded-[10px] px-3.5 py-2 text-[13px] font-medium transition-colors"
             style={{
-              background: isActive ? 'var(--color-primary)' : 'var(--color-surface-2)',
+              background: isActive ? 'var(--color-primary)' : 'transparent',
               color: isActive ? 'var(--color-primary-fg)' : 'var(--color-text-muted)',
             }}
           >
