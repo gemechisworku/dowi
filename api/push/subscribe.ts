@@ -66,21 +66,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
   if (!isValidBody(req.body)) {
+    console.warn('[subscribe] rejected: invalid payload shape', {
+      bodyKeys:
+        req.body && typeof req.body === 'object'
+          ? Object.keys(req.body as object)
+          : typeof req.body,
+    })
     res.status(400).json({ error: 'Invalid subscription payload' })
     return
   }
 
-  const devices: PushDevices = await getPushDevices()
-  const existing = devices[req.body.deviceId]
-  const entry: PushDeviceEntry = {
-    subscription: req.body.subscription,
-    timeZone: req.body.timeZone,
-    rules: req.body.rules,
-    // A settings/task change shouldn't re-arm something already sent today.
-    lastFired: existing?.lastFired ?? {},
-    updatedAt: new Date().toISOString(),
-  }
+  try {
+    const devices: PushDevices = await getPushDevices()
+    const existing = devices[req.body.deviceId]
+    const entry: PushDeviceEntry = {
+      subscription: req.body.subscription,
+      timeZone: req.body.timeZone,
+      rules: req.body.rules,
+      // A settings/task change shouldn't re-arm something already sent today.
+      lastFired: existing?.lastFired ?? {},
+      updatedAt: new Date().toISOString(),
+    }
 
-  await writePushDevices({ ...devices, [req.body.deviceId]: entry })
-  res.status(200).json({ ok: true })
+    await writePushDevices({ ...devices, [req.body.deviceId]: entry })
+    console.log('[subscribe] stored', {
+      deviceId: req.body.deviceId,
+      timeZone: req.body.timeZone,
+      enabledRules: Object.entries(req.body.rules)
+        .filter(
+          ([key, value]) =>
+            key !== 'taskDueAt' && key !== 'quietHours' && (value as { enabled?: boolean }).enabled,
+        )
+        .map(([key]) => key),
+      taskDueCount: req.body.rules.taskDueAt.length,
+      totalDevicesOnFile: Object.keys(devices).length + (existing ? 0 : 1),
+    })
+    res.status(200).json({ ok: true })
+  } catch (error) {
+    // Most likely cause: EDGE_CONFIG/GLOBAL_CONFIG isn't connected, or
+    // VERCEL_API_TOKEN is missing/invalid — see api/_lib/edgeConfig.ts.
+    console.error('[subscribe] failed', error instanceof Error ? error.message : error)
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' })
+  }
 }

@@ -22,40 +22,61 @@ function pruneTaskDueHistory(taskDueAt: string[] | undefined, now: Date): string
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!isAuthorizedCronRequest(req.headers)) {
+    console.warn('[sweep] rejected: missing/incorrect X-Cron-Secret header')
     res.status(401).json({ error: 'Unauthorized' })
     return
   }
 
-  const now = new Date()
-  const devices = await getPushDevices()
-  const updates: PushDevices = {}
-  const removed: string[] = []
+  try {
+    const now = new Date()
+    const devices = await getPushDevices()
+    const deviceIds = Object.entries(devices)
+    console.log(`[sweep] tick at ${now.toISOString()} — ${deviceIds.length} device(s) on file`)
 
-  for (const [deviceId, entry] of Object.entries(devices)) {
-    const { due, firedUpdates } = isDeviceDueNow(entry, now)
-    if (!due) continue
+    const updates: PushDevices = {}
+    const removed: string[] = []
 
-    const result = await sendWakePush(entry.subscription)
-    if (result.gone) {
-      removed.push(deviceId)
-      continue
+    for (const [deviceId, entry] of deviceIds) {
+      const { due, firedUpdates } = isDeviceDueNow(entry, now)
+      if (!due) continue
+      console.log(`[sweep] ${deviceId} is due`, { firedUpdates })
+
+      const result = await sendWakePush(entry.subscription)
+      if (result.gone) {
+        console.warn(`[sweep] ${deviceId} subscription gone — dropping`)
+        removed.push(deviceId)
+        continue
+      }
+      if (!result.ok) {
+        console.warn(
+          `[sweep] ${deviceId} push send failed — leaving lastFired unchanged, will retry next tick`,
+        )
+        continue
+      }
+
+      const merged: PushDeviceEntry['lastFired'] = { ...entry.lastFired, ...firedUpdates }
+      merged.taskDueAt = pruneTaskDueHistory(merged.taskDueAt, now)
+      updates[deviceId] = { ...entry, lastFired: merged, updatedAt: now.toISOString() }
     }
-    if (!result.ok) continue
 
-    const merged: PushDeviceEntry['lastFired'] = { ...entry.lastFired, ...firedUpdates }
-    merged.taskDueAt = pruneTaskDueHistory(merged.taskDueAt, now)
-    updates[deviceId] = { ...entry, lastFired: merged, updatedAt: now.toISOString() }
+    if (Object.keys(updates).length > 0 || removed.length > 0) {
+      const next: PushDevices = { ...devices, ...updates }
+      for (const deviceId of removed) delete next[deviceId]
+      await writePushDevices(next)
+    }
+
+    const summary = {
+      devices: deviceIds.length,
+      fired: Object.keys(updates).length,
+      removed: removed.length,
+    }
+    console.log('[sweep] done', summary)
+    res.status(200).json(summary)
+  } catch (error) {
+    // Most likely cause: EDGE_CONFIG/GLOBAL_CONFIG, VERCEL_API_TOKEN or the
+    // VAPID_* env vars aren't set (or aren't set for this environment) —
+    // see api/_lib/edgeConfig.ts and api/_lib/webPush.ts's own errors.
+    console.error('[sweep] failed', error instanceof Error ? error.message : error)
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' })
   }
-
-  if (Object.keys(updates).length > 0 || removed.length > 0) {
-    const next: PushDevices = { ...devices, ...updates }
-    for (const deviceId of removed) delete next[deviceId]
-    await writePushDevices(next)
-  }
-
-  res.status(200).json({
-    devices: Object.keys(devices).length,
-    fired: Object.keys(updates).length,
-    removed: removed.length,
-  })
 }
