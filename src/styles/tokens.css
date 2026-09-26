@@ -295,8 +295,15 @@ html[data-text-size='l'] {
   --space-card: 0.75rem;
 }
 
-/* One consistent focus style across every interactive element. */
+/*
+ * One consistent focus style across every interactive element. Tight
+ * offset (not 2px) so a focused chip/segmented-option/button reads as a
+ * thin ring hugging its own shape, not a separate halo floating a couple
+ * pixels outside it — the "border gets too big when active" complaint on
+ * pill-shaped controls, where a wide offset is most visible against the
+ * pill's own curve.
+ */
 :focus-visible {
   outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router'
 import { useTheme } from '@/app/theme/useTheme'
 import type { ThemePreference } from '@/app/theme/ThemeContext'
 import { useDatabase } from '@/app/db/useDatabase'
+import { cn } from '@/lib/cn'
 
 const THEME_CYCLE: Record<ThemePreference, ThemePreference> = {
   system: 'light',
@@ -48,10 +49,27 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
     void settingsRepo.update({ theme: nextPreference })
   }
 
+  // Option E "Bold Brand Header" (chosen from the 5-option comparison): a
+  // solid --color-primary band, rounded only at the bottom, carries the app
+  // bar on every screen. Icon buttons are ghost circles tinted with the
+  // page's own foreground colour rather than surface cards with a shadow —
+  // there's no card to elevate off of when the header IS the coloured
+  // surface. The badge dot's ring is set to match this header's own
+  // background (not --color-surface) so it still reads as a ring cut into
+  // the bar instead of a mismatched white halo.
+  const iconButtonClass =
+    'flex h-9 w-9 items-center justify-center rounded-full text-base transition-colors active:scale-95'
+  const iconButtonStyle = { background: 'rgba(255, 255, 255, 0.18)' }
+
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 pt-[max(10px,env(safe-area-inset-top))] pb-2"
-      style={{ background: 'var(--color-bg)' }}
+      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 pt-[max(10px,env(safe-area-inset-top))] pb-3"
+      style={{
+        background: 'var(--color-primary)',
+        color: 'var(--color-primary-fg)',
+        borderRadius: '0 0 24px 24px',
+        boxShadow: '0 10px 24px rgba(37, 99, 235, 0.28)',
+      }}
     >
       <div className="flex min-w-0 items-center gap-2">
         {showBack && (
@@ -59,8 +77,8 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
             type="button"
             aria-label="Back"
             onClick={() => navigate(-1)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-lg"
-            style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)' }}
+            className={cn(iconButtonClass, 'text-lg')}
+            style={iconButtonStyle}
           >
             ‹
           </button>
@@ -73,8 +91,8 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
           type="button"
           aria-label={`Switch to ${THEME_LABEL[nextPreference]} theme (currently ${THEME_LABEL[preference]})`}
           onClick={handleThemeCycle}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-base"
-          style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)' }}
+          className={iconButtonClass}
+          style={iconButtonStyle}
         >
           {THEME_ICON[preference]}
         </button>
@@ -82,8 +100,8 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
           type="button"
           aria-label="Streaks and badges"
           onClick={() => navigate('/streaks')}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-base"
-          style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)' }}
+          className={iconButtonClass}
+          style={iconButtonStyle}
         >
           🔥
         </button>
@@ -95,8 +113,8 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
               : 'Notifications'
           }
           onClick={() => navigate('/notifications')}
-          className="relative flex h-9 w-9 items-center justify-center rounded-full text-base"
-          style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)' }}
+          className={cn('relative', iconButtonClass)}
+          style={iconButtonStyle}
         >
           🔔
           {unreadNotifications > 0 && (
@@ -105,7 +123,7 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
               className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
               style={{
                 background: 'var(--color-expense)',
-                border: '2px solid var(--color-surface)',
+                border: '2px solid var(--color-primary)',
               }}
             />
           )}
@@ -114,8 +132,8 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
           type="button"
           aria-label="Settings"
           onClick={() => navigate('/settings')}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-base"
-          style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)' }}
+          className={iconButtonClass}
+          style={iconButtonStyle}
         >
           ⚙️
         </button>
