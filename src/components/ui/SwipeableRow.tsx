@@ -54,6 +54,7 @@ export function SwipeableRow({
         style={{
           width: REVEAL_WIDTH,
           background: danger ? 'var(--color-danger-solid)' : 'var(--color-primary)',
+          opacity: offset < 0 ? 1 : 0,
           // danger uses the fixed, always-dark-enough --color-danger-solid
           // paired with white; the primary case must follow the theme's
           // own foreground pairing since --color-primary lightens in dark
@@ -72,7 +73,9 @@ export function SwipeableRow({
         style={{
           transform: `translateX(${offset}px)`,
           transition: dragging ? 'none' : 'transform var(--motion-base) var(--motion-ease)',
-          background: 'var(--color-surface)',
+          // Swipe actions sit directly behind this layer. It must stay opaque
+          // so the destructive colour cannot bleed through translucent cards.
+          background: 'var(--color-surface-solid)',
         }}
       >
         {children}
