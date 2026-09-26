@@ -134,6 +134,35 @@ describe('exportAll / importAll round trip', () => {
     expect(result.mode).toBe('replace')
     expect(result.counts.categories).toBe(backup.categories.length)
   })
+
+  it('round-trips the activity log (streak calendar history) through export -> erase -> import', async () => {
+    await repos.activityLog.record('2026-06-01')
+    await repos.activityLog.record('2026-06-01')
+    await repos.activityLog.record('2026-06-02')
+
+    const before = await fullExport(db)
+    expect(before.activityLog).toEqual(
+      expect.arrayContaining([
+        { date: '2026-06-01', count: 2 },
+        { date: '2026-06-02', count: 1 },
+      ]),
+    )
+
+    await db.activityLog.clear()
+    await importAll(db, before, 'replace')
+
+    const restored = await repos.activityLog.list()
+    expect(restored).toHaveLength(2)
+  })
+
+  it('imports cleanly a backup made before the activity log existed (activityLog key absent)', async () => {
+    const backup = await fullExport(db)
+    const legacyBackup = { ...backup } as Partial<typeof backup>
+    delete legacyBackup.activityLog
+
+    await expect(importAll(db, legacyBackup, 'replace')).resolves.not.toThrow()
+    expect(await repos.activityLog.list()).toHaveLength(0)
+  })
 })
 
 describe('validateBackup', () => {

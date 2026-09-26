@@ -80,6 +80,15 @@ export function TopAppBar({ title, showBack = false, unreadNotifications = 0 }: 
         </button>
         <button
           type="button"
+          aria-label="Streaks and badges"
+          onClick={() => navigate('/streaks')}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-base"
+          style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)' }}
+        >
+          🔥
+        </button>
+        <button
+          type="button"
           aria-label={
             unreadNotifications > 0
               ? `Notifications, ${unreadNotifications} unread`

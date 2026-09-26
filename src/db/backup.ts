@@ -1,6 +1,7 @@
 import type { DowiDatabase } from './db'
 import type {
   Account,
+  ActivityLogEntry,
   AppNotification,
   Category,
   ExchangeRate,
@@ -32,6 +33,8 @@ export interface BackupData {
   notifications: AppNotification[]
   settings?: Settings
   meta: MetaEntry[]
+  /** Optional — absent in backups made before M13's streak calendar; treated as empty on import so older files still restore cleanly. */
+  activityLog?: ActivityLogEntry[]
 }
 
 /** Exported so the Settings → Data import preview (UI layer) can compute per-table counts from a parsed-but-not-yet-imported file without a new backend function — see docs/PLAN.md's M2 note. */
@@ -64,6 +67,7 @@ export async function exportAll(db: DowiDatabase): Promise<BackupData> {
     notifications,
     settings,
     meta,
+    activityLog,
   ] = await Promise.all([
     db.transactions.toArray(),
     db.categories.toArray(),
@@ -77,6 +81,7 @@ export async function exportAll(db: DowiDatabase): Promise<BackupData> {
     db.notifications.toArray(),
     db.settings.get('settings'),
     db.meta.toArray(),
+    db.activityLog.toArray(),
   ])
 
   return {
@@ -94,6 +99,7 @@ export async function exportAll(db: DowiDatabase): Promise<BackupData> {
     notifications,
     settings,
     meta,
+    activityLog,
   }
 }
 
@@ -158,6 +164,7 @@ export async function importAll(
       db.notifications,
       db.settings,
       db.meta,
+      db.activityLog,
     ],
     async () => {
       if (mode === 'replace') {
@@ -173,6 +180,7 @@ export async function importAll(
           db.taskCollections.clear(),
           db.notifications.clear(),
           db.meta.clear(),
+          db.activityLog.clear(),
         ])
       }
 
@@ -192,6 +200,8 @@ export async function importAll(
       await db.taskCollections.bulkPut(data.taskCollections)
       await db.notifications.bulkPut(data.notifications)
       await db.meta.bulkPut(data.meta)
+      // Optional — absent from a pre-M13 backup file (see BackupData.activityLog).
+      if (data.activityLog) await db.activityLog.bulkPut(data.activityLog)
       if (data.settings) await db.settings.put(data.settings)
     },
   )

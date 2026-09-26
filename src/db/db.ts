@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import type {
   Account,
+  ActivityLogEntry,
   AppNotification,
   Category,
   ExchangeRate,
@@ -34,6 +35,7 @@ export class DowiDatabase extends Dexie {
   settings!: Table<Settings, string>
   meta!: Table<MetaEntry, string>
   recurringTransactions!: Table<RecurringTransaction, string>
+  activityLog!: Table<ActivityLogEntry, string>
 
   constructor(name = 'dowi') {
     super(name)
@@ -93,6 +95,14 @@ export class DowiDatabase extends Dexie {
           await tasksTable.put(parent)
         }
       })
+
+    // The streak/badges page (M13) needs actual per-day history to draw a
+    // contribution calendar — StreakState (meta table) only ever kept a
+    // running counter, never which days were active. Purely additive: a
+    // brand-new table, nothing to migrate.
+    this.version(4).stores({
+      activityLog: '&date',
+    })
   }
 }
 

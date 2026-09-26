@@ -243,3 +243,17 @@ export interface MetaEntry {
   key: string
   value: string
 }
+
+/**
+ * One calendar day's qualifying-activity count (src/db/activityLogRepo.ts) —
+ * the history StreakState itself never kept, needed for the streak page's
+ * contribution calendar. `count` is how many qualifying actions (income/
+ * expense, note, task) happened that day, purely for shading intensity —
+ * never which ones, so this stays as content-free as the streak state it
+ * sits beside.
+ */
+export interface ActivityLogEntry {
+  /** "YYYY-MM-DD", primary key. */
+  date: string
+  count: number
+}
