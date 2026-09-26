@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useDatabase } from '@/app/db/useDatabase'
+import { cn } from '@/lib/cn'
 import type { Settings, Transaction } from '@/db/types'
 import { DEFAULT_SETTINGS } from '@/db/settingsRepo'
 import { EMPTY_ARRAY } from '@/lib/emptyArray'
@@ -66,12 +67,25 @@ export function MoneyPage() {
   const currentPage = Math.min(page, totalPages)
   const visible = nonRecurring.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const groups = useMemo(() => groupByMonthAndDay(visible), [visible])
+  // The most recent day in view opens by default — collapsing it too would
+  // hide a transaction the user just added on the very screen meant to show
+  // it. Every other day starts collapsed (per-day totals only) until tapped.
+  const defaultExpandedDate = groups[0]?.days[0]?.date
 
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<Transaction | undefined>(undefined)
   const [expandedRecurringId, setExpandedRecurringId] = useState<string | null>(null)
+  const [dayOverrides, setDayOverrides] = useState<Map<string, boolean>>(new Map())
   const { show } = useSnackbar()
+
+  function isDayExpanded(date: string): boolean {
+    return dayOverrides.get(date) ?? date === defaultExpandedDate
+  }
+
+  function toggleDayExpanded(date: string) {
+    setDayOverrides((prev) => new Map(prev).set(date, !isDayExpanded(date)))
+  }
 
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts])
@@ -270,28 +284,47 @@ export function MoneyPage() {
               >
                 {month.label}
               </div>
-              {month.days.map((day) => (
-                <Card key={day.date} className="mb-2">
-                  <div
-                    className="mb-1 flex items-center justify-between text-xs font-semibold"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    <span>{day.date}</span>
-                    <span className="flex gap-2">
-                      {Object.entries(day.subtotals).map(([currency, net]) => (
-                        <MoneyText
-                          key={currency}
-                          amountMinorUnits={net}
-                          currency={currency}
-                          sign={net >= 0 ? 'income' : 'expense'}
-                          showSign
-                        />
-                      ))}
-                    </span>
-                  </div>
-                  {day.transactions.map(renderTransactionRow)}
-                </Card>
-              ))}
+              {month.days.map((day) => {
+                const expanded = isDayExpanded(day.date)
+                return (
+                  <Card key={day.date} className="mb-2">
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      onClick={() => toggleDayExpanded(day.date)}
+                      className="flex w-full items-center justify-between gap-2 text-left text-xs font-semibold"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            'inline-block transition-transform',
+                            expanded && 'rotate-90',
+                          )}
+                        >
+                          ›
+                        </span>
+                        {day.date}
+                      </span>
+                      <span className="flex gap-2">
+                        {Object.entries(day.subtotals).map(([currency, net]) => (
+                          <MoneyText
+                            key={currency}
+                            amountMinorUnits={net}
+                            currency={currency}
+                            sign={net >= 0 ? 'income' : 'expense'}
+                            showSign
+                          />
+                        ))}
+                      </span>
+                    </button>
+                    {expanded && (
+                      <div className="mt-1">{day.transactions.map(renderTransactionRow)}</div>
+                    )}
+                  </Card>
+                )
+              })}
             </div>
           ))
         )}
