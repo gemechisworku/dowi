@@ -330,6 +330,35 @@ test.describe('Settings — Reminders', () => {
     await expect(page.getByLabel('Morning nudge time')).toHaveValue('08:15')
   })
 
+  // Regression: the native time input's own AM/PM control turned out to be
+  // a real, confirmed usability problem on a real device — easy to miss
+  // entirely, silently leaving a reminder set 12 hours off from what the
+  // user intended with no indication anything was wrong. TimePicker now
+  // pairs the input with this explicit, always-visible toggle instead.
+  // Scoped to TimePicker's own wrapper (the input's immediate parent) since
+  // several of these render on this page and an unscoped `.first()` can
+  // land on a different reminder's toggle entirely.
+  test('the explicit AM/PM toggle flips a reminder time by 12 hours and persists', async ({
+    page,
+  }) => {
+    await page.goto('/settings')
+    const morningNudgeGroup = page.getByLabel('Morning nudge time').locator('..')
+    await expect(page.getByLabel('Morning nudge time')).toHaveValue('09:00')
+    await expect(morningNudgeGroup.getByRole('radio', { name: 'AM' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+
+    await morningNudgeGroup.getByRole('radio', { name: 'PM' }).click()
+    await expect(page.getByLabel('Morning nudge time')).toHaveValue('21:00')
+
+    await page.reload()
+    await expect(page.getByLabel('Morning nudge time')).toHaveValue('21:00')
+    await expect(
+      page.getByLabel('Morning nudge time').locator('..').getByRole('radio', { name: 'PM' }),
+    ).toHaveAttribute('aria-checked', 'true')
+  })
+
   test('turning off the evening streak reminder persists and hides its time picker', async ({
     page,
   }) => {
