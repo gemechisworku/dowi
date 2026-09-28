@@ -240,6 +240,71 @@ describe('computeDueReminders — morning nudge', () => {
   })
 })
 
+describe('computeDueReminders — allowBackwardCatchUp: false', () => {
+  // Regression: SettingsPage.tsx resyncs immediately after any reminder
+  // change (so a toggle/retime takes effect in the same session — see its
+  // own comment). Before this fix, setting e.g. morning nudge to a time
+  // later *today* fired it immediately: the default backward-catch-up
+  // fell back to "yesterday's occurrence", which is trivially in the past
+  // and has no existing notification row, so it read as genuinely missed.
+  it('does not fall back to yesterday for a daily reminder whose time has not passed today', () => {
+    const settings = baseSettings({ morningNudge: { enabled: true, time: '09:00' } })
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T08:00:00'),
+      existing: [],
+      installedAt: INSTALLED_AT,
+      allowBackwardCatchUp: false,
+    })
+    expect(due.find((r) => r.type === 'morning-nudge')).toBeUndefined()
+  })
+
+  it('still fires a daily reminder for today once its own time has passed', () => {
+    const settings = baseSettings({ morningNudge: { enabled: true, time: '09:00' } })
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T09:30:00'),
+      existing: [],
+      installedAt: INSTALLED_AT,
+      allowBackwardCatchUp: false,
+    })
+    expect(due.find((r) => r.type === 'morning-nudge')?.scheduledFor).toBe(
+      new Date('2026-09-21T09:00:00').toISOString(),
+    )
+  })
+
+  it('does not fall back to a past week for a weekly reminder whose day+time has not passed', () => {
+    // 2026-09-21 is a Monday; weeklyPlan set for Wednesday.
+    const settings = baseSettings({ weeklyPlan: { enabled: true, day: 3, time: '08:00' } })
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T10:00:00'),
+      existing: [],
+      installedAt: INSTALLED_AT,
+      allowBackwardCatchUp: false,
+    })
+    expect(due.find((r) => r.type === 'weekly-plan')).toBeUndefined()
+  })
+
+  it('still fires a weekly reminder once its own day+time has passed', () => {
+    const settings = baseSettings({ weeklyPlan: { enabled: true, day: 1, time: '08:00' } })
+    const due = computeDueReminders({
+      settings,
+      tasks: [],
+      now: new Date('2026-09-21T10:00:00'),
+      existing: [],
+      installedAt: INSTALLED_AT,
+      allowBackwardCatchUp: false,
+    })
+    expect(due.find((r) => r.type === 'weekly-plan')?.scheduledFor).toBe(
+      new Date('2026-09-21T08:00:00').toISOString(),
+    )
+  })
+})
+
 describe('computeDueReminders — evening streak', () => {
   const settings = baseSettings({ eveningStreak: { enabled: true, time: '21:00' } })
 

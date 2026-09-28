@@ -61,6 +61,20 @@ export interface ComputeDueRemindersInput {
    * either a real export happens or it fires.
    */
   catchUpWindowMs?: number
+  /**
+   * Whether a daily/weekly reminder whose time-of-day hasn't happened yet
+   * *today* is allowed to fall back to "yesterday's occurrence" and fire
+   * immediately as a catch-up. True for every genuine catch-up path (app
+   * reopened after being closed, a push/periodicsync wake) — false for a
+   * resync triggered by the user actively changing reminder settings right
+   * now, which must only ever look forward to the next real occurrence.
+   * Without this, saving a reminder for a few minutes from now fired it
+   * immediately instead: "yesterday at that time" is trivially in the past
+   * and has no existing notification row, so it read as a genuinely missed
+   * occurrence — a real bug, not a false catch-up on something never
+   * actually missed (the setting didn't even exist yesterday).
+   */
+  allowBackwardCatchUp?: boolean
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -71,9 +85,29 @@ function parseTime(time: string): { hours: number; minutes: number } {
   return { hours: h ?? 0, minutes: m ?? 0 }
 }
 
-/** The most recent moment matching `day` (0=Sun..6=Sat) + `time` at or before `from`. */
-function mostRecentWeeklyOccurrence(day: number, time: string, from: Date): Date {
+/**
+ * The most recent moment matching `day` (0=Sun..6=Sat) + `time` at or before
+ * `from` — or, with `allowBackwardCatchUp: false`, this week's own
+ * occurrence even when that falls after `from` (i.e. hasn't happened yet),
+ * so a caller that must never invent a backward-looking catch-up still gets
+ * a real, correctly-dated instant back rather than a fabricated past one;
+ * the caller's own `withinCatchUpWindow` check naturally treats a
+ * still-future instant as not yet due.
+ */
+function mostRecentWeeklyOccurrence(
+  day: number,
+  time: string,
+  from: Date,
+  allowBackwardCatchUp: boolean,
+): Date {
   const { hours, minutes } = parseTime(time)
+  if (!allowBackwardCatchUp) {
+    const candidate = new Date(from)
+    const delta = (day - from.getDay() + 7) % 7
+    candidate.setDate(from.getDate() + delta)
+    candidate.setHours(hours, minutes, 0, 0)
+    return candidate
+  }
   const candidate = new Date(from)
   for (let back = 0; back < 7; back++) {
     candidate.setDate(from.getDate() - back)
@@ -94,12 +128,17 @@ function toLocalDateString(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-/** The most recent moment matching `time`, today if it's already passed, otherwise yesterday. */
-function mostRecentDailyOccurrence(time: string, from: Date): Date {
+/**
+ * The most recent moment matching `time`: today if it's already passed,
+ * otherwise yesterday — or, with `allowBackwardCatchUp: false`, always
+ * today's own occurrence, even one still in the future (see
+ * `mostRecentWeeklyOccurrence`'s doc for why).
+ */
+function mostRecentDailyOccurrence(time: string, from: Date, allowBackwardCatchUp: boolean): Date {
   const { hours, minutes } = parseTime(time)
   const candidate = new Date(from)
   candidate.setHours(hours, minutes, 0, 0)
-  if (candidate.getTime() > from.getTime()) {
+  if (allowBackwardCatchUp && candidate.getTime() > from.getTime()) {
     candidate.setDate(candidate.getDate() - 1)
   }
   return candidate
@@ -207,6 +246,7 @@ export function computeDueReminders({
   currentStreak,
   dailySummary,
   catchUpWindowMs = DEFAULT_CATCH_UP_WINDOW_MS,
+  allowBackwardCatchUp = true,
 }: ComputeDueRemindersInput): DueReminder[] {
   const due: DueReminder[] = []
   const cutoff = now.getTime() - catchUpWindowMs
@@ -221,6 +261,7 @@ export function computeDueReminders({
       reminders.weeklyPlan.day,
       reminders.weeklyPlan.time,
       now,
+      allowBackwardCatchUp,
     )
     const scheduledFor = occurrence.toISOString()
     if (
@@ -242,6 +283,7 @@ export function computeDueReminders({
       reminders.weeklyReview.day,
       reminders.weeklyReview.time,
       now,
+      allowBackwardCatchUp,
     )
     const scheduledFor = occurrence.toISOString()
     if (
@@ -259,7 +301,11 @@ export function computeDueReminders({
   }
 
   if (reminders.dailyAgenda.enabled) {
-    const occurrence = mostRecentDailyOccurrence(reminders.dailyAgenda.time, now)
+    const occurrence = mostRecentDailyOccurrence(
+      reminders.dailyAgenda.time,
+      now,
+      allowBackwardCatchUp,
+    )
     const scheduledFor = occurrence.toISOString()
     if (
       withinCatchUpWindow(occurrence) &&
@@ -276,7 +322,11 @@ export function computeDueReminders({
   }
 
   if (reminders.morningNudge.enabled) {
-    const occurrence = mostRecentDailyOccurrence(reminders.morningNudge.time, now)
+    const occurrence = mostRecentDailyOccurrence(
+      reminders.morningNudge.time,
+      now,
+      allowBackwardCatchUp,
+    )
     const scheduledFor = occurrence.toISOString()
     const alreadyActiveThatDay = streakLastActiveDate === toLocalDateString(occurrence)
     if (
@@ -295,7 +345,11 @@ export function computeDueReminders({
   }
 
   if (reminders.eveningStreak.enabled) {
-    const occurrence = mostRecentDailyOccurrence(reminders.eveningStreak.time, now)
+    const occurrence = mostRecentDailyOccurrence(
+      reminders.eveningStreak.time,
+      now,
+      allowBackwardCatchUp,
+    )
     const scheduledFor = occurrence.toISOString()
     const alreadyActiveThatDay = streakLastActiveDate === toLocalDateString(occurrence)
 
