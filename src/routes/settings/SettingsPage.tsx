@@ -118,7 +118,11 @@ export function SettingsPage() {
     // considered again the next time the app is fully relaunched — catchUp()
     // otherwise only ever runs once per mount (useNotificationRuntime.ts).
     // Re-running it here means a change takes effect in this same session.
-    void scheduler.catchUp()
+    // allowBackwardCatchUp: false — the app is open and being actively used
+    // right now, so a daily/weekly reminder whose time hasn't happened yet
+    // today must wait for its real, forward occurrence, not fire
+    // immediately for a fabricated "yesterday" one (see reminders.ts).
+    void scheduler.catchUp({ allowBackwardCatchUp: false })
     // Keeps the push server's rules current so it wakes this device at the
     // newly-configured time even while the app stays closed.
     void syncPushRules({ db, settingsRepo, repos })

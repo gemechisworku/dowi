@@ -31,6 +31,21 @@ export interface CatchUpSummary {
   quiet: boolean
 }
 
+export interface CatchUpOptions {
+  /**
+   * True (the default) for every genuine catch-up path — app reopened after
+   * being closed, a push/periodicsync wake — where a daily/weekly reminder
+   * whose time-of-day hasn't happened yet today may fall back to
+   * "yesterday's occurrence" and fire immediately, catching up on something
+   * genuinely missed. Pass false for a resync triggered by the user
+   * actively changing reminder settings right now (SettingsPage.tsx) — that
+   * context must only ever look forward, never invent a backward-looking
+   * catch-up for a setting that, from "yesterday's" point of view, did not
+   * even exist yet. See src/lib/reminders.ts's own doc on this flag.
+   */
+  allowBackwardCatchUp?: boolean
+}
+
 export interface ReminderScheduler {
   /**
    * Runs on every app open (and opportunistically via the service worker's
@@ -42,7 +57,7 @@ export interface ReminderScheduler {
    * worker's `push` handler, notably — see its own diagnostic logging) can
    * tell *why* nothing was delivered without re-deriving it.
    */
-  catchUp(): Promise<CatchUpSummary>
+  catchUp(options?: CatchUpOptions): Promise<CatchUpSummary>
   /**
    * Requests permission if it hasn't been decided yet, then shows one
    * notification immediately. Doesn't write an inbox entry — a test ping
@@ -66,7 +81,7 @@ export function createWebScheduler({
   repos,
 }: WebSchedulerDeps): ReminderScheduler {
   return {
-    async catchUp() {
+    async catchUp({ allowBackwardCatchUp = true }: CatchUpOptions = {}) {
       const now = new Date()
 
       // The dedup-critical part — read what's already been raised, decide
@@ -130,6 +145,7 @@ export function createWebScheduler({
             streakLastActiveDate: streak.lastActiveDate,
             currentStreak: streak.currentStreak,
             dailySummary,
+            allowBackwardCatchUp,
           })
           const dueRecurring = computeDueRecurring({
             templates: recurringTemplates.filter((t) => !t.paused),
