@@ -36,14 +36,27 @@ export async function sendWakePush(subscription: PushSubscriptionJson): Promise<
     // even though the server-side send itself succeeds. A short TTL means
     // a wake that couldn't be delivered promptly (device offline) is
     // dropped rather than arriving stale much later.
-    await webpush.sendNotification(subscription, undefined, { urgency: 'high', TTL: 300 })
-    console.log('[push] sendWakePush ok', { endpointHost: hostOf(subscription.endpoint) })
+    const result = await webpush.sendNotification(subscription, undefined, {
+      urgency: 'high',
+      TTL: 300,
+    })
+    // Logging the actual statusCode/body the push service returned, not
+    // just "it didn't throw" — a prior debugging round inferred success
+    // only from indirect evidence (this call plus a follow-up write both
+    // happening), never the literal response, which turned out to be a
+    // real gap worth closing.
+    console.log('[push] sendWakePush ok', {
+      endpoint: subscription.endpoint,
+      statusCode: result.statusCode,
+      body: result.body,
+    })
     return { ok: true, gone: false }
   } catch (error) {
     if (error instanceof WebPushError && (error.statusCode === 404 || error.statusCode === 410)) {
       console.warn('[push] sendWakePush: subscription gone', {
-        endpointHost: hostOf(subscription.endpoint),
+        endpoint: subscription.endpoint,
         statusCode: error.statusCode,
+        body: error.body,
       })
       return { ok: false, gone: true }
     }
@@ -53,18 +66,11 @@ export async function sendWakePush(subscription: PushSubscriptionJson): Promise<
     // to the caller either way, so sweep.ts doesn't retry a device this
     // never explicitly took offline.
     console.error('[push] sendWakePush failed', {
-      endpointHost: hostOf(subscription.endpoint),
+      endpoint: subscription.endpoint,
       statusCode: error instanceof WebPushError ? error.statusCode : undefined,
+      body: error instanceof WebPushError ? error.body : undefined,
       message: error instanceof Error ? error.message : String(error),
     })
     return { ok: false, gone: false }
-  }
-}
-
-function hostOf(endpoint: string): string {
-  try {
-    return new URL(endpoint).host
-  } catch {
-    return 'unknown'
   }
 }
