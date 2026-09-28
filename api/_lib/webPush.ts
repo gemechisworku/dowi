@@ -30,7 +30,13 @@ export interface SendWakeResult {
 export async function sendWakePush(subscription: PushSubscriptionJson): Promise<SendWakeResult> {
   ensureConfigured()
   try {
-    await webpush.sendNotification(subscription)
+    // urgency: 'high' — without it, Android/Chrome can silently defer or
+    // drop a "normal"-priority push while the device is idle/in Doze,
+    // which looks from the outside exactly like "the push was never sent"
+    // even though the server-side send itself succeeds. A short TTL means
+    // a wake that couldn't be delivered promptly (device offline) is
+    // dropped rather than arriving stale much later.
+    await webpush.sendNotification(subscription, undefined, { urgency: 'high', TTL: 300 })
     console.log('[push] sendWakePush ok', { endpointHost: hostOf(subscription.endpoint) })
     return { ok: true, gone: false }
   } catch (error) {

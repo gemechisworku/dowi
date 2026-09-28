@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useAppUpdate } from '@/app/pwa/useAppUpdate'
 import { useDatabase } from '@/app/db/useDatabase'
 import { checkForServiceWorkerUpdate } from '@/app/serviceWorker/checkForUpdate'
-import { getLastPushDebug } from '@/notifications/pushDebug'
+import { getPushDebugLog, type PushDebugRecord } from '@/notifications/pushDebug'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Button } from '@/components/ui/Button'
@@ -42,6 +42,35 @@ export interface AboutSettingsProps {
   changelog?: string
 }
 
+function PushDebugRow({ record }: { record: PushDebugRecord }) {
+  return (
+    <div
+      className="flex flex-col gap-0.5 border-b py-2 text-xs last:border-b-0"
+      style={{ borderColor: 'var(--color-border)' }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
+          {timeAgo(record.ranAt)} ({record.source})
+        </span>
+        {record.error ? (
+          <Badge tone="warning">Failed</Badge>
+        ) : (
+          <Badge tone={record.deliveredCount ? 'primary' : 'neutral'}>
+            due {record.dueCount} · shown {record.deliveredCount}
+          </Badge>
+        )}
+      </div>
+      {record.error ? (
+        <p style={{ color: 'var(--color-text-muted)' }}>{record.error}</p>
+      ) : (
+        <p style={{ color: 'var(--color-text-muted)' }}>
+          permission: {record.permission} · {record.quiet ? 'quiet hours' : 'not quiet'}
+        </p>
+      )}
+    </div>
+  )
+}
+
 /** Settings → About (PRD §5.8): version, build date, changelog, update status, licences. */
 export function AboutSettings({ changelog }: AboutSettingsProps) {
   const { show } = useSnackbar()
@@ -52,9 +81,9 @@ export function AboutSettings({ changelog }: AboutSettingsProps) {
   // can't just call useRegisterSW() again itself.
   const { needRefresh, updateApp } = useAppUpdate()
   // The one path with no console attached on a real phone — see
-  // src/notifications/pushDebug.ts. `undefined` while loading, `null` once
-  // loaded if a background wake has genuinely never happened yet.
-  const lastPushDebug = useLiveQuery(() => getLastPushDebug(db), [db])
+  // src/notifications/pushDebug.ts. Newest first; empty once loaded if a
+  // background wake has genuinely never happened yet.
+  const pushDebugLog = useLiveQuery(() => getPushDebugLog(db), [db])
 
   async function handleCheckForUpdate() {
     setChecking(true)
@@ -128,52 +157,22 @@ export function AboutSettings({ changelog }: AboutSettingsProps) {
         <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
           Background push (debug)
         </p>
-        {lastPushDebug === null && (
+        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          Every time a push or periodic sync reaches the service worker while the app is closed —
+          newest first. Empty means no background wake has reached this device at all, which points
+          at delivery (OS/browser), not the app itself.
+        </p>
+        {pushDebugLog && pushDebugLog.length === 0 && (
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            No background wake recorded yet — this fills in the next time a push or periodic sync
-            reaches the service worker while the app is closed.
+            No background wake recorded yet.
           </p>
         )}
-        {lastPushDebug && (
-          <dl className="flex flex-col gap-1.5 text-sm">
-            <div className="flex justify-between">
-              <dt style={{ color: 'var(--color-text-muted)' }}>Last run</dt>
-              <dd className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                {timeAgo(lastPushDebug.ranAt)} ({lastPushDebug.source})
-              </dd>
-            </div>
-            {lastPushDebug.error ? (
-              <div className="flex flex-col gap-1">
-                <Badge tone="warning" className="self-start">
-                  Failed
-                </Badge>
-                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {lastPushDebug.error}
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="flex justify-between">
-                  <dt style={{ color: 'var(--color-text-muted)' }}>Reminders found due</dt>
-                  <dd className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                    {lastPushDebug.dueCount}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt style={{ color: 'var(--color-text-muted)' }}>Notifications shown</dt>
-                  <dd className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                    {lastPushDebug.deliveredCount}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt style={{ color: 'var(--color-text-muted)' }}>Permission / quiet hours</dt>
-                  <dd className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                    {lastPushDebug.permission} / {lastPushDebug.quiet ? 'quiet' : 'not quiet'}
-                  </dd>
-                </div>
-              </>
-            )}
-          </dl>
+        {pushDebugLog && pushDebugLog.length > 0 && (
+          <div className="flex max-h-64 flex-col overflow-y-auto">
+            {pushDebugLog.map((record, i) => (
+              <PushDebugRow key={`${record.ranAt}-${record.source}-${i}`} record={record} />
+            ))}
+          </div>
         )}
       </Card>
     </section>
