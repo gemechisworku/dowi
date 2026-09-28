@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useFocusTrap } from '@/lib/useFocusTrap'
 import { useLockBodyScroll } from '@/lib/useLockBodyScroll'
+import { useInertBackground } from '@/lib/useInertBackground'
 
 export interface DialogProps {
   open: boolean
@@ -16,6 +17,7 @@ export function Dialog({ open, onClose, title, children, actions }: DialogProps)
   const containerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(containerRef, open)
   useLockBodyScroll(open)
+  useInertBackground(open)
 
   useEffect(() => {
     if (!open) return
@@ -45,7 +47,9 @@ export function Dialog({ open, onClose, title, children, actions }: DialogProps)
         aria-modal="true"
         aria-labelledby="dowi-dialog-title"
         className="relative w-full max-w-sm rounded-[var(--radius-lg)] p-5"
-        style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-elevated)' }}
+        // Opaque --color-surface-solid, not the translucent --color-surface
+        // every Card uses — see Sheet.tsx's identical fix for why.
+        style={{ background: 'var(--color-surface-solid)', boxShadow: 'var(--shadow-elevated)' }}
       >
         <h2
           id="dowi-dialog-title"

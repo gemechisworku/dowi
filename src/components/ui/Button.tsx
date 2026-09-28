@@ -20,7 +20,12 @@ const VARIANT_STYLE: Record<ButtonVariant, { background: string; color: string; 
       border: '1px solid var(--color-border)',
     },
     ghost: { background: 'transparent', color: 'var(--color-primary)' },
-    danger: { background: 'var(--color-danger-solid)', color: 'var(--color-primary-fg)' },
+    // Fixed white, not --color-primary-fg: --color-danger-solid is
+    // deliberately fixed (not theme-swapped, see its own tokens.css
+    // comment), and --color-primary-fg flips to a dark navy in dark mode
+    // (meant for the *light* dark-mode --color-primary) — pairing that
+    // navy with this fixed red dropped to ~3.97:1 in dark mode.
+    danger: { background: 'var(--color-danger-solid)', color: '#ffffff' },
   }
 
 const SIZE_CLASS: Record<ButtonSize, string> = {

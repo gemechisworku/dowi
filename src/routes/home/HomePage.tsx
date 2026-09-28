@@ -235,20 +235,28 @@ export function HomePage() {
             </Card>
           )}
 
-            {/* The focused balance card carries the headline net figure. The toggle sits
+          {/* The focused balance card carries the headline net figure. The toggle sits
               outside the tap-to-open-Reports button below so its own radio
-              buttons never nest inside another button (axe no-focusable-content). */}
+              buttons never nest inside another button (axe no-focusable-content).
+              Uses the same fixed brand gradient as the top app bar / page bands
+              (--color-brand-gradient-*, --color-on-brand*), not the theme-swapped
+              --color-primary/-fg this used to carry — those flip to a *light*
+              blue-400 in dark mode, which no amount of light/translucent text
+              tuning can clear 4.5:1 against (verified: even solid white peaks at
+              ~3.7:1 there). The inverse PeriodSelector below assumes the same
+              fixed-dark-brand-surface contract. */}
           <Card
             style={{
-               background: 'var(--color-primary)',
-               boxShadow: 'var(--shadow-elevated)',
-               color: 'var(--color-primary-fg)',
+              background:
+                'linear-gradient(145deg, var(--color-brand-gradient-start), var(--color-brand-gradient-end))',
+              boxShadow: 'var(--shadow-elevated)',
+              color: 'var(--color-on-brand)',
             }}
           >
             <div className="flex items-center justify-between gap-3">
               <span
                 className="text-[11px] font-semibold uppercase tracking-wide"
-                style={{ opacity: 0.85 }}
+                style={{ color: 'var(--color-on-brand-muted)' }}
               >
                 This {period}
               </span>
@@ -264,7 +272,7 @@ export function HomePage() {
               onClick={() => navigate('/money')}
               className="mt-3 block w-full text-left"
             >
-              <p className="text-[11px]" style={{ opacity: 0.8 }}>
+              <p className="text-[11px]" style={{ color: 'var(--color-on-brand-muted)' }}>
                 Net balance · {periodLabel}
               </p>
               <p className="mt-0.5 text-[31px] font-extrabold tracking-tight">
@@ -272,12 +280,12 @@ export function HomePage() {
                   amountMinorUnits={report.netMinorUnits}
                   currency={baseCurrency}
                   showSign
-                   color="var(--color-primary-fg)"
+                  color="var(--color-on-brand)"
                 />
               </p>
               <div className="mt-3.5 flex gap-4">
                 <div className="flex-1">
-                  <p className="text-[10.5px]" style={{ opacity: 0.8 }}>
+                  <p className="text-[10.5px]" style={{ color: 'var(--color-on-brand-muted)' }}>
                     Income
                   </p>
                   <p className="text-sm font-bold">
@@ -285,23 +293,25 @@ export function HomePage() {
                       amountMinorUnits={report.income.totalMinorUnits}
                       currency={baseCurrency}
                       approximate={report.income.wasConverted}
-                       color="var(--color-primary-fg)"
+                      color="var(--color-on-brand)"
                     />
                   </p>
                   <div
                     className="mt-1.5 h-1.5 overflow-hidden rounded-full"
-                     style={{ background: 'color-mix(in srgb, var(--color-primary-fg) 25%, transparent)' }}
+                    style={{
+                      background: 'color-mix(in srgb, var(--color-on-brand) 25%, transparent)',
+                    }}
                     role="img"
                     aria-label={`Income vs expense comparison for ${periodLabel}`}
                   >
                     <div
                       className="h-full rounded-full"
-                       style={{ width: `${incomeBarPct}%`, background: 'var(--color-primary-fg)' }}
+                      style={{ width: `${incomeBarPct}%`, background: 'var(--color-on-brand)' }}
                     />
                   </div>
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10.5px]" style={{ opacity: 0.8 }}>
+                  <p className="text-[10.5px]" style={{ color: 'var(--color-on-brand-muted)' }}>
                     Expense
                   </p>
                   <p className="text-sm font-bold">
@@ -325,7 +335,9 @@ export function HomePage() {
                   </p>
                   <div
                     className="mt-1.5 h-1.5 overflow-hidden rounded-full"
-                     style={{ background: 'color-mix(in srgb, var(--color-primary-fg) 25%, transparent)' }}
+                    style={{
+                      background: 'color-mix(in srgb, var(--color-on-brand) 25%, transparent)',
+                    }}
                   >
                     <div
                       className="h-full rounded-full"
@@ -343,12 +355,12 @@ export function HomePage() {
                 key={action.label}
                 type="button"
                 onClick={() => navigate(action.href)}
-                 className="flex flex-1 flex-col items-center gap-1 rounded-[var(--radius-md)] border py-3 text-center text-[10.5px] font-semibold backdrop-blur-xl"
+                className="flex flex-1 flex-col items-center gap-1 rounded-[var(--radius-md)] border py-3 text-center text-[10.5px] font-semibold backdrop-blur-xl"
                 style={{
                   background: 'var(--color-surface)',
                   boxShadow: 'var(--shadow-card)',
                   color: 'var(--color-text)',
-                   borderColor: 'var(--color-border)',
+                  borderColor: 'var(--color-border)',
                 }}
               >
                 <span aria-hidden="true" className="text-[17px]">

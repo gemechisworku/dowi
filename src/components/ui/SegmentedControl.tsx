@@ -19,9 +19,17 @@ export interface SegmentedControlProps<T extends string> {
   variant?: 'default' | 'inverse'
 }
 
+/*
+ * "inverse" is transparent, not a translucent white wash: any white tint at
+ * all here lightens the effective background the unselected label's own
+ * (already-translucent) --color-on-brand-muted text sits on, and that pair
+ * can't clear 4.5:1 together — verified even a 0.03 alpha wash drops it
+ * below the minimum, so the selected pill's own opaque
+ * --color-on-brand-surface-strong is what carries the visual structure.
+ */
 const TRACK_BACKGROUND: Record<'default' | 'inverse', string> = {
   default: 'var(--color-surface-2)',
-  inverse: 'rgba(255, 255, 255, 0.16)',
+  inverse: 'transparent',
 }
 
 /** The Day/Week/Month/FY (and similar) period switch. A single visible control acting as a radiogroup. */
@@ -53,8 +61,8 @@ export function SegmentedControl<T extends string>({
             style={
               variant === 'inverse'
                 ? {
-                    background: selected ? 'var(--color-surface-solid)' : 'transparent',
-                    color: selected ? 'var(--blue-700)' : 'rgba(255, 255, 255, 0.85)',
+                    background: selected ? 'var(--color-on-brand-surface-strong)' : 'transparent',
+                    color: selected ? 'var(--blue-700)' : 'var(--color-on-brand-muted)',
                   }
                 : {
                     background: selected ? 'var(--color-primary)' : 'transparent',
