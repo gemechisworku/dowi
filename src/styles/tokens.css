@@ -38,10 +38,20 @@
   --color-primary: var(--blue-600);
   --color-primary-fg: #ffffff;
   --color-primary-soft: var(--blue-50);
+  /*
+   * blue-600, not blue-500: the brand gradient is the background for white
+   * text everywhere it's used (top app bar, every page's title band), and
+   * blue-500 is mathematically too light for that — even pure #ffffff only
+   * reaches 3.68:1 against it, short of the 4.5:1 normal-text minimum, no
+   * matter how the foreground token is tuned. blue-600 keeps both gradient
+   * stops dark enough for white text to clear 4.5:1 throughout.
+   */
   --color-brand-gradient-start: var(--blue-700);
-  --color-brand-gradient-end: var(--blue-500);
+  --color-brand-gradient-end: var(--blue-600);
   --color-on-brand: #ffffff;
-  --color-on-brand-muted: rgba(255, 255, 255, 0.76);
+  /* 0.92, not 0.76: needs to stay ≥4.5:1 against the *lighter* gradient
+     stop (blue-600) — 0.76 only reached 3.68:1 there. */
+  --color-on-brand-muted: rgba(255, 255, 255, 0.92);
   --color-on-brand-surface: rgba(255, 255, 255, 0.14);
   --color-on-brand-surface-strong: rgba(255, 255, 255, 0.94);
   --color-on-brand-border: rgba(255, 255, 255, 0.2);
@@ -51,10 +61,12 @@
   --color-surface-2: #f3f6fb;
   --color-surface-3: #e9eef8;
   --color-text: #172033;
-  /* slate-600, not -500: -500 (#64748b) only clears 4.5:1 on white by a
-     hair and fails outright against --color-surface-2 (~4.3:1) — this
-     passes comfortably (~7.6:1) against every surface it's used on. */
-  --color-text-muted: #667085;
+  /* slate-600, not the redesign's lighter #667085: #667085 only reaches
+     ~4.9:1 on the translucent Card surface and drops well under 4.5:1
+     against tinted "soft" backgrounds (e.g. ~1.6:1 on --color-primary-soft)
+     — #475569 passes comfortably (~7:1+) against every surface it's used
+     on, including every soft/tinted one. */
+  --color-text-muted: #475569;
   --color-text-on-primary: #ffffff;
   --color-border: rgba(23, 32, 51, 0.08);
   --color-border-strong: rgba(23, 32, 51, 0.16);
@@ -128,8 +140,16 @@
   --radius-pill: 999px;
 
   /* ---- Type scale ---- */
-  --font-sans: Figtree, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: Outfit, var(--font-sans);
+  /*
+   * System fonts only, deliberately — no Figtree/Outfit webfont load. This
+   * app is local-first / no-cloud (see PRD), enforced by a real e2e test
+   * asserting zero third-party network requests after load; a Google
+   * Fonts <link> in index.html briefly violated that (fixed alongside
+   * this) with no way to self-host the actual font files from this
+   * environment. Falls through to system-ui/-apple-system either way.
+   */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-sans);
 
   --text-xs: 12px;
   --text-sm: 13.5px;
@@ -204,7 +224,7 @@
     --color-scrim: rgba(0, 0, 0, 0.6);
     --color-focus-ring: var(--blue-400);
     --color-brand-gradient-start: var(--blue-700);
-    --color-brand-gradient-end: var(--blue-500);
+    --color-brand-gradient-end: var(--blue-600);
 
     --color-disabled-bg: #1a212e;
     --color-disabled-fg: #545f70;
@@ -253,7 +273,7 @@
   --color-scrim: rgba(0, 0, 0, 0.6);
   --color-focus-ring: var(--blue-400);
   --color-brand-gradient-start: var(--blue-700);
-  --color-brand-gradient-end: var(--blue-500);
+  --color-brand-gradient-end: var(--blue-600);
 
   --color-disabled-bg: #1a212e;
   --color-disabled-fg: #545f70;

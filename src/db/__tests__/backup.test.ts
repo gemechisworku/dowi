@@ -163,6 +163,44 @@ describe('exportAll / importAll round trip', () => {
     await expect(importAll(db, legacyBackup, 'replace')).resolves.not.toThrow()
     expect(await repos.activityLog.list()).toHaveLength(0)
   })
+
+  it('round-trips recurring transaction templates through export -> erase -> import', async () => {
+    const category = await repos.categories.create({
+      name: 'Subscriptions',
+      icon: '💳',
+      color: '#000',
+      type: 'expense',
+    })
+    await repos.recurring.create({
+      name: 'Netflix',
+      type: 'expense',
+      amountMinorUnits: 1500,
+      currency: 'ETB',
+      categoryId: category.id,
+      tags: [],
+      interval: { unit: 'month', every: 1 },
+      startDate: '2026-01-01',
+      autoRecord: true,
+      paused: false,
+    })
+
+    const before = await fullExport(db)
+    expect(before.recurringTransactions).toHaveLength(1)
+
+    await db.recurringTransactions.clear()
+    await importAll(db, before, 'replace')
+
+    expect(await repos.recurring.list()).toHaveLength(1)
+  })
+
+  it('imports cleanly a backup made before recurringTransactions was backed up (key absent)', async () => {
+    const backup = await fullExport(db)
+    const legacyBackup = { ...backup } as Partial<typeof backup>
+    delete legacyBackup.recurringTransactions
+
+    await expect(importAll(db, legacyBackup, 'replace')).resolves.not.toThrow()
+    expect(await repos.recurring.list()).toHaveLength(0)
+  })
 })
 
 describe('validateBackup', () => {

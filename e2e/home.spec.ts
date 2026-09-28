@@ -555,11 +555,16 @@ test.describe('Home — accessibility', () => {
 // genuinely empty database (`hasNoData`), unlike the fixture-seeded
 // beforeEach every other a11y test above uses.
 test.describe('Home — accessibility, getting-started tour open', () => {
+  // Sheet makes #root `inert` while open (useInertBackground) — real
+  // assistive tech can no longer reach it, so its scrim-covered contents
+  // are correctly out of scope here too. axe-core 4.13 doesn't itself skip
+  // `inert` subtrees for color-contrast, so this excludes it explicitly
+  // rather than asserting on background content nothing can actually reach.
   test('zero violations with the tour open, light theme', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('dowi:theme', 'light'))
     await page.goto('/')
     await page.getByRole('button', { name: 'Take the tour' }).click()
-    const results = await new AxeBuilder({ page }).analyze()
+    const results = await new AxeBuilder({ page }).exclude('#root').analyze()
     expect(results.violations).toEqual([])
   })
 
@@ -567,7 +572,7 @@ test.describe('Home — accessibility, getting-started tour open', () => {
     await page.addInitScript(() => localStorage.setItem('dowi:theme', 'dark'))
     await page.goto('/')
     await page.getByRole('button', { name: 'Take the tour' }).click()
-    const results = await new AxeBuilder({ page }).analyze()
+    const results = await new AxeBuilder({ page }).exclude('#root').analyze()
     expect(results.violations).toEqual([])
   })
 })

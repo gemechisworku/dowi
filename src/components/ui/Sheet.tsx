@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useFocusTrap } from '@/lib/useFocusTrap'
 import { useLockBodyScroll } from '@/lib/useLockBodyScroll'
+import { useInertBackground } from '@/lib/useInertBackground'
 
 export interface SheetProps {
   open: boolean
@@ -42,6 +43,7 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
 
   useFocusTrap(containerRef, open)
   useLockBodyScroll(open)
+  useInertBackground(open)
 
   function closeOnce() {
     if (closedRef.current) return
@@ -159,8 +161,14 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-[24px] border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"
-        style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-elevated)' }}
+        className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-[24px] border-t pb-[env(safe-area-inset-bottom)]"
+        // Opaque --color-surface-solid, not the translucent --color-surface
+        // every Card uses: a modal can open over *any* page content, so its
+        // own text's effective contrast can't depend on whatever happens to
+        // show through a backdrop-blur behind it (confirmed by axe flagging
+        // this sheet's own button text against a background blended from
+        // the scrim and the page underneath).
+        style={{ background: 'var(--color-surface-solid)', boxShadow: 'var(--shadow-elevated)' }}
       >
         <div
           onPointerDown={handleDragStart}

@@ -8,6 +8,7 @@ import type {
   MetaEntry,
   Note,
   NoteCollection,
+  RecurringTransaction,
   Settings,
   Source,
   Task,
@@ -35,6 +36,8 @@ export interface BackupData {
   meta: MetaEntry[]
   /** Optional — absent in backups made before M13's streak calendar; treated as empty on import so older files still restore cleanly. */
   activityLog?: ActivityLogEntry[]
+  /** Optional — recurringTransactions was itself added in M12 but never wired into backup/restore until now; same "absent in older files" handling as activityLog. */
+  recurringTransactions?: RecurringTransaction[]
 }
 
 /** Exported so the Settings → Data import preview (UI layer) can compute per-table counts from a parsed-but-not-yet-imported file without a new backend function — see docs/PLAN.md's M2 note. */
@@ -68,6 +71,7 @@ export async function exportAll(db: DowiDatabase): Promise<BackupData> {
     settings,
     meta,
     activityLog,
+    recurringTransactions,
   ] = await Promise.all([
     db.transactions.toArray(),
     db.categories.toArray(),
@@ -82,6 +86,7 @@ export async function exportAll(db: DowiDatabase): Promise<BackupData> {
     db.settings.get('settings'),
     db.meta.toArray(),
     db.activityLog.toArray(),
+    db.recurringTransactions.toArray(),
   ])
 
   return {
@@ -100,6 +105,7 @@ export async function exportAll(db: DowiDatabase): Promise<BackupData> {
     settings,
     meta,
     activityLog,
+    recurringTransactions,
   }
 }
 
@@ -165,6 +171,7 @@ export async function importAll(
       db.settings,
       db.meta,
       db.activityLog,
+      db.recurringTransactions,
     ],
     async () => {
       if (mode === 'replace') {
@@ -181,6 +188,7 @@ export async function importAll(
           db.notifications.clear(),
           db.meta.clear(),
           db.activityLog.clear(),
+          db.recurringTransactions.clear(),
         ])
       }
 
@@ -202,6 +210,9 @@ export async function importAll(
       await db.meta.bulkPut(data.meta)
       // Optional — absent from a pre-M13 backup file (see BackupData.activityLog).
       if (data.activityLog) await db.activityLog.bulkPut(data.activityLog)
+      // Optional — absent from any backup made before this fix (see BackupData.recurringTransactions).
+      if (data.recurringTransactions)
+        await db.recurringTransactions.bulkPut(data.recurringTransactions)
       if (data.settings) await db.settings.put(data.settings)
     },
   )

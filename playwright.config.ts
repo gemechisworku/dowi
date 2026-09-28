@@ -9,6 +9,12 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4173',
     trace: 'on-first-retry',
+    // The page's `main > *` entrance fade (`@media (prefers-reduced-motion:
+    // reduce) { animation: none }` in index.css) means this also disables
+    // it for every test — avoids axe (and anything asserting a computed
+    // style) sampling mid-fade, diluted colors as a flaky artifact of an
+    // animation timing, not a real bug.
+    reducedMotion: 'reduce',
   },
   webServer: {
     command: 'npm run build && npm run preview',

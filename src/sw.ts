@@ -17,6 +17,7 @@ import {
   type PrecacheEntry,
 } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
+import type { DowiDatabase } from './db/db'
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<PrecacheEntry | string>
@@ -85,7 +86,7 @@ self.addEventListener('push', (event: PushEvent) => {
   // catch-up window disagree at the margin), no notification is shown for
   // this push — an accepted, rare trade-off against ever showing a
   // spurious "nothing new" notification (see src/notifications/pushRules.ts).
-  event.waitUntil(runReminderCatchUp())
+  event.waitUntil(runReminderCatchUp('push'))
 })
 
 self.addEventListener('pushsubscriptionchange', (event: Event) => {
@@ -170,10 +171,12 @@ const swScope = self as unknown as {
  */
 swScope.addEventListener('periodicsync', (event) => {
   if (event.tag !== REMINDERS_SYNC_TAG) return
-  event.waitUntil(runReminderCatchUp())
+  event.waitUntil(runReminderCatchUp('periodicsync'))
 })
 
-async function runReminderCatchUp(): Promise<void> {
+async function runReminderCatchUp(source: 'push' | 'periodicsync'): Promise<void> {
+  const ranAt = new Date().toISOString()
+  let db: DowiDatabase | undefined
   try {
     const [
       { createDatabase },
@@ -181,24 +184,37 @@ async function runReminderCatchUp(): Promise<void> {
       { createNotificationsRepo },
       { createRepositories },
       { createWebScheduler },
+      { recordPushDebug },
     ] = await Promise.all([
       import('./db/db'),
       import('./db/settingsRepo'),
       import('./db/notificationsRepo'),
       import('./db/repositories'),
       import('./notifications/scheduler'),
+      import('./notifications/pushDebug'),
     ])
-    const db = createDatabase()
+    db = createDatabase()
     const scheduler = createWebScheduler({
       db,
       settingsRepo: createSettingsRepo(db),
       notificationsRepo: createNotificationsRepo(db),
       repos: createRepositories(db),
     })
-    await scheduler.catchUp()
-  } catch {
+    const summary = await scheduler.catchUp()
+    await recordPushDebug(db, { ranAt, source, ...summary })
+  } catch (error) {
     // Best-effort — a failure here just means the user sees the same
-    // reminders as an ordinary catch-up next time they open the app.
+    // reminders as an ordinary catch-up next time they open the app. Still
+    // recorded (when we got far enough to have a `db`) — see pushDebug.ts;
+    // this is the one path with no console attached on a real phone.
+    if (db) {
+      const { recordPushDebug } = await import('./notifications/pushDebug')
+      await recordPushDebug(db, {
+        ranAt,
+        source,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   }
 }
 
