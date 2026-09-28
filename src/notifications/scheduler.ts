@@ -24,15 +24,25 @@ import {
   type NotificationPermissionState,
 } from './permission'
 
+export interface CatchUpSummary {
+  dueCount: number
+  deliveredCount: number
+  permission: NotificationPermissionState
+  quiet: boolean
+}
+
 export interface ReminderScheduler {
   /**
    * Runs on every app open (and opportunistically via the service worker's
    * periodicsync when the platform supports it): writes an inbox entry for
    * everything newly due and attempts OS delivery for each — exactly once
    * per occurrence, since dedup is keyed off what's already in the
-   * `notifications` table (AC-P2).
+   * `notifications` table (AC-P2). Returns a small summary rather than void
+   * purely so a caller with no other visibility into this run (the service
+   * worker's `push` handler, notably — see its own diagnostic logging) can
+   * tell *why* nothing was delivered without re-deriving it.
    */
-  catchUp(): Promise<void>
+  catchUp(): Promise<CatchUpSummary>
   /**
    * Requests permission if it hasn't been decided yet, then shows one
    * notification immediately. Doesn't write an inbox entry — a test ping
@@ -193,10 +203,14 @@ export function createWebScheduler({
         },
       )
 
-      if (toDeliver.length === 0 && toDeliverRecurring.length === 0) return
-
+      const dueCount = toDeliver.length + toDeliverRecurring.length
       const permission = getNotificationPermission()
-      if (permission !== 'granted' || quiet) return
+
+      if (dueCount === 0 || permission !== 'granted' || quiet) {
+        return { dueCount, deliveredCount: 0, permission, quiet }
+      }
+
+      let deliveredCount = 0
 
       // A stable tag per occurrence (not the freshly-created row's own id)
       // so that even if something upstream ever did manage to raise the
@@ -208,7 +222,10 @@ export function createWebScheduler({
           tag: `${reminder.type}:${reminder.scheduledFor}`,
           deepLink: reminder.deepLink,
         })
-        if (delivered) await notificationsRepo.markDelivered(created.id)
+        if (delivered) {
+          await notificationsRepo.markDelivered(created.id)
+          deliveredCount += 1
+        }
       }
 
       for (const { created, reminder } of toDeliverRecurring) {
@@ -217,8 +234,13 @@ export function createWebScheduler({
           tag: `recurring-due:${reminder.template.id}:${reminder.scheduledFor}`,
           deepLink: reminder.deepLink,
         })
-        if (delivered) await notificationsRepo.markDelivered(created.id)
+        if (delivered) {
+          await notificationsRepo.markDelivered(created.id)
+          deliveredCount += 1
+        }
       }
+
+      return { dueCount, deliveredCount, permission, quiet }
     },
 
     async sendTest() {
