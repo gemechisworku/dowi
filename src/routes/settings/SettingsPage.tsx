@@ -226,7 +226,7 @@ export function SettingsPage() {
               onChange={(e) => handleToggle('weeklyPlan', e.target.checked)}
             />
             {reminders.weeklyPlan.enabled && (
-              <div className="grid grid-cols-2 gap-2 pl-1">
+              <div className="flex flex-col gap-2 pl-1">
                 <Select
                   aria-label="Weekly plan day"
                   options={DAY_OPTIONS}
@@ -257,7 +257,7 @@ export function SettingsPage() {
               onChange={(e) => handleToggle('weeklyReview', e.target.checked)}
             />
             {reminders.weeklyReview.enabled && (
-              <div className="grid grid-cols-2 gap-2 pl-1">
+              <div className="flex flex-col gap-2 pl-1">
                 <Select
                   aria-label="Weekly review day"
                   options={DAY_OPTIONS}
@@ -398,21 +398,39 @@ export function SettingsPage() {
             }
           />
           {reminders.quietHours.enabled && (
-            <div className="grid grid-cols-2 gap-2 pl-1">
-              <TimePicker
-                aria-label="Quiet hours start"
-                value={reminders.quietHours.start}
-                onChange={(e) =>
-                  patchReminders({ quietHours: { ...reminders.quietHours, start: e.target.value } })
-                }
-              />
-              <TimePicker
-                aria-label="Quiet hours end"
-                value={reminders.quietHours.end}
-                onChange={(e) =>
-                  patchReminders({ quietHours: { ...reminders.quietHours, end: e.target.value } })
-                }
-              />
+            <div className="flex flex-col gap-3 pl-1">
+              <div className="flex flex-col gap-1">
+                <span
+                  className="text-xs font-semibold"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  From
+                </span>
+                <TimePicker
+                  aria-label="Quiet hours start"
+                  value={reminders.quietHours.start}
+                  onChange={(e) =>
+                    patchReminders({
+                      quietHours: { ...reminders.quietHours, start: e.target.value },
+                    })
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span
+                  className="text-xs font-semibold"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  Until
+                </span>
+                <TimePicker
+                  aria-label="Quiet hours end"
+                  value={reminders.quietHours.end}
+                  onChange={(e) =>
+                    patchReminders({ quietHours: { ...reminders.quietHours, end: e.target.value } })
+                  }
+                />
+              </div>
             </div>
           )}
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>

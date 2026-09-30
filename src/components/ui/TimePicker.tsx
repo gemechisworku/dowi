@@ -54,18 +54,23 @@ export const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(function
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Input
-        ref={ref}
-        type="time"
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        className={className}
-        aria-label={ariaLabel}
-        {...props}
-      />
-      <div style={disabled ? { opacity: 0.6, pointerEvents: 'none' } : undefined}>
+    <div className="flex items-center gap-1.5">
+      <div className="min-w-0 flex-1">
+        <Input
+          ref={ref}
+          type="time"
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          className={className}
+          aria-label={ariaLabel}
+          {...props}
+        />
+      </div>
+      <div
+        className="shrink-0"
+        style={disabled ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
+      >
         <SegmentedControl
           label="AM or PM"
           options={PERIOD_OPTIONS}

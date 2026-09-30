@@ -174,36 +174,8 @@ swScope.addEventListener('periodicsync', (event) => {
   event.waitUntil(runReminderCatchUp('periodicsync'))
 })
 
-/**
- * TEMPORARY, while diagnosing a real reports-of-zero-background-notifications
- * regression: a visible, silent debug notification, fired immediately (no
- * imports, no IndexedDB) and then replaced (same tag) once the real work
- * below finishes or throws. The pushDebug.ts breadcrumb below depends on
- * IndexedDB itself working — if the failure is upstream of that (a dynamic
- * import failing, `db` never getting created), that breadcrumb never gets
- * written at all, which is indistinguishable from "no push arrived" from
- * Settings → About alone. This notification is the fallback for exactly
- * that case: it proves the push event reached this handler regardless of
- * what happens next. Remove once the regression is understood.
- */
-const PUSH_DEBUG_NOTIFICATION_TAG = 'push-debug'
-
-async function showPushDebugNotification(title: string, body: string): Promise<void> {
-  try {
-    await self.registration.showNotification(title, {
-      body,
-      tag: PUSH_DEBUG_NOTIFICATION_TAG,
-      silent: true,
-    })
-  } catch {
-    // Nothing further we can do to surface it.
-  }
-}
-
 async function runReminderCatchUp(source: 'push' | 'periodicsync'): Promise<void> {
   const ranAt = new Date().toISOString()
-  await showPushDebugNotification(`Push received (${source})`, `${ranAt} — checking reminders…`)
-
   let db: DowiDatabase | undefined
   try {
     const [
@@ -230,22 +202,20 @@ async function runReminderCatchUp(source: 'push' | 'periodicsync'): Promise<void
     })
     const summary = await scheduler.catchUp()
     await recordPushDebug(db, { ranAt, source, ...summary })
-    await showPushDebugNotification(
-      `Push handled (${source})`,
-      `due=${summary.dueCount} delivered=${summary.deliveredCount} permission=${summary.permission} quiet=${summary.quiet}`,
-    )
   } catch (error) {
-    // Best-effort in the real (non-debug) sense — a failure here just means
-    // the user sees the same reminders as an ordinary catch-up next time
-    // they open the app. Still recorded (when we got far enough to have a
-    // `db`) via pushDebug.ts, and always surfaced via the debug notification
-    // above regardless of how early this failed.
-    const message = error instanceof Error ? error.message : String(error)
+    // Best-effort — a failure here just means the user sees the same
+    // reminders as an ordinary catch-up next time they open the app. Still
+    // recorded (when we got far enough to have a `db`) via pushDebug.ts —
+    // see Settings → About for the last several runs' outcomes, including
+    // this one's error if it's the one that's visible there.
     if (db) {
       const { recordPushDebug } = await import('./notifications/pushDebug')
-      await recordPushDebug(db, { ranAt, source, error: message })
+      await recordPushDebug(db, {
+        ranAt,
+        source,
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
-    await showPushDebugNotification(`Push failed (${source})`, message)
   }
 }
 
